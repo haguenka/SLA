@@ -107,6 +107,10 @@ if uploaded_file is not None:
         # Ensure DATE column exists
         filtered_df['DATE'] = filtered_df['DATA_HORA_PRESCRICAO'].dt.date
 
+        # Calculate totals and averages
+        total_patients = filtered_df.shape[0]  # Total patients
+        avg_process_time = filtered_df['PROCESS_TIME_HOURS'].mean()  # Average process time
+
         # Heatmap for day of the week and time of day
         heatmap_data = filtered_df.groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
 
