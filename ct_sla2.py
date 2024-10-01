@@ -134,13 +134,17 @@ if uploaded_file is not None:
         # Correlate worst days with heatmap
         st.write("### Highlighting Top 10 Worst Days on Heatmap")
         worst_day_labels = worst_days['DATE'].astype(str).tolist()
-
+        
+        # Ensure you're working only with FORA DO PRAZO exams
         filtered_df['DAY'] = filtered_df['DATA_HORA_PRESCRICAO'].dt.date.astype(str)
         filtered_df['WORST_DAY_FLAG'] = filtered_df['DAY'].apply(lambda x: 1 if x in worst_day_labels else 0)
-
+        
+        # Filter to show only exams that are "FORA DO PRAZO"
+        fora_do_prazo_df = filtered_df[(filtered_df['WORST_DAY_FLAG'] == 1) & (filtered_df['SLA_STATUS'] == 'FORA DO PRAZO')]
+        
         # Group for heatmap display: show count of FORA DO PRAZO by day of the week and time period for the worst days
-        worst_day_heatmap_data = filtered_df[filtered_df['WORST_DAY_FLAG'] == 1].groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
-
+        worst_day_heatmap_data = fora_do_prazo_df.groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
+        
         # Create annotation text for the heatmap with both "FORA DO PRAZO" counts and dates
         def create_annotation_text(row, col, data, worst_days):
             if data.at[row, col] > 0:
@@ -151,16 +155,17 @@ if uploaded_file is not None:
                     dates = ', '.join(matched_rows['DATE'].astype(str).values)
                     return f"{data.at[row, col]} ({dates})"
             return ""
-
+        
         # Apply the annotation function
         annotations = [[create_annotation_text(row, col, worst_day_heatmap_data, worst_days)
                         for col in worst_day_heatmap_data.columns] for row in worst_day_heatmap_data.index]
-
+        
         # Display the heatmap for the top 10 worst days with "FORA DO PRAZO" count and date as annotations
         fig6, ax6 = plt.subplots(figsize=(10, 6))
         sns.heatmap(worst_day_heatmap_data, annot=annotations, fmt='', cmap='Reds', ax=ax6, cbar=False)
         ax6.set_title('Number of FORA DO PRAZO Exams on Top 10 Worst Days (with Dates)')
         st.pyplot(fig6)
+
 
         # Total Patients Processed and Average Process Time
         st.write(f"**Total Patients Processed**: {total_patients}")
