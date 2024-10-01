@@ -106,6 +106,10 @@ if uploaded_file is not None:
         # Ensure DATE column exists
         filtered_df['DATE'] = filtered_df['DATA_HORA_PRESCRICAO'].dt.date
 
+        # Display the dataframe with the analysis columns (SLA status, process time, etc.)
+        st.write(f"### Processed Data with SLA Status for {selected_unidade}")
+        st.dataframe(filtered_df[['DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR', 'PROCESS_TIME_HOURS', 'SLA_STATUS', 'FORA_DO_PRAZO']])
+
         # Calculate totals and averages
         total_patients = filtered_df.shape[0]
         avg_process_time = filtered_df['PROCESS_TIME_HOURS'].mean()
