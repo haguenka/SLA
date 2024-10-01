@@ -125,6 +125,10 @@ if uploaded_file is not None:
         ax4.set_title('Number of Exams by Day and Time Period')
         st.pyplot(fig4)
 
+        # Total Patients Processed and Average Process Time
+        st.write(f"**Total Patients Processed**: {total_patients}")
+        st.write(f"**Average Process Time (in hours)**: {avg_process_time:.2f}")
+
         # Correlate heatmap with SLA status (exams within SLA vs outside SLA)
         sla_heatmap_data = filtered_df[filtered_df['SLA_STATUS'] == 'Within SLA'].groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
 
@@ -173,10 +177,6 @@ if uploaded_file is not None:
             sns.heatmap(worst_day_heatmap_data, annot=annotations, fmt='', cmap='Reds', ax=ax6, cbar=False)
             ax6.set_title('Number of FORA DO PRAZO Exams on Top 10 Worst Days (with Dates)')
             st.pyplot(fig6)
-
-        # Total Patients Processed and Average Process Time
-        st.write(f"**Total Patients Processed**: {total_patients}")
-        st.write(f"**Average Process Time (in hours)**: {avg_process_time:.2f}")
 
         # SLA Violations Plot (Pie Chart)
         st.write(f"### SLA Violations (FORA DO PRAZO) for {selected_unidade}")
