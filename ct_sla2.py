@@ -94,9 +94,9 @@ if uploaded_file is not None:
 
         # Create time periods (morning, afternoon, night)
         def get_period(hour):
-            if 6 <= hour < 12:
+            if 7 <= hour < 13:
                 return 'Morning'
-            elif 12 <= hour < 18:
+            elif 13 <= hour < 19:
                 return 'Afternoon'
             else:
                 return 'Night'
@@ -160,15 +160,15 @@ if uploaded_file is not None:
                         return f"{data.at[row, col]} ({dates})"
                 return ""
         
-            # Apply the annotation function
-            annotations = [[create_annotation_text(row, col, worst_day_heatmap_data, worst_days)
-                            for col in worst_day_heatmap_data.columns] for row in worst_day_heatmap_data.index]
+        # Apply the annotation function
+        annotations = [[create_annotation_text(row, col, worst_day_heatmap_data, worst_days)
+                        for col in worst_day_heatmap_data.columns] for row in worst_day_heatmap_data.index]
         
-            # Display the heatmap for the top 10 worst days with "FORA DO PRAZO" count and date as annotations
-            fig6, ax6 = plt.subplots(figsize=(10, 6))
-            sns.heatmap(worst_day_heatmap_data, annot=annotations, fmt='', cmap='Reds', ax=ax6, cbar=False)
-            ax6.set_title('Number of FORA DO PRAZO Exams on Top 10 Worst Days (with Dates)')
-            st.pyplot(fig6)
+        # Display the heatmap for the top 10 worst days with "FORA DO PRAZO" count and date as annotations
+        fig6, ax6 = plt.subplots(figsize=(10, 6))
+        sns.heatmap(worst_day_heatmap_data, annot=annotations, fmt='', cmap='Reds', ax=ax6, cbar=False)
+        ax6.set_title('Number of FORA DO PRAZO Exams on Top 10 Worst Days (with Dates)')
+        st.pyplot(fig6)
 
 
         # Total Patients Processed and Average Process Time
