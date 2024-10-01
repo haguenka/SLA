@@ -104,6 +104,25 @@ if uploaded_file is not None:
         filtered_df['HOUR'] = filtered_df['DATA_HORA_PRESCRICAO'].dt.hour
         filtered_df['TIME_PERIOD'] = filtered_df['HOUR'].apply(get_period)
 
+        # Heatmap for day of the week and time of day
+        heatmap_data = filtered_df.groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
+
+        # Display the heatmap for number of exams by day and period
+        st.write(f"### Heatmap of Exams by Day and Time Period for {selected_unidade}")
+        fig4, ax4 = plt.subplots(figsize=(10, 6))
+        sns.heatmap(heatmap_data, annot=True, fmt='d', cmap='coolwarm', ax=ax4)
+        ax4.set_title('Number of Exams by Day and Time Period')
+        st.pyplot(fig4)
+
+        # Correlate heatmap with SLA status (exams within SLA vs outside SLA)
+        sla_heatmap_data = filtered_df[filtered_df['SLA_STATUS'] == 'Within SLA'].groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
+
+        st.write(f"### Heatmap of Exams within SLA by Day and Time Period for {selected_unidade}")
+        fig5, ax5 = plt.subplots(figsize=(10, 6))
+        sns.heatmap(sla_heatmap_data, annot=True, fmt='d', cmap='Blues', ax=ax5)
+        ax5.set_title('Exams Within SLA by Day and Time Period')
+        st.pyplot(fig5)
+        
         # Group by Date, Day of Week, and Time Period for the worst days analysis
         worst_days = filtered_df[filtered_df['FORA_DO_PRAZO']].groupby(['DATE', 'DAY_OF_WEEK', 'TIME_PERIOD']).size().reset_index(name='FORA_DO_PRAZO_COUNT')
         worst_days = worst_days.sort_values(by='FORA_DO_PRAZO_COUNT', ascending=False).head(10)
@@ -111,7 +130,7 @@ if uploaded_file is not None:
         if worst_days.shape[0] > 0:
             st.write("### Top 10 Worst Days by FORA DO PRAZO Count with Day and Period")
             st.dataframe(worst_days)
-
+            
             # Heatmap for day of the week and time of day for FORA DO PRAZO exams
             st.write("### Highlighting Top 10 Worst Days on Heatmap")
             worst_day_labels = worst_days['DATE'].astype(str).tolist()
@@ -147,6 +166,24 @@ if uploaded_file is not None:
         # Total Patients Processed and Average Process Time
         st.write(f"**Total Patients Processed**: {total_patients}")
         st.write(f"**Average Process Time (in hours)**: {avg_process_time:.2f}")
+
+        # SLA Violations Plot (Pie Chart)
+        st.write(f"### SLA Violations (FORA DO PRAZO) for {selected_unidade}")
+        fig2, ax2 = plt.subplots()
+        violation_data = [filtered_df[filtered_df['FORA_DO_PRAZO']].shape[0], filtered_df[~filtered_df['FORA_DO_PRAZO']].shape[0]]
+        labels = ['FORA DO PRAZO', 'Within SLA']
+        ax2.pie(violation_data, labels=labels, autopct='%1.1f%%', startangle=90, colors=['#ff9999', '#99ff99'])
+        ax2.set_title('SLA Violations')
+        st.pyplot(fig2)
+
+        # Average Process Time by SLA Category (Bar Chart)
+        st.write(f"### Average Process Time by SLA Category for {selected_unidade}")
+        avg_process_by_sla = filtered_df.groupby('SLA_STATUS')['PROCESS_TIME_HOURS'].mean()
+        fig3, ax3 = plt.subplots()
+        avg_process_by_sla.plot(kind='bar', ax=ax3, color='#66b3ff')
+        ax3.set_ylabel('Average Time (hours)')
+        ax3.set_title('Average Process Time by SLA Category')
+        st.pyplot(fig3)
 
 else:
     st.write("Please upload an Excel file to continue.")
