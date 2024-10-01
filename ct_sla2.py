@@ -145,10 +145,13 @@ if uploaded_file is not None:
         # Group for heatmap display: show count of FORA DO PRAZO by day of the week and time period for the worst days
         worst_day_heatmap_data = fora_do_prazo_df.groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
         
-        # Check if worst_day_heatmap_data is empty
-        if worst_day_heatmap_data.empty:
+        # Check if the DataFrame is empty or contains only NaNs
+        if worst_day_heatmap_data.empty or worst_day_heatmap_data.isna().all().all():
             st.write("No data available for FORA DO PRAZO exams on the worst days.")
         else:
+            # Replace any NaN values with 0 for heatmap rendering
+            worst_day_heatmap_data = worst_day_heatmap_data.fillna(0)
+        
             # Create annotation text for the heatmap with both "FORA DO PRAZO" counts and dates
             def create_annotation_text(row, col, data, worst_days):
                 if data.at[row, col] > 0:
@@ -160,15 +163,16 @@ if uploaded_file is not None:
                         return f"{data.at[row, col]} ({dates})"
                 return ""
         
-        # Apply the annotation function
-        annotations = [[create_annotation_text(row, col, worst_day_heatmap_data, worst_days)
-                        for col in worst_day_heatmap_data.columns] for row in worst_day_heatmap_data.index]
+            # Apply the annotation function
+            annotations = [[create_annotation_text(row, col, worst_day_heatmap_data, worst_days)
+                            for col in worst_day_heatmap_data.columns] for row in worst_day_heatmap_data.index]
         
-        # Display the heatmap for the top 10 worst days with "FORA DO PRAZO" count and date as annotations
-        fig6, ax6 = plt.subplots(figsize=(10, 6))
-        sns.heatmap(worst_day_heatmap_data, annot=annotations, fmt='', cmap='Reds', ax=ax6, cbar=False)
-        ax6.set_title('Number of FORA DO PRAZO Exams on Top 10 Worst Days (with Dates)')
-        st.pyplot(fig6)
+            # Display the heatmap for the top 10 worst days with "FORA DO PRAZO" count and date as annotations
+            fig6, ax6 = plt.subplots(figsize=(10, 6))
+            sns.heatmap(worst_day_heatmap_data, annot=annotations, fmt='', cmap='Reds', ax=ax6, cbar=False)
+            ax6.set_title('Number of FORA DO PRAZO Exams on Top 10 Worst Days (with Dates)')
+            st.pyplot(fig6)
+
 
 
         # Total Patients Processed and Average Process Time
