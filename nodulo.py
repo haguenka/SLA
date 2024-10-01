@@ -1,18 +1,11 @@
-import logging
 import os
-import re
 import sqlite3
-import fitz  # PyMuPDF for PDF manipulation
 import pandas as pd
-import base64
-from io import BytesIO
+import fitz  # PyMuPDF for PDF manipulation
 import streamlit as st
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-
 def sanitize_column_name(column_name):
-    sanitized_name = re.sub(r'\W+', '_', column_name)
-    return sanitized_name.strip('_')
+    return re.sub(r'\W+', '_', column_name).strip('_')
 
 def initialize_database(db_path):
     conn = sqlite3.connect(db_path)
@@ -54,8 +47,6 @@ def extract_patient_info(text):
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             output_dict[key] = match.group(1).strip()
-        else:
-            logging.warning(f"Pattern for '{key}' not found in text")
 
     return output_dict
 
@@ -66,13 +57,11 @@ def save_to_database(db_path, data):
     initialize_database(db_path)
 
     if 'id' in data and data['id']:
-        # Update an existing patient
         set_clause = ', '.join(f'"{key}" = ?' for key in data.keys() if key != 'id')
         sql = f'UPDATE patients SET {set_clause} WHERE id = ?'
         values = [str(data[key]) if data[key] is not None else '' for key in data.keys() if key != 'id']
         values.append(data['id'])
     else:
-        # Insert new patient
         columns = ', '.join(f'"{key}"' for key in data.keys() if key != 'id')
         placeholders = ', '.join(['?' for _ in data if _ != 'id'])
         sql = f'INSERT INTO patients ({columns}) VALUES ({placeholders})'
@@ -105,16 +94,28 @@ def highlight_phrases_with_conditions(input_folder, output_folder):
 
             doc.close()
         except Exception as e:
-            logging.error(f"Error processing file {filename}: {str(e)}")
+            st.error(f"Error processing file {filename}: {str(e)}")
 
     return pdf_data
 
 # Streamlit Application Interface
 st.title("Pulmonary Nodule Program")
 
-# Folder selection for input and output
-input_folder = st.text_input("Select the input folder for PDFs")
-output_folder = st.text_input("Select the output folder for processed files")
+# Input folder selection (dummy file selection to mimic folder selection)
+st.header("Select Input and Output Folders")
+input_file = st.file_uploader("Select a dummy file from the input folder (to get folder path)", type=['pdf', 'txt', 'csv', 'xlsx'])
+output_file = st.file_uploader("Select a dummy file from the output folder (to get folder path)", type=['pdf', 'txt', 'csv', 'xlsx'])
+
+input_folder = None
+output_folder = None
+
+if input_file is not None:
+    input_folder = os.path.dirname(input_file.name)
+    st.success(f"Input folder selected: {input_folder}")
+
+if output_file is not None:
+    output_folder = os.path.dirname(output_file.name)
+    st.success(f"Output folder selected: {output_folder}")
 
 # Process PDFs Button
 if st.button("Process PDFs"):
@@ -138,7 +139,7 @@ if st.button("Process PDFs"):
                 mime="application/x-sqlite3"
             )
     else:
-        st.error("Please specify both input and output folders.")
+        st.error("Please select both input and output folders.")
 
 # View Database Content
 if st.button("View Database"):
