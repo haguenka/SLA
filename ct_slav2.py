@@ -80,6 +80,15 @@ if uploaded_file is not None:
         # Flagging cases that exceed the 1-hour limit as 'FORA DO PRAZO'
         filtered_df['FORA_DO_PRAZO'] = filtered_df['PROCESS_TIME_HOURS'] > 1
 
+        # Function to get the adjusted day of the week (7 AM to 7 AM next day)
+        def get_adjusted_day_of_week(datetime_val):
+            # If the time is between 00:00 and 06:59, count it as the previous day
+            if datetime_val.hour < 7:
+                adjusted_datetime = datetime_val - pd.Timedelta(days=1)  # Move to the previous day
+            else:
+                adjusted_datetime = datetime_val
+            return adjusted_datetime.day_name()  # Return the day of the week
+
         # Display the dataframe with the analysis columns (SLA status, process time, etc.)
         st.write(f"### Processed Data with SLA Status for {selected_unidade}")
         st.dataframe(filtered_df[['DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR', 'PROCESS_TIME_HOURS', 'SLA_STATUS', 'FORA_DO_PRAZO']])
