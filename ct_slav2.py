@@ -34,21 +34,21 @@ if uploaded_file is not None:
 
     # Date selection (specific day or range)
     date_option = st.sidebar.radio("Select Date Option", ['Specific Day', 'Date Range'])
-
+    
     if date_option == 'Specific Day':
         selected_date = st.sidebar.date_input("Choose a day", value=pd.to_datetime('today'))
-        # Filter for the specific day (start and end of the day)
-        start_date = pd.to_datetime(selected_date)
-        end_date = start_date + pd.DateOffset(days=1) - pd.Timedelta(seconds=1)  # Include the full day until 23:59:59
+        # Filter for the specific day (start from 7 AM and end at 6:59 AM next day)
+        start_date = pd.to_datetime(selected_date) + pd.DateOffset(hours=7)
+        end_date = start_date + pd.Timedelta(hours=23, minutes=59)  # Include until 6:59 AM next day
         filtered_df = filtered_df[(filtered_df['DATA_HORA_PRESCRICAO'] >= start_date) & 
-                                  (filtered_df['DATA_HORA_PRESCRICAO'] <= end_date)]
+                                  (filtered_df['DATA_HORA_PRESCRICAO'] < end_date)]
     else:
         start_date, end_date = st.sidebar.date_input("Select date range", value=(pd.to_datetime('today') - pd.DateOffset(days=7), pd.to_datetime('today')))
-        # Ensure the date range includes the entire start and end days
-        start_date = pd.to_datetime(start_date)
-        end_date = pd.to_datetime(end_date) + pd.Timedelta(hours=23, minutes=59, seconds=59)
+        # Adjust date range to start at 7:00 AM of the first day and end at 6:59 AM of the day after the last day
+        start_date = pd.to_datetime(start_date) + pd.DateOffset(hours=7)
+        end_date = pd.to_datetime(end_date) + pd.Timedelta(hours=6, minutes=59)  # Include until 6:59 AM of the next day
         filtered_df = filtered_df[(filtered_df['DATA_HORA_PRESCRICAO'] >= start_date) & 
-                                  (filtered_df['DATA_HORA_PRESCRICAO'] <= end_date)]
+                                  (filtered_df['DATA_HORA_PRESCRICAO'] < end_date)]
 
     # Check if there is data to display after filtering
     if filtered_df.empty:
