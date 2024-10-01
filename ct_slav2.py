@@ -89,17 +89,8 @@ if uploaded_file is not None:
                 adjusted_datetime = datetime_val
             return adjusted_datetime.day_name()  # Return the day of the week
 
-        # Display the dataframe with the analysis columns (SLA status, process time, etc.)
-        st.write(f"### Processed Data with SLA Status for {selected_unidade}")
-        st.dataframe(filtered_df[['DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR', 'PROCESS_TIME_HOURS', 'SLA_STATUS', 'FORA_DO_PRAZO']])
-
-        # Calculate totals and averages
-        total_patients = filtered_df.shape[0]
-        avg_process_time = filtered_df['PROCESS_TIME_HOURS'].mean()
-
-        # Top 10 Worst Days (most "FORA DO PRAZO" exams)
-        filtered_df['DATE'] = filtered_df['DATA_HORA_PRESCRICAO'].dt.date
-        filtered_df['DAY_OF_WEEK'] = filtered_df['DATA_HORA_PRESCRICAO'].dt.day_name()
+        # Apply the adjusted day of the week logic
+        filtered_df['DAY_OF_WEEK'] = filtered_df['DATA_HORA_PRESCRICAO'].apply(get_adjusted_day_of_week)
 
         # Create time periods (morning, afternoon, night)
         def get_period(hour):
@@ -131,7 +122,7 @@ if uploaded_file is not None:
         sns.heatmap(sla_heatmap_data, annot=True, fmt='d', cmap='Blues', ax=ax5)
         ax5.set_title('Exams Within SLA by Day and Time Period')
         st.pyplot(fig5)
-        
+
         # Group by Date, Day of Week, and Time Period for the worst days analysis
         worst_days = filtered_df[filtered_df['FORA_DO_PRAZO']].groupby(['DATE', 'DAY_OF_WEEK', 'TIME_PERIOD']).size().reset_index(name='FORA_DO_PRAZO_COUNT')
         worst_days = worst_days.sort_values(by='FORA_DO_PRAZO_COUNT', ascending=False).head(10)
@@ -139,7 +130,7 @@ if uploaded_file is not None:
         if worst_days.shape[0] > 0:
             st.write("### Top 10 Worst Days by FORA DO PRAZO Count with Day and Period")
             st.dataframe(worst_days)
-            
+
             # Heatmap for day of the week and time of day for FORA DO PRAZO exams
             st.write("### Highlighting Top 10 Worst Days on Heatmap")
             worst_day_labels = worst_days['DATE'].astype(str).tolist()
