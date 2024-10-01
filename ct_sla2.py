@@ -122,28 +122,31 @@ if uploaded_file is not None:
         ax4.set_title('Number of Exams by Day and Time Period')
         st.pyplot(fig4)
 
-        # Correlate heatmap with SLA status (exams within SLA vs outside SLA)
-        sla_heatmap_data = filtered_df[filtered_df['SLA_STATUS'] == 'Within SLA'].groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
-
-        st.write(f"### Heatmap of Exams within SLA by Day and Time Period for {selected_unidade}")
-        fig5, ax5 = plt.subplots(figsize=(10, 6))
-        sns.heatmap(sla_heatmap_data, annot=True, fmt='d', cmap='Blues', ax=ax5)
-        ax5.set_title('Exams Within SLA by Day and Time Period')
-        st.pyplot(fig5)
-
         # Correlate worst days with heatmap
         st.write("### Highlighting Top 10 Worst Days on Heatmap")
+        
+        # Filter to include only FORA DO PRAZO exams
+        fora_do_prazo_df = filtered_df[filtered_df['SLA_STATUS'] == 'FORA DO PRAZO']
+        
+        # Ensure 'DATE' column exists in the DataFrame
+        fora_do_prazo_df['DATE'] = fora_do_prazo_df['DATA_HORA_PRESCRICAO'].dt.date
+        
+        # Step 1: Identify the top 10 worst days based on the number of FORA DO PRAZO exams
+        worst_days = fora_do_prazo_df.groupby('DATE').size().reset_index(name='FORA_DO_PRAZO_COUNT')
+        worst_days = worst_days.sort_values(by='FORA_DO_PRAZO_COUNT', ascending=False).head(10)
+        
+        # Get the list of the worst day labels
         worst_day_labels = worst_days['DATE'].astype(str).tolist()
         
-        # Ensure you're working only with FORA DO PRAZO exams
+        # Step 2: Filter the data for exams that occurred on the worst days
         filtered_df['DAY'] = filtered_df['DATA_HORA_PRESCRICAO'].dt.date.astype(str)
         filtered_df['WORST_DAY_FLAG'] = filtered_df['DAY'].apply(lambda x: 1 if x in worst_day_labels else 0)
         
-        # Filter to show only exams that are "FORA DO PRAZO"
-        fora_do_prazo_df = filtered_df[(filtered_df['WORST_DAY_FLAG'] == 1) & (filtered_df['SLA_STATUS'] == 'FORA DO PRAZO')]
+        # Step 3: Filter FORA DO PRAZO exams that happened on the worst days
+        fora_do_prazo_on_worst_days = filtered_df[(filtered_df['WORST_DAY_FLAG'] == 1) & (filtered_df['SLA_STATUS'] == 'FORA DO PRAZO')]
         
-        # Group for heatmap display: show count of FORA DO PRAZO by day of the week and time period for the worst days
-        worst_day_heatmap_data = fora_do_prazo_df.groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
+        # Group for heatmap display: count FORA DO PRAZO exams by DAY_OF_WEEK and TIME_PERIOD
+        worst_day_heatmap_data = fora_do_prazo_on_worst_days.groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
         
         # Check if the DataFrame is empty or contains only NaNs
         if worst_day_heatmap_data.empty or worst_day_heatmap_data.isna().all().all():
@@ -172,7 +175,6 @@ if uploaded_file is not None:
             sns.heatmap(worst_day_heatmap_data, annot=annotations, fmt='', cmap='Reds', ax=ax6, cbar=False)
             ax6.set_title('Number of FORA DO PRAZO Exams on Top 10 Worst Days (with Dates)')
             st.pyplot(fig6)
-
 
 
         # Total Patients Processed and Average Process Time
