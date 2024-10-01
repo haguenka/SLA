@@ -104,6 +104,9 @@ if uploaded_file is not None:
         filtered_df['HOUR'] = filtered_df['DATA_HORA_PRESCRICAO'].dt.hour
         filtered_df['TIME_PERIOD'] = filtered_df['HOUR'].apply(get_period)
 
+        # Ensure DATE column exists
+        filtered_df['DATE'] = filtered_df['DATA_HORA_PRESCRICAO'].dt.date
+
         # Heatmap for day of the week and time of day
         heatmap_data = filtered_df.groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
 
