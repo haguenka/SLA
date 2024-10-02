@@ -113,9 +113,11 @@ if uploaded_file is not None:
         st.write(f"### Processed Data with SLA Status for {selected_unidade}")
         st.dataframe(filtered_df[['DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR', 'PROCESS_TIME_HOURS', 'SLA_STATUS', 'FORA_DO_PRAZO']])
 
-        # Display the dataframe with "EM ESPERA" flagged cases
+        # Display the dataframe with only "EM ESPERA" flagged cases
         st.markdown("### Data with 'EM ESPERA' Flag")
-        st.dataframe(filtered_df[['EM_ESPERA', 'DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR', 'PROCESS_TIME_HOURS', 'SLA_STATUS', 'FORA_DO_PRAZO']])
+        espera_df = filtered_df[filtered_df['EM_ESPERA'] == True]
+        st.dataframe(espera_df[['EM_ESPERA', 'DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR', 'PROCESS_TIME_HOURS', 'SLA_STATUS', 'FORA_DO_PRAZO']])
+
 
         # Calculate totals and averages
         total_patients = filtered_df.shape[0]
