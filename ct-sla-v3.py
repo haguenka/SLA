@@ -116,7 +116,7 @@ if uploaded_file is not None:
         # Display the dataframe with only "EM ESPERA" flagged cases
         st.markdown("### Data with 'EM ESPERA' Flag")
         espera_df = filtered_df[filtered_df['EM_ESPERA'] == True]
-        st.dataframe(espera_df[['EM_ESPERA', 'DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR', 'PROCESS_TIME_HOURS', 'SLA_STATUS', 'FORA_DO_PRAZO']])
+        st.dataframe(espera_df[['EM_ESPERA', 'NOME_PACIENTE', 'DESCRICAO_PROCEDIMENTO', 'DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR', 'SLA_STATUS']])
 
 
         # Calculate totals and averages
