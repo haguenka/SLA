@@ -21,9 +21,9 @@ if uploaded_file is not None:
 
     # Create the "EM ESPERA" flag for rows where STATUS_ALAUDAR is empty
     filtered_df['EM_ESPERA'] = filtered_df['STATUS_ALAUDAR'].isna()
-    
-    # Drop rows where the date conversion failed (i.e., rows with NaT in either datetime column)
-    filtered_df = filtered_df.dropna(subset=['DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR'])
+
+    # Drop rows where the prescription date is invalid
+    filtered_df = filtered_df.dropna(subset=['DATA_HORA_PRESCRICAO'])
 
     # Sidebar for selecting UNIDADE and Date
     st.sidebar.header("Filter Options")
@@ -37,7 +37,7 @@ if uploaded_file is not None:
 
     # Date selection (specific day or range)
     date_option = st.sidebar.radio("Select Date Option", ['Specific Day', 'Date Range'])
-    
+
     if date_option == 'Specific Day':
         selected_date = st.sidebar.date_input("Choose a day", value=pd.to_datetime('today'))
         # Filter for the specific day (start from 7 AM and end at 6:59 AM next day)
@@ -61,7 +61,7 @@ if uploaded_file is not None:
         st.markdown(f"### Filtered Data for {selected_unidade}")
         st.dataframe(filtered_df)
 
-        # Calculate the time difference (in hours)
+        # Calculate the time difference (in hours) for rows where STATUS_ALAUDAR is not NaT
         filtered_df['PROCESS_TIME_HOURS'] = (filtered_df['STATUS_ALAUDAR'] - filtered_df['DATA_HORA_PRESCRICAO']).dt.total_seconds() / 3600
 
         # Classify into time intervals
@@ -116,7 +116,7 @@ if uploaded_file is not None:
         # Display the dataframe with "EM ESPERA" flagged cases
         st.markdown("### Data with 'EM ESPERA' Flag")
         st.dataframe(filtered_df[filtered_df['EM_ESPERA']])
-        
+
         # Calculate totals and averages
         total_patients = filtered_df.shape[0]
         avg_process_time = filtered_df['PROCESS_TIME_HOURS'].mean()
