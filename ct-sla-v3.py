@@ -19,6 +19,9 @@ if uploaded_file is not None:
     filtered_df['DATA_HORA_PRESCRICAO'] = pd.to_datetime(filtered_df['DATA_HORA_PRESCRICAO'], dayfirst=True, errors='coerce')
     filtered_df['STATUS_ALAUDAR'] = pd.to_datetime(filtered_df['STATUS_ALAUDAR'], dayfirst=True, errors='coerce')
 
+    # Create the "EM ESPERA" flag for rows where STATUS_ALAUDAR is empty
+    filtered_df['EM_ESPERA'] = filtered_df['STATUS_ALAUDAR'].isna()
+    
     # Drop rows where the date conversion failed (i.e., rows with NaT in either datetime column)
     filtered_df = filtered_df.dropna(subset=['DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR'])
 
@@ -110,6 +113,10 @@ if uploaded_file is not None:
         st.write(f"### Processed Data with SLA Status for {selected_unidade}")
         st.dataframe(filtered_df[['DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR', 'PROCESS_TIME_HOURS', 'SLA_STATUS', 'FORA_DO_PRAZO']])
 
+        # Display the dataframe with "EM ESPERA" flagged cases
+        st.markdown("### Data with 'EM ESPERA' Flag")
+        st.dataframe(filtered_df[filtered_df['EM_ESPERA']])
+        
         # Calculate totals and averages
         total_patients = filtered_df.shape[0]
         avg_process_time = filtered_df['PROCESS_TIME_HOURS'].mean()
