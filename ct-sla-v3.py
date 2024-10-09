@@ -230,8 +230,8 @@ if uploaded_file is not None:
             plt.grid(True)
             plt.tight_layout()
             st.pyplot(plt)
-else:
-    st.write("Date range is not larger than two days.")
+        else:
+            st.write("Date range is not larger than two days.")
 
 else:
     st.write("Please upload an Excel file to continue.")
