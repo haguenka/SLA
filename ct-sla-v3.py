@@ -211,27 +211,6 @@ if uploaded_file is not None:
             ax6.set_title('Number of FORA DO PRAZO Exams on Top 10 Worst Days (with Dates)')
             st.pyplot(fig6)
 
-        # Extract day of the week and full date
-        filtered_df['DAY_OF_WEEK'] = filtered_df['DATA'].dt.day_name()
-        filtered_df['FULL_DATE'] = filtered_df['DATA'].dt.date
-        
-        # Calculate average process time per day of the week
-        average_process_time = filtered_df.groupby('DAY_OF_WEEK').agg({'TEMPO_PROCESSAMENTO': 'mean', 'FULL_DATE': 'first'}).reset_index()
-        
-        # Check if the date range is larger than two days
-        if (filtered_df['DATA'].max() - filtered_df['DATA'].min()).days > 2:
-            # Plotting the average process time by day of the week
-            plt.figure(figsize=(10, 6))
-            plt.plot(average_process_time['DAY_OF_WEEK'], average_process_time['TEMPO_PROCESSAMENTO'], marker='o')
-            plt.xlabel('Day of the Week')
-            plt.ylabel('Average Process Time (minutes)')
-            plt.title('Average Process Time by Day of the Week')
-            plt.xticks(rotation=45)
-            plt.grid(True)
-            plt.tight_layout()
-            st.pyplot(plt)
-        else:
-            st.write("Date range is not larger than two days.")
 
 else:
     st.write("Please upload an Excel file to continue.")
