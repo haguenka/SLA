@@ -196,6 +196,7 @@ if uploaded_file is not None:
         ax3.set_title('Average Process Time by SLA Category')
         st.pyplot(fig3)
 
+
         # Average Process Time by Day of the Week (Line Graph)
         if date_option == 'Date Range' and (end_date - start_date).days > 3:
             st.write(f"### Average Process Time by Day of the Week for {selected_unidade}")
@@ -206,6 +207,7 @@ if uploaded_file is not None:
             fig4, ax4 = plt.subplots()
             avg_process_by_day = avg_process_by_day.reindex(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
             avg_process_by_day.plot(kind='line', marker='o', ax=ax4)
+            ax4.set_xticks(range(len(avg_process_by_day)))
             ax4.set_xticklabels(avg_process_by_day.index, rotation=45, ha='right')
             ax4.set_ylabel('Average Time (hours)')
             ax4.set_title('Average Process Time by Day of the Week')
