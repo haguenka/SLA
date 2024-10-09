@@ -19,8 +19,11 @@ if uploaded_file is not None:
     filtered_df['DATA_HORA_PRESCRICAO'] = pd.to_datetime(filtered_df['DATA_HORA_PRESCRICAO'], dayfirst=True, errors='coerce')
     filtered_df['STATUS_ALAUDAR'] = pd.to_datetime(filtered_df['STATUS_ALAUDAR'], dayfirst=True, errors='coerce')
 
-    # Drop rows where the date conversion failed (i.e., rows with NaT in either datetime column)
-    filtered_df = filtered_df.dropna(subset=['DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR'])
+    # Create the "EM ESPERA" flag for rows where STATUS_ALAUDAR is empty
+    filtered_df['EM_ESPERA'] = filtered_df['STATUS_ALAUDAR'].isna()
+
+    # Drop rows where the prescription date is invalid
+    filtered_df = filtered_df.dropna(subset=['DATA_HORA_PRESCRICAO'])
 
     # Sidebar for selecting UNIDADE and Date
     st.sidebar.header("Filter Options")
@@ -34,7 +37,7 @@ if uploaded_file is not None:
 
     # Date selection (specific day or range)
     date_option = st.sidebar.radio("Select Date Option", ['Specific Day', 'Date Range'])
-    
+
     if date_option == 'Specific Day':
         selected_date = st.sidebar.date_input("Choose a day", value=pd.to_datetime('today'))
         # Filter for the specific day (start from 7 AM and end at 6:59 AM next day)
@@ -55,10 +58,10 @@ if uploaded_file is not None:
         st.write("No data available for the selected UNIDADE and date range.")
     else:
         # Display the filtered dataframe
-        st.write(f"### Filtered Data for {selected_unidade}")
+        st.markdown(f"### Filtered Data for {selected_unidade}")
         st.dataframe(filtered_df)
 
-        # Calculate the time difference (in hours)
+        # Calculate the time difference (in hours) for rows where STATUS_ALAUDAR is not NaT
         filtered_df['PROCESS_TIME_HOURS'] = (filtered_df['STATUS_ALAUDAR'] - filtered_df['DATA_HORA_PRESCRICAO']).dt.total_seconds() / 3600
 
         # Classify into time intervals
@@ -82,12 +85,11 @@ if uploaded_file is not None:
 
         # Function to get the adjusted day of the week (7 AM to 7 AM next day)
         def get_adjusted_day_of_week(datetime_val):
-            # If the time is between 00:00 and 06:59, count it as the previous day
             if datetime_val.hour < 7:
                 adjusted_datetime = datetime_val - pd.Timedelta(days=1)  # Move to the previous day
             else:
                 adjusted_datetime = datetime_val
-            return adjusted_datetime.day_name()  # Return the day of the week
+            return adjusted_datetime.day_name()
 
         # Apply the adjusted day of the week logic
         filtered_df['DAY_OF_WEEK'] = filtered_df['DATA_HORA_PRESCRICAO'].apply(get_adjusted_day_of_week)
@@ -111,39 +113,76 @@ if uploaded_file is not None:
         st.write(f"### Processed Data with SLA Status for {selected_unidade}")
         st.dataframe(filtered_df[['DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR', 'PROCESS_TIME_HOURS', 'SLA_STATUS', 'FORA_DO_PRAZO']])
 
+        # Display the dataframe with only "EM ESPERA" flagged cases
+        st.markdown("### Data with 'EM ESPERA' Flag")
+        espera_df = filtered_df[filtered_df['EM_ESPERA'] == True]
+        st.dataframe(espera_df[['EM_ESPERA', 'NOME_PACIENTE', 'DESCRICAO_PROCEDIMENTO', 'DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR', 'SLA_STATUS']])
+
+
         # Calculate totals and averages
-        total_patients = filtered_df.shape[0]  # Total patients
-        avg_process_time = filtered_df['PROCESS_TIME_HOURS'].mean()  # Average process time
+        total_patients = filtered_df.shape[0]
+        avg_process_time = filtered_df['PROCESS_TIME_HOURS'].mean()
 
-        # Heatmap for day of the week and time of day
-        heatmap_data = filtered_df.groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
+        # --- Layout starts here ---
+        st.markdown("## Overview")
+        st.markdown(f"**Total Patients Processed**: {total_patients}")
+        st.markdown(f"**Average Process Time (in hours)**: {avg_process_time:.2f}")
 
-        # Display the heatmap for number of exams by day and period
-        st.write(f"### Heatmap of Exams by Day and Time Period for {selected_unidade}")
-        fig4, ax4 = plt.subplots(figsize=(10, 6))
-        sns.heatmap(heatmap_data, annot=True, fmt='d', cmap='coolwarm', ax=ax4)
-        ax4.set_title('Number of Exams by Day and Time Period')
-        st.pyplot(fig4)
+        # Group graphs in two columns for cleaner layout
+        col1, col2 = st.columns(2)
 
-        # Correlate heatmap with SLA status (exams within SLA vs outside SLA)
-        sla_heatmap_data = filtered_df[filtered_df['SLA_STATUS'] == 'Within SLA'].groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
+        with col1:
+            st.markdown("### SLA Violations Pie Chart")
+            fig2, ax2 = plt.subplots()
+            violation_data = [filtered_df[filtered_df['FORA_DO_PRAZO']].shape[0], filtered_df[~filtered_df['FORA_DO_PRAZO']].shape[0]]
+            labels = ['FORA DO PRAZO', 'Within SLA']
+            ax2.pie(violation_data, labels=labels, autopct='%1.1f%%', startangle=90, colors=['#ff9999', '#99ff99'])
+            ax2.set_title('SLA Violations')
+            st.pyplot(fig2)
 
-        st.write(f"### Heatmap of Exams within SLA by Day and Time Period for {selected_unidade}")
-        fig5, ax5 = plt.subplots(figsize=(10, 6))
-        sns.heatmap(sla_heatmap_data, annot=True, fmt='d', cmap='Blues', ax=ax5)
-        ax5.set_title('Exams Within SLA by Day and Time Period')
-        st.pyplot(fig5)
+        with col2:
+            st.markdown("### Average Process Time by SLA Category")
+            avg_process_by_sla = filtered_df.groupby('SLA_STATUS')['PROCESS_TIME_HOURS'].mean()
+            fig3, ax3 = plt.subplots()
+            avg_process_by_sla.plot(kind='bar', ax=ax3, color='#66b3ff')
+            ax3.set_ylabel('Average Time (hours)')
+            ax3.set_title('Average Process Time by SLA Category')
+            st.pyplot(fig3)
+
+        st.markdown("---")
+        st.markdown("## Heatmaps")
+
+        # Group heatmaps into another two-column layout
+        col3, col4 = st.columns(2)
+
+        with col3:
+            st.markdown("### Heatmap of Exams by Day and Time Period")
+            heatmap_data = filtered_df.groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
+            fig4, ax4 = plt.subplots(figsize=(10, 6))
+            sns.heatmap(heatmap_data, annot=True, fmt='d', cmap='coolwarm', ax=ax4)
+            ax4.set_title('Number of Exams by Day and Time Period')
+            st.pyplot(fig4)
+
+        with col4:
+            st.markdown("### Heatmap of Exams within SLA by Day and Time Period")
+            sla_heatmap_data = filtered_df[filtered_df['SLA_STATUS'] == 'Within SLA'].groupby(['DAY_OF_WEEK', 'TIME_PERIOD']).size().unstack(fill_value=0)
+            fig5, ax5 = plt.subplots(figsize=(10, 6))
+            sns.heatmap(sla_heatmap_data, annot=True, fmt='d', cmap='Blues', ax=ax5)
+            ax5.set_title('Exams Within SLA by Day and Time Period')
+            st.pyplot(fig5)
+
+        # Worst day analysis
+        st.markdown("---")
+        st.markdown("## Top 10 Worst Days by FORA DO PRAZO Count")
 
         # Group by Date, Day of Week, and Time Period for the worst days analysis
         worst_days = filtered_df[filtered_df['FORA_DO_PRAZO']].groupby(['DATE', 'DAY_OF_WEEK', 'TIME_PERIOD']).size().reset_index(name='FORA_DO_PRAZO_COUNT')
         worst_days = worst_days.sort_values(by='FORA_DO_PRAZO_COUNT', ascending=False).head(10)
 
         if worst_days.shape[0] > 0:
-            st.write("### Top 10 Worst Days by FORA DO PRAZO Count with Day and Period")
             st.dataframe(worst_days)
 
-            # Heatmap for day of the week and time of day for FORA DO PRAZO exams
-            st.write("### Highlighting Top 10 Worst Days on Heatmap")
+            st.markdown("### Heatmap of FORA DO PRAZO on Top 10 Worst Days")
             worst_day_labels = worst_days['DATE'].astype(str).tolist()
 
             # Filter only FORA DO PRAZO exams for the worst days
@@ -156,10 +195,8 @@ if uploaded_file is not None:
             # Create annotation text for the heatmap with both "FORA DO PRAZO" counts and dates
             def create_annotation_text(row, col, data, worst_days):
                 if data.at[row, col] > 0:
-                    # Find matching date from worst_days for the row and col
                     matched_rows = worst_days[(worst_days['DAY_OF_WEEK'] == row) & (worst_days['TIME_PERIOD'] == col)]
                     if not matched_rows.empty:
-                        # Combine dates and count in the annotation text
                         dates = ', '.join(matched_rows['DATE'].astype(str).values)
                         return f"{data.at[row, col]} ({dates})"
                 return ""
@@ -168,50 +205,11 @@ if uploaded_file is not None:
             annotations = [[create_annotation_text(row, col, worst_day_heatmap_data, worst_days)
                             for col in worst_day_heatmap_data.columns] for row in worst_day_heatmap_data.index]
 
-            # Display the heatmap for the top 10 worst days with "FORA DO PRAZO" count and date as annotations
+            # Display the heatmap for the top 10 worst days
             fig6, ax6 = plt.subplots(figsize=(10, 6))
             sns.heatmap(worst_day_heatmap_data, annot=annotations, fmt='', cmap='Reds', ax=ax6, cbar=False)
             ax6.set_title('Number of FORA DO PRAZO Exams on Top 10 Worst Days (with Dates)')
             st.pyplot(fig6)
-
-        # Total Patients Processed and Average Process Time
-        st.write(f"**Total Patients Processed**: {total_patients}")
-        st.write(f"**Average Process Time (in hours)**: {avg_process_time:.2f}")
-
-        # SLA Violations Plot (Pie Chart)
-        st.write(f"### SLA Violations (FORA DO PRAZO) for {selected_unidade}")
-        fig2, ax2 = plt.subplots()
-        violation_data = [filtered_df[filtered_df['FORA_DO_PRAZO']].shape[0], filtered_df[~filtered_df['FORA_DO_PRAZO']].shape[0]]
-        labels = ['FORA DO PRAZO', 'Within SLA']
-        ax2.pie(violation_data, labels=labels, autopct='%1.1f%%', startangle=90, colors=['#ff9999', '#99ff99'])
-        ax2.set_title('SLA Violations')
-        st.pyplot(fig2)
-
-        # Average Process Time by SLA Category (Bar Chart)
-        st.write(f"### Average Process Time by SLA Category for {selected_unidade}")
-        avg_process_by_sla = filtered_df.groupby('SLA_STATUS')['PROCESS_TIME_HOURS'].mean()
-        fig3, ax3 = plt.subplots()
-        avg_process_by_sla.plot(kind='bar', ax=ax3, color='#66b3ff')
-        ax3.set_ylabel('Average Time (hours)')
-        ax3.set_title('Average Process Time by SLA Category')
-        st.pyplot(fig3)
-
-
-        # Average Process Time by Day of the Week (Line Graph)
-        if date_option == 'Date Range' and (end_date - start_date).days > 3:
-            st.write(f"### Average Process Time by Day of the Week for {selected_unidade}")
-            filtered_df['DayOfWeek'] = filtered_df['DATA_HORA_PRESCRICAO'].dt.day_name()
-            avg_process_by_day = filtered_df.groupby('DayOfWeek')['PROCESS_TIME_HOURS'].mean()
-            
-            # Plotting the line graph
-            fig4, ax4 = plt.subplots()
-            avg_process_by_day = avg_process_by_day.reindex(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
-            avg_process_by_day.plot(kind='line', marker='o', ax=ax4)
-            ax4.set_xticks(range(len(avg_process_by_day)))
-            ax4.set_xticklabels(avg_process_by_day.index, rotation=45, ha='right')
-            ax4.set_ylabel('Average Time (hours)')
-            ax4.set_title('Average Process Time by Day of the Week')
-            st.pyplot(fig4)
 
 else:
     st.write("Please upload an Excel file to continue.")
