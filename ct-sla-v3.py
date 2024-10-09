@@ -196,9 +196,6 @@ if uploaded_file is not None:
         ax3.set_title('Average Process Time by SLA Category')
         st.pyplot(fig3)
 
-else:
-    st.write("Please upload an Excel file to continue.")
-
         # Average Process Time by Day of the Week (Line Graph)
         if date_option == 'Date Range' and (end_date - start_date).days > 3:
             st.write(f"### Average Process Time by Day of the Week for {selected_unidade}")
@@ -212,3 +209,6 @@ else:
             ax4.set_ylabel('Average Time (hours)')
             ax4.set_title('Average Process Time by Day of the Week')
             st.pyplot(fig4)
+
+else:
+    st.write("Please upload an Excel file to continue.")
