@@ -206,6 +206,7 @@ if uploaded_file is not None:
             fig4, ax4 = plt.subplots()
             avg_process_by_day = avg_process_by_day.reindex(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
             avg_process_by_day.plot(kind='line', marker='o', ax=ax4)
+            ax4.set_xticklabels(avg_process_by_day.index, rotation=45, ha='right')
             ax4.set_ylabel('Average Time (hours)')
             ax4.set_title('Average Process Time by Day of the Week')
             st.pyplot(fig4)
