@@ -68,12 +68,7 @@ if st.session_state['vacancy_data']:
             if day != 0:
                 day_date = date(year, month, day)
                 doctors = ", ".join(calendar_dict[day_date]) if day_date in calendar_dict else ""
-                fig.add_trace(go.Scatter(
-                    x=[week_days[day_idx]],
-                    y=[week_idx],
-                    mode='markers+text',
-                    marker=dict(size=50, color='darkslateblue', line=dict(width=2, color='white')),
-                    text=[f"{day}\n{doctors}"],
+                fig.add_trace(go.Scatter(x=[week_days[day_idx]], y=[week_idx], mode='markers+text', marker=dict(size=50, color='darkslateblue', line=dict(width=2, color='white')), text=[f"{day}: {doctors}"],
                     textposition='middle center',
                     textfont=dict(color='white')
                 ))
