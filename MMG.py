@@ -10,12 +10,12 @@ with st.sidebar:
     st.title('Navigation')
     menu_options = [
         'Upload File',
-        'Numero Total de MMG',
-        'MMG por dia',
+        'Total Number of Exams',
+        'Number of Studies per Day',
         'SLA Compliance',
         'SLA Compliance Over Time',
         'Number of Exams per Unidade',
-        'Laudos por Medica'
+        'Count by Medico Laudo Definitivo'
     ]
     selection = st.radio('Go to', menu_options)
 
@@ -53,12 +53,12 @@ if file is not None:
         elif isinstance(date_selection, pd.Timestamp):
             filtered_df = filtered_df[filtered_df['DATA_HORA_PRESCRICAO'].dt.date == date_selection]
 
-        if selection == 'Numero Total de MMG':
+        if selection == 'Total Number of Exams':
             # Total number of exams
             total_exams = filtered_df.shape[0]
             st.write(f'Total number of mammogram exams: {total_exams}')
 
-        elif selection == 'MMG por dia':
+        elif selection == 'Number of Studies per Day':
             # Line graph of studies (number x day in full date format including day of week)
             line_data = filtered_df['DATA_HORA_PRESCRICAO'].dt.date.value_counts().sort_index()
             if not line_data.empty:
@@ -111,8 +111,8 @@ if file is not None:
             else:
                 st.write("No data available for the selected filters.")
 
-        elif selection == 'Laudos por Medica':
-            # Drop-down to select "MEDICO_LAUDO_DEFINITIVO" and count events
+        elif selection == 'Count by Medico Laudo Definitivo':
+            # Drop-down to select "MEDICO_LAUDO_DEFINITIVO" and count events based on filtered data
             medico_selected = st.sidebar.selectbox('Select Medico Laudo Definitivo', filtered_df['MEDICO_LAUDO_DEFINITIVO'].dropna().unique())
             medico_filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == medico_selected]
             total_by_medico = medico_filtered_df.shape[0]
