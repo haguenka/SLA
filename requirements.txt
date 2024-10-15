@@ -3,4 +3,3 @@ seaborn
 pandas
 openpyxl
 PyMuPDF
-plotly.express
