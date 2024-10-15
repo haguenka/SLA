@@ -3,3 +3,5 @@ seaborn
 pandas
 openpyxl
 PyMuPDF
+plotly.express
+streamlit_calendly
