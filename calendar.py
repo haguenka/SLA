@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
 import calendar
-import itertools
+import plotly.graph_objects as go
 
 # Data structure to hold doctor's vacancy periods
 if 'vacancy_data' not in st.session_state:
@@ -33,8 +33,8 @@ if st.session_state['vacancy_data']:
     st.write("### Current Vacancy Periods")
     st.dataframe(df)
 
-    # Create a classic calendar view to display doctor names on respective days
-    st.write("### Classic Calendar View")
+    # Create a modern calendar view to display doctor names on respective days
+    st.write("### Modern Calendar View")
     month = st.selectbox("Select Month", range(1, 13))
     year = st.selectbox("Select Year", range(date.today().year, date.today().year + 5))
     df['Start Date'] = pd.to_datetime(df['Start Date'])
@@ -57,23 +57,34 @@ if st.session_state['vacancy_data']:
                 calendar_dict[current_date].append(row['Doctor'])
             current_date += timedelta(days=1)
 
-    # Display the calendar in a grid format
-    st.write(f"### {calendar.month_name[month]} {year}")
+    # Create a modern calendar using Plotly
     week_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    st.markdown("| " + " | ".join(week_days) + " |")
-    st.markdown("|" + " --- |" * 7)
-
-    # Generate calendar weeks
     weeks = calendar.monthcalendar(year, month)
-    for week in weeks:
-        week_str = "| "
-        for day in week:
-            if day == 0:
-                week_str += "    | "
-            else:
+
+    fig = go.Figure()
+
+    for week_idx, week in enumerate(weeks):
+        for day_idx, day in enumerate(week):
+            if day != 0:
                 day_date = date(year, month, day)
                 doctors = ", ".join(calendar_dict[day_date]) if day_date in calendar_dict else ""
-                week_str += f"{day} {doctors} | "
-        st.markdown(week_str)
+                fig.add_trace(go.Scatter(
+                    x=[week_days[day_idx]],
+                    y=[week_idx],
+                    mode='markers+text',
+                    marker=dict(size=50, color='lightblue', line=dict(width=2, color='blue')),
+                    text=[f"{day}\n{doctors}"],
+                    textposition='middle center'
+                ))
+
+    fig.update_layout(
+        title=f"Doctor Vacancy Calendar - {calendar.month_name[month]} {year}",
+        xaxis=dict(title='Day of Week', tickmode='array', tickvals=week_days),
+        yaxis=dict(title='Week of Month', tickmode='array', tickvals=list(range(len(weeks))), autorange='reversed'),
+        plot_bgcolor='white',
+        showlegend=False
+    )
+
+    st.plotly_chart(fig)
 else:
     st.write("No vacancy periods added yet.")
