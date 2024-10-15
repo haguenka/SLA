@@ -1,10 +1,7 @@
+import plotly.express as px
 import streamlit as st
 import pandas as pd
 from datetime import date
-from streamlit_calendly import st_calendly
-import plotly.express as px
-import calendar
-import datetime
 
 # Data structure to hold doctor's vacancy periods
 if 'vacancy_data' not in st.session_state:
