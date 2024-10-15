@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
 import calendar
+import itertools
 
 # Data structure to hold doctor's vacancy periods
 if 'vacancy_data' not in st.session_state:
@@ -39,39 +40,40 @@ if st.session_state['vacancy_data']:
     df['Start Date'] = pd.to_datetime(df['Start Date'])
     df['End Date'] = pd.to_datetime(df['End Date'])
 
-    # Initialize calendar grid
-    cal = calendar.monthcalendar(year, month)
-    calendar_display = [['' for _ in range(7)] for _ in range(len(cal))]
+    # Initialize calendar grid for the month
+    days_in_month = calendar.monthrange(year, month)[1]
+    month_dates = [date(year, month, day) for day in range(1, days_in_month + 1)]
 
-    # Populate calendar with doctor names
+    # Create a dictionary to hold doctor availability per day
+    calendar_dict = {day: [] for day in month_dates}
+
+    # Populate the dictionary with doctor names for each day
     for _, row in df.iterrows():
         start_date = row['Start Date']
         end_date = row['End Date']
         current_date = start_date
         while current_date <= end_date:
-            if current_date.year == year and current_date.month == month:
-                week_idx = (current_date.day - 1) // 7
-                day_idx = (current_date.weekday() + 1) % 7
-                if calendar_display[week_idx][day_idx] == '':
-                    calendar_display[week_idx][day_idx] = row['Doctor']
-                else:
-                    calendar_display[week_idx][day_idx] += f", {row['Doctor']}"
+            if current_date in calendar_dict:
+                calendar_dict[current_date].append(row['Doctor'])
             current_date += timedelta(days=1)
 
-    # Display the calendar
+    # Display the calendar in a grid format
     st.write(f"### {calendar.month_name[month]} {year}")
-    st.markdown("| Sun | Mon | Tue | Wed | Thu | Fri | Sat |")
-    st.markdown("| --- | --- | --- | --- | --- | --- | --- |")
-    for week in cal:
+    week_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    st.markdown("| " + " | ".join(week_days) + " |")
+    st.markdown("|" + " --- |" * 7)
+
+    # Generate calendar weeks
+    weeks = calendar.monthcalendar(year, month)
+    for week in weeks:
         week_str = "| "
         for day in week:
             if day == 0:
-                week_str += "     | "
+                week_str += "    | "
             else:
-                week_idx = (day - 1) // 7
-                day_idx = (calendar.weekday(year, month, day) + 1) % 7
-                doctor_str = calendar_display[week_idx][day_idx]
-                week_str += f"{day} {doctor_str if doctor_str else ''} | "
+                day_date = date(year, month, day)
+                doctors = ", ".join(calendar_dict[day_date]) if day_date in calendar_dict else ""
+                week_str += f"{day} {doctors} | "
         st.markdown(week_str)
 else:
     st.write("No vacancy periods added yet.")
