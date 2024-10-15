@@ -25,7 +25,7 @@ if file is not None:
     df = pd.read_excel(file, 'Sheet1')
 
     # Filter relevant rows and columns
-    mamografia_df = df[df['DESCRICAO_PROCEDIMENTO'].str.contains('MAMOGRAFIA', na=False)]
+    mamografia_df = df[df['DESCRICAO_PROCEDIMENTO'].str.contains('MAMOGRAFIA DIGITAL BILATERAL', na=False)]
     mamografia_df = mamografia_df[mamografia_df['MEDICO_SOLICITANTE'].isin(['MARCELO JACOBINA DE ABREU', 'HENRIQUE ARUME GUENKA'])]
 
     # Convert date columns to datetime
