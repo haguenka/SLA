@@ -47,7 +47,7 @@ if st.session_state['vacancy_data']:
         start_date = row['Start Date']
         end_date = row['End Date']
         current_date = start_date
-        while current_date <= end_date:
+        while pd.to_datetime(current_date) <= pd.to_datetime(end_date):
             if current_date.month == month and current_date.year == year:
                 day_str = f"{current_date.day:2}"
                 if day_str in calendar_output:
