@@ -10,12 +10,12 @@ with st.sidebar:
     st.title('Navigation')
     menu_options = [
         'Upload File',
-        'Total Number of Exams',
-        'Number of Studies per Day',
+        'Numero Total de MMG',
+        'MMG por dia',
         'SLA Compliance',
         'SLA Compliance Over Time',
         'Number of Exams per Unidade',
-        'Count by Medico Laudo Definitivo'
+        'Laudos por Medica'
     ]
     selection = st.radio('Go to', menu_options)
 
