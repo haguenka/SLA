@@ -50,7 +50,7 @@ if st.session_state['vacancy_data']:
 
     calendar_df = pd.DataFrame(calendar_data)
     calendar_df['Date'] = pd.to_datetime(calendar_df['Date'])
-calendar_df['Day'] = calendar_df['Date'].dt.day
+    calendar_df['Day'] = calendar_df['Date'].dt.day
     calendar_df['Month'] = calendar_df['Date'].dt.month_name()
 
     # Create a calendar-like heatmap
