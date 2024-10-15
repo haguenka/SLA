@@ -53,12 +53,12 @@ if file is not None:
         elif isinstance(date_selection, pd.Timestamp):
             filtered_df = filtered_df[filtered_df['DATA_HORA_PRESCRICAO'].dt.date == date_selection]
 
-        if selection == 'Total Number of Exams':
+        if selection == 'Numero Total de MMG':
             # Total number of exams
             total_exams = filtered_df.shape[0]
             st.write(f'Total number of mammogram exams: {total_exams}')
 
-        elif selection == 'Number of Studies per Day':
+        elif selection == 'MMG por dia':
             # Line graph of studies (number x day in full date format including day of week)
             line_data = filtered_df['DATA_HORA_PRESCRICAO'].dt.date.value_counts().sort_index()
             if not line_data.empty:
@@ -111,7 +111,7 @@ if file is not None:
             else:
                 st.write("No data available for the selected filters.")
 
-        elif selection == 'Count by Medico Laudo Definitivo':
+        elif selection == 'Laudos por Medica':
             # Drop-down to select "MEDICO_LAUDO_DEFINITIVO" and count events
             medico_selected = st.sidebar.selectbox('Select Medico Laudo Definitivo', filtered_df['MEDICO_LAUDO_DEFINITIVO'].dropna().unique())
             medico_filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == medico_selected]
