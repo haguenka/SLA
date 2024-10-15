@@ -1,7 +1,8 @@
-import plotly.express as px
 import streamlit as st
 import pandas as pd
 from datetime import date
+import calendar
+import datetime
 
 # Data structure to hold doctor's vacancy periods
 if 'vacancy_data' not in st.session_state:
@@ -31,23 +32,5 @@ if st.session_state['vacancy_data']:
     df = pd.DataFrame(st.session_state['vacancy_data'])
     st.write("### Current Vacancy Periods")
     st.dataframe(df)
-
-    # Display a fancy modern calendar to visualize the doctors' names
-    st.write("### Vacancy Calendar View")
-    calendar_data = []
-    for _, row in df.iterrows():
-        start_date = row['Start Date']
-        end_date = row['End Date']
-        current_date = start_date
-        while current_date <= end_date:
-            calendar_data.append({
-                'Doctor': row['Doctor'],
-                'Date': current_date
-            })
-            current_date += datetime.timedelta(days=1)
-
-    calendar_df = pd.DataFrame(calendar_data)
-    fig = px.timeline(calendar_df, x_start='Date', x_end='Date', y='Doctor', title='Doctor Vacancy Calendar', color='Doctor')
-    st.plotly_chart(fig)
 else:
     st.write("No vacancy periods added yet.")
