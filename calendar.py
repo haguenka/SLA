@@ -37,23 +37,41 @@ if st.session_state['vacancy_data']:
     month = st.selectbox("Select Month", range(1, 13))
     year = st.selectbox("Select Year", range(date.today().year, date.today().year + 5))
     df['Start Date'] = pd.to_datetime(df['Start Date'])
-    filtered_calendar_df = df[(df['Start Date'].dt.year == year) & (df['Start Date'].dt.month == month)]
+    df['End Date'] = pd.to_datetime(df['End Date'])
 
-    cal = calendar.TextCalendar(firstweekday=calendar.SUNDAY)
-    calendar_output = cal.formatmonth(year, month)
+    # Initialize calendar grid
+    cal = calendar.monthcalendar(year, month)
+    calendar_display = [['' for _ in range(7)] for _ in range(len(cal))]
 
-    # Display calendar with doctor names on respective days
-    for _, row in filtered_calendar_df.iterrows():
+    # Populate calendar with doctor names
+    for _, row in df.iterrows():
         start_date = row['Start Date']
         end_date = row['End Date']
         current_date = start_date
-        while pd.to_datetime(current_date) <= pd.to_datetime(end_date):
-            if current_date.month == month and current_date.year == year:
-                day_str = f"{current_date.day:2}"
-                if day_str in calendar_output:
-                    calendar_output = calendar_output.replace(day_str, f"{day_str} ({row['Doctor']})")
+        while current_date <= end_date:
+            if current_date.year == year and current_date.month == month:
+                week_idx = (current_date.day - 1) // 7
+                day_idx = (current_date.weekday() + 1) % 7
+                if calendar_display[week_idx][day_idx] == '':
+                    calendar_display[week_idx][day_idx] = row['Doctor']
+                else:
+                    calendar_display[week_idx][day_idx] += f", {row['Doctor']}"
             current_date += timedelta(days=1)
 
-    st.text(calendar_output)
+    # Display the calendar
+    st.write(f"### {calendar.month_name[month]} {year}")
+    st.markdown("| Sun | Mon | Tue | Wed | Thu | Fri | Sat |")
+    st.markdown("| --- | --- | --- | --- | --- | --- | --- |")
+    for week in cal:
+        week_str = "| "
+        for day in week:
+            if day == 0:
+                week_str += "     | "
+            else:
+                week_idx = (day - 1) // 7
+                day_idx = (calendar.weekday(year, month, day) + 1) % 7
+                doctor_str = calendar_display[week_idx][day_idx]
+                week_str += f"{day} {doctor_str if doctor_str else ''} | "
+        st.markdown(week_str)
 else:
     st.write("No vacancy periods added yet.")
