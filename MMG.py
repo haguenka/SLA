@@ -117,5 +117,9 @@ if file is not None:
             medico_filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == medico_selected]
             total_by_medico = medico_filtered_df.shape[0]
             st.write(f'Total number of exams by {medico_selected}: {total_by_medico}')
+
+        # Display the filtered dataframe
+        st.write("Filtered Data:")
+        st.dataframe(filtered_df)
     else:
         st.write("No mammography data found in the uploaded file.")
