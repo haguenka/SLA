@@ -36,6 +36,7 @@ if st.session_state['vacancy_data']:
     st.write("### Classic Calendar View")
     month = st.selectbox("Select Month", range(1, 13))
     year = st.selectbox("Select Year", range(date.today().year, date.today().year + 5))
+    df['Start Date'] = pd.to_datetime(df['Start Date'])
     filtered_calendar_df = df[(df['Start Date'].dt.year == year) & (df['Start Date'].dt.month == month)]
 
     cal = calendar.TextCalendar(firstweekday=calendar.SUNDAY)
