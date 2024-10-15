@@ -14,7 +14,8 @@ with st.sidebar:
         'Number of Studies per Day',
         'SLA Compliance',
         'SLA Compliance Over Time',
-        'Number of Exams per Unidade'
+        'Number of Exams per Unidade',
+        'Count by Medico Laudo Definitivo'
     ]
     selection = st.radio('Go to', menu_options)
 
@@ -109,5 +110,12 @@ if file is not None:
                 st.pyplot(fig4)
             else:
                 st.write("No data available for the selected filters.")
+
+        elif selection == 'Count by Medico Laudo Definitivo':
+            # Drop-down to select "MEDICO_LAUDO_DEFINITIVO" and count events
+            medico_selected = st.sidebar.selectbox('Select Medico Laudo Definitivo', filtered_df['MEDICO_LAUDO_DEFINITIVO'].dropna().unique())
+            medico_filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == medico_selected]
+            total_by_medico = medico_filtered_df.shape[0]
+            st.write(f'Total number of exams by {medico_selected}: {total_by_medico}')
     else:
         st.write("No mammography data found in the uploaded file.")
