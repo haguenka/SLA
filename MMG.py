@@ -45,11 +45,11 @@ if file is not None:
 
         filtered_df = mamografia_df[mamografia_df['UNIDADE'] == unidade_selected]
 
-        if isinstance(date_selection, tuple) and len(date_selection) == 2:
+        if isinstance(date_selection, list) and len(date_selection) == 2:
             start_date, end_date = date_selection
             filtered_df = filtered_df[(filtered_df['DATA_HORA_PRESCRICAO'].dt.date >= start_date) & 
                                       (filtered_df['DATA_HORA_PRESCRICAO'].dt.date <= end_date)]
-        elif isinstance(date_selection, pd.Timestamp):
+        else:
             filtered_df = filtered_df[filtered_df['DATA_HORA_PRESCRICAO'].dt.date == date_selection]
 
         if selection == 'Total Number of Exams':
