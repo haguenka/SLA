@@ -41,16 +41,16 @@ if file is not None:
     # Drop-down selection for "UNIDADE" and specific date/period selection
     if not mamografia_df.empty:
         unidade_selected = st.sidebar.selectbox('Select Unidade', mamografia_df['UNIDADE'].unique())
-        date_selection = st.sidebar.date_input('Select a specific day or period of time', [])
+        date_selection = st.sidebar.date_input('Select a specific day or period of time', value=None, key='date_selection', help='Select a date or a range of dates')
 
         filtered_df = mamografia_df[mamografia_df['UNIDADE'] == unidade_selected]
 
-        if date_selection:
-            if isinstance(date_selection, list) and len(date_selection) == 2:
-                filtered_df = filtered_df[(filtered_df['DATA_HORA_PRESCRICAO'].dt.date >= pd.to_datetime(date_selection[0], dayfirst=True)) & 
-                                          (filtered_df['DATA_HORA_PRESCRICAO'].dt.date <= pd.to_datetime(date_selection[1], dayfirst=True))]
-            else:
-                filtered_df = filtered_df[filtered_df['DATA_HORA_PRESCRICAO'].dt.date == pd.to_datetime(date_selection, dayfirst=True).date()]
+        if isinstance(date_selection, tuple) and len(date_selection) == 2:
+            start_date, end_date = date_selection
+            filtered_df = filtered_df[(filtered_df['DATA_HORA_PRESCRICAO'].dt.date >= start_date) & 
+                                      (filtered_df['DATA_HORA_PRESCRICAO'].dt.date <= end_date)]
+        elif isinstance(date_selection, pd.Timestamp):
+            filtered_df = filtered_df[filtered_df['DATA_HORA_PRESCRICAO'].dt.date == date_selection]
 
         if selection == 'Total Number of Exams':
             # Total number of exams
