@@ -41,7 +41,7 @@ if file is not None:
     # Drop-down selection for "UNIDADE" and specific date/period selection
     if not mamografia_df.empty:
         unidade_selected = st.sidebar.selectbox('Select Unidade', mamografia_df['UNIDADE'].unique())
-        date_selection = st.sidebar.date_input('Select a specific day or period of time', value=None, key='date_selection', help='Select a date or a range of dates')
+        date_selection = st.sidebar.date_input('Select a specific day or period of time', value=(mamografia_df['DATA_HORA_PRESCRICAO'].min(), mamografia_df['DATA_HORA_PRESCRICAO'].max()), key='date_selection', help='Select a date or a range of dates')
 
         filtered_df = mamografia_df[mamografia_df['UNIDADE'] == unidade_selected]
 
