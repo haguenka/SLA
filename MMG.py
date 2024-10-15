@@ -28,9 +28,9 @@ if file is not None:
     mamografia_df = df[df['DESCRICAO_PROCEDIMENTO'].str.contains('MAMOGRAFIA', case=False, na=False)]
     mamografia_df = mamografia_df[mamografia_df['MEDICO_SOLICITANTE'].isin(['MARCELO JACOBINA DE ABREU', 'HENRIQUE ARUME GUENKA'])]
 
-    # Convert date columns to datetime with format specified
-    mamografia_df['DATA_HORA_PRESCRICAO'] = pd.to_datetime(mamografia_df['DATA_HORA_PRESCRICAO'], format='%d/%m/%Y %H:%M', errors='coerce')
-    mamografia_df['STATUS_APROVADO'] = pd.to_datetime(mamografia_df['STATUS_APROVADO'], format='%d/%m/%Y %H:%M', errors='coerce')
+    # Convert date columns to datetime with dayfirst=True
+    mamografia_df['DATA_HORA_PRESCRICAO'] = pd.to_datetime(mamografia_df['DATA_HORA_PRESCRICAO'], dayfirst=True, errors='coerce')
+    mamografia_df['STATUS_APROVADO'] = pd.to_datetime(mamografia_df['STATUS_APROVADO'], dayfirst=True, errors='coerce')
 
     # Filter out invalid dates
     mamografia_df = mamografia_df.dropna(subset=['DATA_HORA_PRESCRICAO', 'STATUS_APROVADO'])
@@ -45,12 +45,12 @@ if file is not None:
 
         filtered_df = mamografia_df[mamografia_df['UNIDADE'] == unidade_selected]
 
-        if isinstance(date_selection, list) and len(date_selection) == 2:
-            start_date, end_date = date_selection
-            filtered_df = filtered_df[(filtered_df['DATA_HORA_PRESCRICAO'].dt.date >= start_date) & 
-                                      (filtered_df['DATA_HORA_PRESCRICAO'].dt.date <= end_date)]
-        else:
-            filtered_df = filtered_df[filtered_df['DATA_HORA_PRESCRICAO'].dt.date == date_selection]
+        if date_selection:
+            if isinstance(date_selection, list) and len(date_selection) == 2:
+                filtered_df = filtered_df[(filtered_df['DATA_HORA_PRESCRICAO'].dt.date >= pd.to_datetime(date_selection[0], dayfirst=True)) & 
+                                          (filtered_df['DATA_HORA_PRESCRICAO'].dt.date <= pd.to_datetime(date_selection[1], dayfirst=True))]
+            else:
+                filtered_df = filtered_df[filtered_df['DATA_HORA_PRESCRICAO'].dt.date == pd.to_datetime(date_selection, dayfirst=True).date()]
 
         if selection == 'Total Number of Exams':
             # Total number of exams
