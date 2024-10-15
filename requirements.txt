@@ -4,3 +4,4 @@ pandas
 openpyxl
 PyMuPDF
 streamlit
+plotly
