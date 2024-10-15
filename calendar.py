@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
 import calendar
-import plotly.graph_objects as go
 
 # Data structure to hold doctor's vacancy periods
 if 'vacancy_data' not in st.session_state:
@@ -33,56 +32,27 @@ if st.session_state['vacancy_data']:
     st.write("### Current Vacancy Periods")
     st.dataframe(df)
 
-    # Create a full calendar to display doctor names on respective days
-    st.write("### Full Vacancy Calendar View")
-    calendar_data = []
-    for _, row in df.iterrows():
+    # Create a classic calendar view to display doctor names on respective days
+    st.write("### Classic Calendar View")
+    month = st.selectbox("Select Month", range(1, 13))
+    year = st.selectbox("Select Year", range(date.today().year, date.today().year + 5))
+    filtered_calendar_df = df[(df['Start Date'].dt.year == year) & (df['Start Date'].dt.month == month)]
+
+    cal = calendar.TextCalendar(firstweekday=calendar.SUNDAY)
+    calendar_output = cal.formatmonth(year, month)
+
+    # Display calendar with doctor names on respective days
+    for _, row in filtered_calendar_df.iterrows():
         start_date = row['Start Date']
         end_date = row['End Date']
         current_date = start_date
         while current_date <= end_date:
-            calendar_data.append({
-                'Doctor': row['Doctor'],
-                'Date': current_date
-            })
+            if current_date.month == month and current_date.year == year:
+                day_str = f"{current_date.day:2}"
+                if day_str in calendar_output:
+                    calendar_output = calendar_output.replace(day_str, f"{day_str} ({row['Doctor']})")
             current_date += timedelta(days=1)
 
-    calendar_df = pd.DataFrame(calendar_data)
-    calendar_df['Date'] = pd.to_datetime(calendar_df['Date'])
-
-    # Create a calendar grid
-    st.write("### Monthly Calendar View")
-    month = st.selectbox("Select Month", list(calendar_df['Date'].dt.month.unique()))
-    year = st.selectbox("Select Year", list(calendar_df['Date'].dt.year.unique()))
-    filtered_calendar_df = calendar_df[(calendar_df['Date'].dt.month == month) & (calendar_df['Date'].dt.year == year)]
-
-    month_calendar = calendar.monthcalendar(year, month)
-    fig = go.Figure()
-
-    for week in month_calendar:
-        for day in week:
-            if day != 0:
-                day_date = date(year, month, day)
-                day_data = filtered_calendar_df[filtered_calendar_df['Date'] == day_date]
-                doctors = ', '.join(day_data['Doctor'].unique()) if not day_data.empty else ''
-                fig.add_trace(go.Scatter(
-                    x=[day],
-                    y=[week.index(day)],
-                    mode='markers+text',
-                    text=[doctors],
-                    textposition='top center',
-                    marker=dict(size=15),
-                    name=f"Day {day}"
-                ))
-
-    fig.update_layout(
-        title='Doctor Vacancy Calendar',
-        xaxis_title='Day of Month',
-        yaxis_title='Week',
-        xaxis=dict(tickmode='array', tickvals=list(range(1, 32))),
-        yaxis=dict(tickmode='array', tickvals=list(range(0, len(month_calendar))))
-    )
-
-    st.plotly_chart(fig)
+    st.text(calendar_output)
 else:
     st.write("No vacancy periods added yet.")
