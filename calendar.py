@@ -72,16 +72,21 @@ if st.session_state['vacancy_data']:
                     x=[week_days[day_idx]],
                     y=[week_idx],
                     mode='markers+text',
-                    marker=dict(size=50, color='lightblue', line=dict(width=2, color='blue')),
+                    marker=dict(size=50, color='darkslateblue', line=dict(width=2, color='white')),
                     text=[f"{day}\n{doctors}"],
-                    textposition='middle center'
+                    textposition='middle center',
+                    textfont=dict(color='white')
                 ))
 
     fig.update_layout(
         title=f"Doctor Vacancy Calendar - {calendar.month_name[month]} {year}",
-        xaxis=dict(title='Day of Week', tickmode='array', tickvals=week_days),
-        yaxis=dict(title='Week of Month', tickmode='array', tickvals=list(range(len(weeks))), autorange='reversed'),
-        plot_bgcolor='white',
+        xaxis=dict(title='Day of Week', tickmode='array', tickvals=week_days, linecolor='white', gridcolor='gray'),
+        yaxis=dict(title='Week of Month', tickmode='array', tickvals=list(range(len(weeks))), autorange='reversed', linecolor='white', gridcolor='gray'),
+        plot_bgcolor='black',
+        paper_bgcolor='black',
+        title_font=dict(color='white'),
+        xaxis_title_font=dict(color='white'),
+        yaxis_title_font=dict(color='white'),
         showlegend=False
     )
 
