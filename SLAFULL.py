@@ -2,14 +2,12 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from PIL import Image
+import requests
+from io import BytesIO
 
 # Streamlit app
 def main():
     st.title("SLA Analysis Dashboard")
-
-    # Load and display logo
-    import requests
-from io import BytesIO
 
     # Load and display logo from GitHub
     url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
