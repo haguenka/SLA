@@ -1,10 +1,15 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+from PIL import Image
 
 # Streamlit app
 def main():
     st.title("SLA Analysis Dashboard")
+
+    # Load and display logo
+    logo = Image.open("/mnt/data/image.png")
+    st.image(logo, use_column_width=True)
 
     # File upload
     uploaded_file = st.file_uploader("Upload an Excel file for SLA Analysis", type=['xlsx'])
