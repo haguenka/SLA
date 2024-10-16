@@ -101,8 +101,8 @@ def main():
             sla_status_counts = df_filtered['SLA_STATUS'].value_counts()
             colors = ['lightcoral' if status == 'SLA FORA DO PERÍODO' else 'lightgreen' for status in sla_status_counts.index]
             fig, ax = plt.subplots()
-            logo = logo.resize((300, 200))
-            fig.figimage(logo, 30, fig.bbox.ymax - 20, zorder=1, alpha=0.8)
+            logo = logo.resize((400, 200))
+            fig.figimage(logo, 30, fig.bbox.ymax - 80, zorder=1, alpha=0.8)
             ax.pie(sla_status_counts, labels=sla_status_counts.index, autopct='%1.1f%%', colors=colors)
             ax.set_title(f'SLA Status - {selected_unidade} - {selected_grupo} - {selected_tipo_atendimento}')
 
