@@ -17,7 +17,7 @@ def main():
 
     # File upload
     st.sidebar.header("Upload File")
-        uploaded_file = st.sidebar.file_uploader("Upload an Excel file for SLA Analysis", type=['xlsx'])
+    uploaded_file = st.sidebar.file_uploader("Upload an Excel file for SLA Analysis", type=['xlsx'])
     if uploaded_file is not None:
         try:
             # Load the Excel file
