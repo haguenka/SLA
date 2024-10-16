@@ -54,21 +54,25 @@ def main():
 
             df_selected = df[selected_columns]
 
-            # Sidebar dropdown for selecting UNIDADE and GRUPO
+            # Sidebar dropdown for selecting UNIDADE, GRUPO, and TIPO_ATENDIMENTO
             unidade_options = df['UNIDADE'].unique()
             selected_unidade = st.sidebar.selectbox("Select UNIDADE", unidade_options)
 
             grupo_options = df['GRUPO'].unique()
             selected_grupo = st.sidebar.selectbox("Select GRUPO", grupo_options)
 
+            tipo_atendimento_options = df['TIPO_ATENDIMENTO'].unique()
+            selected_tipo_atendimento = st.sidebar.selectbox("Select TIPO_ATENDIMENTO", tipo_atendimento_options)
+
             # Date range selection
             min_date = df['STATUS_ALAUDAR'].min()
             max_date = df['STATUS_ALAUDAR'].max()
             start_date, end_date = st.sidebar.date_input("Select Date Range", [min_date, max_date])
 
-            # Filter dataframe based on selected UNIDADE, GRUPO, and date range
+            # Filter dataframe based on selected UNIDADE, GRUPO, TIPO_ATENDIMENTO, and date range
             df_filtered = df_selected[(df_selected['UNIDADE'] == selected_unidade) &
                                       (df_selected['GRUPO'] == selected_grupo) &
+                                      (df_selected['TIPO_ATENDIMENTO'] == selected_tipo_atendimento) &
                                       (df_selected['STATUS_ALAUDAR'] >= pd.Timestamp(start_date)) &
                                       (df_selected['STATUS_ALAUDAR'] <= pd.Timestamp(end_date))]
 
@@ -79,7 +83,7 @@ def main():
             sla_status_counts = df_filtered['SLA_STATUS'].value_counts()
             fig, ax = plt.subplots()
             ax.pie(sla_status_counts, labels=sla_status_counts.index, autopct='%1.1f%%', colors=['lightgreen', 'lightcoral'])
-            ax.set_title(f'SLA Status Distribution for {selected_unidade} - {selected_grupo}')
+            ax.set_title(f'SLA Status Distribution for {selected_unidade} - {selected_grupo} - {selected_tipo_atendimento}')
 
             # Display the pie chart
             st.pyplot(fig)
