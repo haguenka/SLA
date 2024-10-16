@@ -16,8 +16,8 @@ def main():
     st.sidebar.image(logo, use_column_width=True)
 
     # File upload
-    st.sidebar.header("Carregar arquivo EXCEL (.xlsx)")
-    uploaded_file = st.sidebar.file_uploader("Upload an Excel file for SLA Analysis", type=['xlsx'])
+    st.sidebar.header("Carregar arquivo")
+    uploaded_file = st.sidebar.file_uploader("Escolher um arquivo Excel", type=['xlsx'])
     if uploaded_file is not None:
         try:
             # Load the Excel file
