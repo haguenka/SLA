@@ -70,18 +70,18 @@ def main():
 
             # Sidebar dropdown for selecting UNIDADE, GRUPO, and TIPO_ATENDIMENTO
             unidade_options = df['UNIDADE'].unique()
-            selected_unidade = st.sidebar.selectbox("Select UNIDADE", unidade_options)
+            selected_unidade = st.sidebar.selectbox("Selecione a UNIDADE", unidade_options)
 
             grupo_options = df['GRUPO'].unique()
-            selected_grupo = st.sidebar.selectbox("Select GRUPO", grupo_options)
+            selected_grupo = st.sidebar.selectbox("Selecione o GRUPO", grupo_options)
 
             tipo_atendimento_options = df['TIPO_ATENDIMENTO'].unique()
-            selected_tipo_atendimento = st.sidebar.selectbox("Select TIPO_ATENDIMENTO", tipo_atendimento_options)
+            selected_tipo_atendimento = st.sidebar.selectbox("Selecione o Tipo de Atendimento", tipo_atendimento_options)
 
             # Date range selection
             min_date = df['STATUS_ALAUDAR'].min()
             max_date = df['STATUS_ALAUDAR'].max()
-            start_date, end_date = st.sidebar.date_input("Select Date Range", [min_date, max_date])
+            start_date, end_date = st.sidebar.date_input("Selecione o periodo", [min_date, max_date])
 
             # Filter dataframe based on selected UNIDADE, GRUPO, TIPO_ATENDIMENTO, and date range
             df_filtered = df_selected[(df_selected['UNIDADE'] == selected_unidade) &
