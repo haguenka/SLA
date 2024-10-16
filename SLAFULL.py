@@ -8,7 +8,7 @@ def main():
     st.title("SLA Analysis Dashboard")
 
     # Load and display logo
-    logo = Image.open(uploaded_file)
+    logo = Image.open("/mnt/data/image.png")
     st.image(logo, use_column_width=True)
 
     # File upload
