@@ -102,7 +102,7 @@ def main():
             colors = ['lightcoral' if status == 'SLA FORA DO PERÍODO' else 'lightgreen' for status in sla_status_counts.index]
             fig, ax = plt.subplots()
             ax.pie(sla_status_counts, labels=sla_status_counts.index, autopct='%1.1f%%', colors=colors)
-            ax.set_title(f'SLA Status Distribution for {selected_unidade} - {selected_grupo} - {selected_tipo_atendimento}')
+            ax.set_title(f'SLA Status - {selected_unidade} - {selected_grupo} - {selected_tipo_atendimento}')
 
             # Display the pie chart
             st.pyplot(fig)
