@@ -13,7 +13,7 @@ def main():
             # Load the Excel file
             df = pd.read_excel(uploaded_file)
 
-            # Filter by GRUPO to include only 'GRUPO TOMOGRAFIA' and 'GRUPO RESSONANCIA MAGNETICA'
+            # Filter by GRUPO to include only specific groups
             allowed_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO RAIO-X', 'GRUPO MAMOGRAFIA', 'GRUPO MEDICINA NUCLEAR', 'GRUPO ULTRASSOM']
             df = df[df['GRUPO'].isin(allowed_groups)]
 
@@ -35,9 +35,11 @@ def main():
 
             # Define the conditions for SLA violations
             conditions = [
-                (df['TIPO_ATENDIMENTO'] == 'Pronto Atendimento') & (df['DELTA_TIME'] > 1),
-                (df['TIPO_ATENDIMENTO'] == 'Internado') & (df['DELTA_TIME'] > 24),
-                (df['TIPO_ATENDIMENTO'] == 'Externo') & (df['DELTA_TIME'] > 72)
+                (df['GRUPO'] == 'GRUPO RAIO-X') & (df['DELTA_TIME'] > 72),
+                (df['GRUPO'].isin(['GRUPO MAMOGRAFIA', 'GRUPO MEDICINA NUCLEAR'])) & (df['DELTA_TIME'] > (5 * 24)),
+                (df['TIPO_ATENDIMENTO'] == 'Pronto Atendimento') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 1),
+                (df['TIPO_ATENDIMENTO'] == 'Internado') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 24),
+                (df['TIPO_ATENDIMENTO'] == 'Externo') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 72)
             ]
 
             # Set the default SLA status and apply conditions
@@ -45,6 +47,8 @@ def main():
             df.loc[conditions[0], 'SLA_STATUS'] = 'SLA FORA DO PERÍODO'
             df.loc[conditions[1], 'SLA_STATUS'] = 'SLA FORA DO PERÍODO'
             df.loc[conditions[2], 'SLA_STATUS'] = 'SLA FORA DO PERÍODO'
+            df.loc[conditions[3], 'SLA_STATUS'] = 'SLA FORA DO PERÍODO'
+            df.loc[conditions[4], 'SLA_STATUS'] = 'SLA FORA DO PERÍODO'
 
             # Select only relevant columns
             selected_columns = [
