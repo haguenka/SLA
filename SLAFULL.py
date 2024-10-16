@@ -79,6 +79,10 @@ def main():
             # Display the filtered dataframe
             st.dataframe(df_filtered)
 
+            # Display total number of exams
+            total_exams = len(df_filtered)
+            st.write(f"Total number of exams: {total_exams}")
+
             # Generate SLA_STATUS pie chart
             sla_status_counts = df_filtered['SLA_STATUS'].value_counts()
             fig, ax = plt.subplots()
