@@ -8,7 +8,13 @@ def main():
     st.title("SLA Analysis Dashboard")
 
     # Load and display logo
-    logo = Image.open('image.png')
+    import requests
+from io import BytesIO
+
+    # Load and display logo from GitHub
+    url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
+    response = requests.get(url)
+    logo = Image.open(BytesIO(response.content))
     st.image(logo, use_column_width=True)
 
     # File upload
