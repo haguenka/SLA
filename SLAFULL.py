@@ -13,10 +13,11 @@ def main():
     url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
     response = requests.get(url)
     logo = Image.open(BytesIO(response.content))
-    st.image(logo, use_column_width=True)
+    st.sidebar.image(logo, use_column_width=True)
 
     # File upload
-    uploaded_file = st.file_uploader("Upload an Excel file for SLA Analysis", type=['xlsx'])
+    st.sidebar.header("Upload File")
+        uploaded_file = st.sidebar.file_uploader("Upload an Excel file for SLA Analysis", type=['xlsx'])
     if uploaded_file is not None:
         try:
             # Load the Excel file
