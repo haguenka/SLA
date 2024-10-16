@@ -37,7 +37,7 @@ if file is not None:
     mamografia_df = mamografia_df.dropna(subset=['DATA_HORA_PRESCRICAO', 'STATUS_APROVADO'])
 
     # Calculate SLA timing (5 days)
-    mamografia_df['SLA_MET'] = (mamografia_df['STATUS_APROVADO'] - mamografia_df['DATA_HORA_PRESCRICAO']).dt.days <= 5
+    mamografia_df['SLA_MET'] = (mamografia_df['STATUS_APROVADO'] - mamografia_df['DATA_HORA_PRESCRICAO']).dt.days <= 10
 
     # Drop-down selection for "UNIDADE" and specific date/period selection
     if not mamografia_df.empty:
