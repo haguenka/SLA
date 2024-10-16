@@ -5,4 +5,4 @@ openpyxl
 PyMuPDF
 streamlit
 plotly
-Pillow
+pillow
