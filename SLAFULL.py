@@ -14,7 +14,7 @@ def main():
             df = pd.read_excel(uploaded_file)
 
             # Filter by GRUPO to include only 'GRUPO TOMOGRAFIA' and 'GRUPO RESSONANCIA MAGNETICA'
-            allowed_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA']
+            allowed_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO RAIO-X', 'GRUPO MAMOGRAFIA', 'GRUPO MEDICINA NUCLEAR', 'GRUPO ULTRASSOM']
             df = df[df['GRUPO'].isin(allowed_groups)]
 
             # Parse the relevant datetime columns explicitly with dayfirst=True
