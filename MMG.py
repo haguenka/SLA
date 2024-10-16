@@ -15,7 +15,8 @@ with st.sidebar:
         'SLA Compliance',
         'SLA Compliance Over Time',
         'Number of Exams per Unidade',
-        'Count by Medico Laudo Definitivo'
+        'Count by Medico Laudo Definitivo',
+        'Exams Without Report'
     ]
     selection = st.radio('Go to', menu_options)
 
@@ -34,7 +35,7 @@ if file is not None:
     mamografia_df['STATUS_APROVADO'] = pd.to_datetime(mamografia_df['STATUS_APROVADO'], dayfirst=True, errors='coerce')
 
     # Filter out invalid dates
-    mamografia_df = mamografia_df.dropna(subset=['DATA_HORA_PRESCRICAO', 'STATUS_APROVADO'])
+    mamografia_df = mamografia_df.dropna(subset=['DATA_HORA_PRESCRICAO'])
 
     # Calculate SLA timing (5 days)
     mamografia_df['SLA_MET'] = (mamografia_df['STATUS_APROVADO'] - mamografia_df['DATA_HORA_PRESCRICAO']).dt.days <= 10
@@ -117,6 +118,16 @@ if file is not None:
             medico_filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == medico_selected]
             total_by_medico = medico_filtered_df.shape[0]
             st.write(f'Total number of exams by {medico_selected}: {total_by_medico}')
+
+        elif selection == 'Exams Without Report':
+            # Total number of mammogram exams without a report (STATUS_APROVADO is empty)
+            missing_report_df = mamografia_df[mamografia_df['STATUS_APROVADO'].isna()]
+            total_missing_report = missing_report_df.shape[0]
+            st.write(f'Total number of mammogram exams without a report: {total_missing_report}')
+
+            # Display the dataframe of exams without a report
+            st.write("Dataframe of mammogram exams without a report:")
+            st.dataframe(missing_report_df)
 
         # Display the filtered dataframe
         st.write("Filtered Data:")
