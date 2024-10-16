@@ -54,12 +54,23 @@ def main():
 
             df_selected = df[selected_columns]
 
-            # Sidebar dropdown for selecting UNIDADE
+            # Sidebar dropdown for selecting UNIDADE and GRUPO
             unidade_options = df['UNIDADE'].unique()
             selected_unidade = st.sidebar.selectbox("Select UNIDADE", unidade_options)
 
-            # Filter dataframe based on selected UNIDADE
-            df_filtered = df_selected[df_selected['UNIDADE'] == selected_unidade]
+            grupo_options = df['GRUPO'].unique()
+            selected_grupo = st.sidebar.selectbox("Select GRUPO", grupo_options)
+
+            # Date range selection
+            min_date = df['STATUS_ALAUDAR'].min()
+            max_date = df['STATUS_ALAUDAR'].max()
+            start_date, end_date = st.sidebar.date_input("Select Date Range", [min_date, max_date])
+
+            # Filter dataframe based on selected UNIDADE, GRUPO, and date range
+            df_filtered = df_selected[(df_selected['UNIDADE'] == selected_unidade) &
+                                      (df_selected['GRUPO'] == selected_grupo) &
+                                      (df_selected['STATUS_ALAUDAR'] >= pd.Timestamp(start_date)) &
+                                      (df_selected['STATUS_ALAUDAR'] <= pd.Timestamp(end_date))]
 
             # Display the filtered dataframe
             st.dataframe(df_filtered)
@@ -68,7 +79,7 @@ def main():
             sla_status_counts = df_filtered['SLA_STATUS'].value_counts()
             fig, ax = plt.subplots()
             ax.pie(sla_status_counts, labels=sla_status_counts.index, autopct='%1.1f%%', colors=['lightgreen', 'lightcoral'])
-            ax.set_title(f'SLA Status Distribution for {selected_unidade}')
+            ax.set_title(f'SLA Status Distribution for {selected_unidade} - {selected_grupo}')
 
             # Display the pie chart
             st.pyplot(fig)
