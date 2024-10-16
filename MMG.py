@@ -29,16 +29,17 @@ if file is not None:
     # Filter relevant rows and columns
     mamografia_df = df[df['DESCRICAO_PROCEDIMENTO'].str.contains('MAMOGRAFIA', case=False, na=False)]
     mamografia_df = mamografia_df[mamografia_df['MEDICO_SOLICITANTE'].isin(['MARCELO JACOBINA DE ABREU', 'HENRIQUE ARUME GUENKA'])]
-
+    
     # Convert date columns to datetime with dayfirst=True
     mamografia_df['DATA_HORA_PRESCRICAO'] = pd.to_datetime(mamografia_df['DATA_HORA_PRESCRICAO'], dayfirst=True, errors='coerce')
     mamografia_df['STATUS_APROVADO'] = pd.to_datetime(mamografia_df['STATUS_APROVADO'], dayfirst=True, errors='coerce')
-
+    mamografia_df['STATUS_ALAUDAR'] = pd.to_datetime(mamografia_df['STATUS_APROVADO'], dayfirst=True, errors='coerce')
+    
     # Filter out invalid dates
     mamografia_df = mamografia_df.dropna(subset=['DATA_HORA_PRESCRICAO'])
 
     # Calculate SLA timing (5 days)
-    mamografia_df['SLA_MET'] = (mamografia_df['STATUS_APROVADO'] - mamografia_df['DATA_HORA_PRESCRICAO']).dt.days <= 10
+    mamografia_df['SLA_MET'] = (mamografia_df['STATUS_APROVADO'] - mamografia_df['STATUS_ALAUDAR']).dt.days <= 10
 
     # Drop-down selection for "UNIDADE" and specific date/period selection
     if not mamografia_df.empty:
