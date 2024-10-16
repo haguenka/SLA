@@ -6,6 +6,12 @@ import seaborn as sns
 # Streamlit file uploader
 st.title("SLA Dashboard for CT Exams")
 
+# Load and display logo from GitHub
+url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
+response = requests.get(url)
+logo = Image.open(BytesIO(response.content))
+st.sidebar.image(logo, use_column_width=True)
+
 uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx"])
 
 if uploaded_file is not None:
