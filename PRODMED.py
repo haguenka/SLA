@@ -34,8 +34,8 @@ if uploaded_file is not None:
     data['STATUS_APROVADO'] = pd.to_datetime(data['STATUS_APROVADO'], format='%d-%m-%Y %H:%M', errors='coerce')
     min_date = data['STATUS_APROVADO'].min() if pd.notna(data['STATUS_APROVADO'].min()) else pd.Timestamp.now()
     max_date = data['STATUS_APROVADO'].max() if pd.notna(data['STATUS_APROVADO'].max()) else pd.Timestamp.now()
-    start_date = st.sidebar.date_input('Start Date', value=min_date, min_value=min_date, max_value=max_date)
-    end_date = st.sidebar.date_input('End Date', value=max_date, min_value=min_date, max_value=max_date)
+    start_date = st.sidebar.date_input('Start Date', value=min_date, min_value=min_date, max_value=max_date, key='start_date', label_visibility='visible', widget_type='calendar')
+    end_date = st.sidebar.date_input('End Date', value=max_date, min_value=min_date, max_value=max_date, key='end_date', label_visibility='visible', widget_type='calendar')
 
     # Filter data by date range
     filtered_data = data[(data['STATUS_APROVADO'] >= pd.to_datetime(start_date)) & (data['STATUS_APROVADO'] <= pd.to_datetime(end_date))]
