@@ -18,7 +18,7 @@ def load_data(uploaded_file):
     return None
 
 # Streamlit App
-st.title('Event Counter for MEDICO_LAUDO_DEFINITIVO')
+st.title('Laudos Medicos')
 
 # File Upload
 uploaded_file = st.sidebar.file_uploader("Choose an Excel file", type=["xlsx"])
@@ -32,10 +32,10 @@ if uploaded_file is not None:
 
     # Date Range Filter
     data['STATUS_APROVADO'] = pd.to_datetime(data['STATUS_APROVADO'], format='%d/%m/%Y %H:%M', errors='coerce')
-    min_date = data['STATUS_APROVADO'].min().date() if pd.notna(data['STATUS_APROVADO'].min()) else None
-    max_date = data['STATUS_APROVADO'].max().date() if pd.notna(data['STATUS_APROVADO'].max()) else None
-    start_date = st.sidebar.date_input('Start Date', min_value=min_date, max_value=max_date)
-    end_date = st.sidebar.date_input('End Date', min_value=min_date, max_value=max_date)
+    min_date = data['STATUS_APROVADO'].min() if pd.notna(data['STATUS_APROVADO'].min()) else None
+    max_date = data['STATUS_APROVADO'].max() if pd.notna(data['STATUS_APROVADO'].max()) else None
+    start_date = st.sidebar.date_input('Start Date', value=min_date, min_value=min_date, max_value=max_date)
+    end_date = st.sidebar.date_input('End Date', value=max_date, min_value=min_date, max_value=max_date)
 
     # Filter data by date range
     filtered_data = data[(data['STATUS_APROVADO'] >= pd.to_datetime(start_date)) & (data['STATUS_APROVADO'] <= pd.to_datetime(end_date))]
