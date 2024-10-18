@@ -1,5 +1,14 @@
 import streamlit as st
 import pandas as pd
+from PIL import Image
+import requests
+from io import BytesIO
+
+# Load and display logo from GitHub
+url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
+response = requests.get(url)
+logo = Image.open(BytesIO(response.content))
+st.sidebar.image(logo, use_column_width=True)
 
 # Load data from the Excel file
 def load_data(uploaded_file):
