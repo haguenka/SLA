@@ -1,8 +1,5 @@
 import streamlit as st
 import pandas as pd
-from PIL import Image
-import requests
-from io import BytesIO
 
 # Load data from the Excel file
 def load_data(uploaded_file):
@@ -13,12 +10,6 @@ def load_data(uploaded_file):
 
 # Streamlit App
 st.title('Event Counter for MEDICO_LAUDO_DEFINITIVO')
-
-# Load and display logo from GitHub
-url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
-response = requests.get(url)
-logo = Image.open(BytesIO(response.content))
-st.sidebar.image(logo, use_column_width=True)
 
 # File Upload
 uploaded_file = st.sidebar.file_uploader("Choose an Excel file", type=["xlsx"])
@@ -32,11 +23,11 @@ if uploaded_file is not None:
 
     # Date Range Filter
     data['STATUS_APROVADO'] = pd.to_datetime(data['STATUS_APROVADO'], format='%d/%m/%Y %H:%M', errors='coerce')
-    start_date = st.sidebar.date_input('Start Date', min_value=data['STATUS_APROVADO'].min(), max_value=data['status_aprovado'].max())
+    start_date = st.sidebar.date_input('Start Date', min_value=data['STATUS_APROVADO'].min(), max_value=data['STATUS_APROVADO'].max())
     end_date = st.sidebar.date_input('End Date', min_value=data['STATUS_APROVADO'].min(), max_value=data['STATUS_APROVADO'].max())
 
     # Filter data by date range
-    filtered_data = data[(data['status_aprovado'] >= pd.to_datetime(start_date)) & (data['status_aprovado'] <= pd.to_datetime(end_date))]
+    filtered_data = data[(data['STATUS_APROVADO'] >= pd.to_datetime(start_date)) & (data['STATUS_APROVADO'] <= pd.to_datetime(end_date))]
 
     # GRUPO and UNIDADE Filters
     grupos = filtered_data['GRUPO'].dropna().unique()
