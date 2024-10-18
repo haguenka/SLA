@@ -22,7 +22,7 @@ if uploaded_file is not None:
     st.sidebar.header('Filters')
 
     # Date Range Filter
-    data['DATA_LAUDO'] = pd.to_datetime(data['DATA_LAUDO_LAUDO'], errors='coerce')
+    data['DATA_LAUDO'] = pd.to_datetime(data['DATA_LAUDO'], errors='coerce')
     start_date = st.sidebar.date_input('Start Date', min_value=data['DATA_LAUDO'].min(), max_value=data['DATA_LAUDO'].max())
     end_date = st.sidebar.date_input('End Date', min_value=data['DATA_LAUDO'].min(), max_value=data['DATA_LAUDO'].max())
 
