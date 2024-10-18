@@ -29,6 +29,15 @@ if uploaded_file is not None:
     # Filter data by date range
     filtered_data = data[(data['DATA_LAUDO'] >= pd.to_datetime(start_date)) & (data['DATA_LAUDO'] <= pd.to_datetime(end_date))]
 
+    # GRUPO and UNIDADE Filters
+    grupos = filtered_data['GRUPO'].dropna().unique()
+    selected_grupo = st.sidebar.selectbox('Select a GRUPO', grupos)
+    unidades = filtered_data['UNIDADE'].dropna().unique()
+    selected_unidade = st.sidebar.selectbox('Select a UNIDADE', unidades)
+
+    # Filter data by GRUPO and UNIDADE
+    filtered_data = filtered_data[(filtered_data['GRUPO'] == selected_grupo) & (filtered_data['UNIDADE'] == selected_unidade)]
+
     # Get unique doctor names and let the user select
     doctors = filtered_data['MEDICO_LAUDO_DEFINITIVO'].dropna().unique()
     selected_doctor = st.sidebar.selectbox('Select a Doctor', doctors)
@@ -40,8 +49,12 @@ if uploaded_file is not None:
     procedure_counts = doctor_data['DESCRICAO_PROCEDIMENTO'].value_counts().reset_index()
     procedure_counts.columns = ['DESCRICAO_PROCEDIMENTO', 'Count']
 
-    # Display the dataframe
+    # Display the dataframe and total counts
     st.write(f"Procedures for Dr. {selected_doctor}")
     st.dataframe(procedure_counts)
+    st.write(f"Total number of procedures: {procedure_counts['Count'].sum()}")
+
+    # Display total count for filtered data
+    st.write(f"Total number of events in filtered data: {filtered_data.shape[0]}")
 else:
     st.write("Please upload an Excel file to proceed.")
