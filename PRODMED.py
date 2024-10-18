@@ -22,12 +22,12 @@ if uploaded_file is not None:
     st.sidebar.header('Filters')
 
     # Date Range Filter
-    data['DATA_LAUDO'] = pd.to_datetime(data['DATA_LAUDO'], errors='coerce')
-    start_date = st.sidebar.date_input('Start Date', min_value=data['DATA_LAUDO'].min(), max_value=data['DATA_LAUDO'].max())
-    end_date = st.sidebar.date_input('End Date', min_value=data['DATA_LAUDO'].min(), max_value=data['DATA_LAUDO'].max())
+    data['STATUS_APROVADO'] = pd.to_datetime(data['STATUS_APROVADO'], format='%d/%m/%Y %H:%M', errors='coerce')
+    start_date = st.sidebar.date_input('Start Date', min_value=data['STATUS_APROVADO'].min(), max_value=data['status_aprovado'].max())
+    end_date = st.sidebar.date_input('End Date', min_value=data['STATUS_APROVADO'].min(), max_value=data['STATUS_APROVADO'].max())
 
     # Filter data by date range
-    filtered_data = data[(data['DATA_LAUDO'] >= pd.to_datetime(start_date)) & (data['DATA_LAUDO'] <= pd.to_datetime(end_date))]
+    filtered_data = data[(data['status_aprovado'] >= pd.to_datetime(start_date)) & (data['status_aprovado'] <= pd.to_datetime(end_date))]
 
     # GRUPO and UNIDADE Filters
     grupos = filtered_data['GRUPO'].dropna().unique()
