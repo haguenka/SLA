@@ -65,6 +65,13 @@ if uploaded_file is not None:
         procedure_counts = filtered_data['DESCRICAO_PROCEDIMENTO'].value_counts().reset_index()
         procedure_counts.columns = ['DESCRICAO_PROCEDIMENTO', 'Count']
 
+        # Assign points based on GRUPO
+        filtered_data['PONTOS'] = filtered_data.apply(
+            lambda x: 1 * procedure_counts.loc[procedure_counts['DESCRICAO_PROCEDIMENTO'] == x['DESCRICAO_PROCEDIMENTO'], 'Count'].values[0] if x['GRUPO'] == 'TOMOGRAFIA' else 
+                      2 * procedure_counts.loc[procedure_counts['DESCRICAO_PROCEDIMENTO'] == x['DESCRICAO_PROCEDIMENTO'], 'Count'].values[0] if x['GRUPO'] == 'RESSONANCIA' else 0, axis=1)
+
+        total_pontos = filtered_data['PONTOS'].sum()
+
         # Display the dataframe and total counts
         st.write(f"Procedures for Dr. {selected_doctor}")
         st.dataframe(procedure_counts)
@@ -72,8 +79,12 @@ if uploaded_file is not None:
 
         # Display total count for filtered data
         st.write(f"Total number of events in filtered data: {filtered_data.shape[0]}")
+
+        # Display total points
+        st.write(f"Total PONTOS: {total_pontos}")
     else:
         st.write("No data available for the selected date range.")
 else:
     st.write("Please upload an Excel file to proceed.")
+
 
