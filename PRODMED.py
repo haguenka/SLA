@@ -1,14 +1,5 @@
 import streamlit as st
 import pandas as pd
-from PIL import Image
-import requests
-from io import BytesIO
-
-# Load and display logo from GitHub
-url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
-response = requests.get(url)
-logo = Image.open(BytesIO(response.content))
-st.sidebar.image(logo, use_column_width=True)
 
 # Load data from the Excel file
 def load_data(uploaded_file):
@@ -18,7 +9,7 @@ def load_data(uploaded_file):
     return None
 
 # Streamlit App
-st.title('Laudos Medicos')
+st.title('Event Counter for MEDICO_LAUDO_DEFINITIVO')
 
 # File Upload
 uploaded_file = st.sidebar.file_uploader("Choose an Excel file", type=["xlsx"])
@@ -31,11 +22,11 @@ if uploaded_file is not None:
     st.sidebar.header('Filters')
 
     # Date Range Filter
-    data['STATUS_APROVADO'] = pd.to_datetime(data['STATUS_APROVADO'], format='%d/%m/%Y %H:%M', errors='coerce')
-    min_date = data['STATUS_APROVADO'].min() if pd.notna(data['STATUS_APROVADO'].min()) else pd.Timestamp.now()
-    max_date = data['STATUS_APROVADO'].max() if pd.notna(data['STATUS_APROVADO'].max()) else pd.Timestamp.now()
-    start_date = st.sidebar.date_input('Start Date', value=min_date, min_value=min_date, max_value=max_date)
-    end_date = st.sidebar.date_input('End Date', value=max_date, min_value=min_date, max_value=max_date)
+    data['STATUS_APROVADO'] = pd.to_datetime(data['STATUS_APROVADO'], format='%d/%m/%Y', errors='coerce')
+    min_date = data['STATUS_APROVADO'].min().date() if pd.notna(data['STATUS_APROVADO'].min()) else pd.Timestamp.now().date()
+    max_date = data['STATUS_APROVADO'].max().date() if pd.notna(data['STATUS_APROVADO'].max()) else pd.Timestamp.now().date()
+    start_date = st.sidebar.date_input('Start Date', min_value=min_date, max_value=max_date, value=min_date)
+    end_date = st.sidebar.date_input('End Date', min_value=min_date, max_value=max_date, value=max_date)
 
     # Filter data by date range
     filtered_data = data[(data['STATUS_APROVADO'] >= pd.to_datetime(start_date)) & (data['STATUS_APROVADO'] <= pd.to_datetime(end_date))]
@@ -76,3 +67,4 @@ if uploaded_file is not None:
         st.write("No data available for the selected date range.")
 else:
     st.write("Please upload an Excel file to proceed.")
+
