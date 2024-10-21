@@ -18,7 +18,7 @@ st.title('Medical Analysis Dashboard')
 # Upload Excel and CSV files
 st.sidebar.header('Upload Files')
 xlsx_file = st.sidebar.file_uploader('Upload Excel File', type=['xlsx'])
-csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
+csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multiplier.csv'
 csv_df = pd.read_csv(csv_url)
 
 # Initialize dataframes
@@ -96,8 +96,26 @@ if xlsx_file:
     # Display total points across all hospitals and modalities
     st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum}</h2>", unsafe_allow_html=True)
 
+    # Export all results to Excel file
+    if st.button('Export Results to Excel'):
+        with pd.ExcelWriter('/mnt/data/Medical_Analysis_Results.xlsx') as writer:
+            filtered_df.to_excel(writer, sheet_name='Filtered Data', index=False)
+            for hospital in doctor_grouped['UNIDADE'].unique():
+                hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
+                for grupo in hospital_df['GRUPO'].unique():
+                    grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
+                    grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
+                    grupo_df.to_excel(writer, sheet_name=f'{hospital}_{grupo}', index=False)
+
+            # Add a summary sheet
+            summary_df = pd.DataFrame({'Total Points for All Modalities': [total_points_sum]})
+            summary_df.to_excel(writer, sheet_name='Summary', index=False)
+
+        st.success('Results exported successfully! You can download the file from the link below:')
+        st.markdown(f"[Download Results](Medical_Analysis_Results.xlsx)")
 else:
-    st.sidebar.write('Please upload both an Excel and a CSV file to continue.')
+    st.sidebar.write('Please upload an Excel file to continue.')
+
 
 
 
