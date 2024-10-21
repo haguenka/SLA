@@ -1,4 +1,4 @@
-import streamlit as st
+          import streamlit as st
 import pandas as pd
 from PIL import Image
 import requests
@@ -174,9 +174,9 @@ if xlsx_file:
                 # Add hospital and modality dataframes to subsequent pages in table format
                 for hospital in doctor_grouped['UNIDADE'].unique():
                     pdf.add_page()
-                    pdf.set_font('Arial', 'B', 20)
-                    pdf.set_text_color(0, 0, 255)
-                    pdf.cell(0, 10, f'Hospital: {hospital}', ln=True, align='L')
+                    pdf.set_font('Arial', 'B', 24)
+                pdf.set_text_color(0, 0, 255)
+                pdf.cell(0, 10, f'Hospital: {hospital}', ln=True, align='C')
                     pdf.set_text_color(0, 0, 0)
                     pdf.ln(10)
                     hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
@@ -189,7 +189,7 @@ if xlsx_file:
 
                         # Create table header
                         pdf.set_font('Arial', 'B', 10)
-                        pdf.cell(0, 10, 'Procedure', 1, 0, 'C')
+                        pdf.cell(80, 10, 'Procedure', 1, 0, 'C')
                         pdf.cell(30, 10, 'Count', 1, 0, 'C')
                         pdf.cell(30, 10, 'Multiplier', 1, 0, 'C')
                         pdf.cell(30, 10, 'Points', 1, 1, 'C')
@@ -197,7 +197,7 @@ if xlsx_file:
                         # Add rows to the table
                         pdf.set_font('Arial', '', 10)
                         for _, row in grupo_df.iterrows():
-                            pdf.cell(0, 10, row['DESCRICAO_PROCEDIMENTO'], 1, 0, 'L')
+                            pdf.cell(80, 10, row['DESCRICAO_PROCEDIMENTO'], 1, 0, 'L')
                             pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
                             pdf.cell(30, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
                             pdf.cell(30, 10, f"{row['POINTS']:.1f}", 1, 1, 'C')
