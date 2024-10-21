@@ -25,10 +25,10 @@ csv_df = pd.read_csv(csv_url)
 excel_df = None
 csv_df = None
 
-if xlsx_file and csv_df is not None:
+if xlsx_file:
     # Load the files into dataframes
     excel_df = pd.read_excel(xlsx_file)
-    csv_df = pd.read_csv(csv_file)
+    
 
     # Strip any leading/trailing whitespace from CSV column names
     csv_df.columns = csv_df.columns.str.strip()
