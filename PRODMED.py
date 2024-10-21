@@ -222,9 +222,9 @@ if xlsx_file:
                 pdf.cell(0, 10, 'Procedure Summary', ln=True, align='C')
                 pdf.ln(10)
                 pdf.set_font('Arial', '', 12)
-                procedure_summary = merged_df.groupby('DESCRICAO_PROCEDIMENTO').agg({'POINTS': 'sum', 'STATUS_APROVADO': 'count', 'TIPO_ATENDIMENTO': 'nunique'}).rename(columns={'STATUS_APROVADO': 'Total Exams', 'TIPO_ATENDIMENTO': 'Tipo Atendimento Count'}).reset_index()
+                procedure_summary = merged_df.groupby(['DESCRICAO_PROCEDIMENTO', 'TIPO_ATENDIMENTO']).agg({'POINTS': 'sum', 'STATUS_APROVADO': 'count'}).rename(columns={'STATUS_APROVADO': 'Total Exams'}).reset_index()
                 for _, row in procedure_summary.iterrows():
-                    pdf.cell(0, 10, f"Procedure: {row['DESCRICAO_PROCEDIMENTO']}, Total Points: {row['POINTS']:.1f}, Total Exams: {row['Total Exams']}, Tipo Atendimento: {row['Tipo Atendimento Count']}", ln=True)
+                    pdf.cell(0, 10, f"Procedure: {row['DESCRICAO_PROCEDIMENTO']}, Tipo Atendimento: {row['TIPO_ATENDIMENTO']}, Total Points: {row['POINTS']:.1f}, Total Exams: {row['Total Exams']}", ln=True)
                 
                 pdf_file_path = 'Medical_Analysis_Combined_Report.pdf'
                 pdf.output(pdf_file_path)
