@@ -35,7 +35,7 @@ def load_multipliers():
 # Function to calculate points
 def calculate_points(filtered_data, multipliers):
     def clean_string(s):
-        return ''.join(e for e in s.lower() if e.isalnum() or e.isspace()).strip()
+        return s.lower().replace(' ', '').replace('-', '').replace('.', '').strip()
 
     multipliers = {clean_string(k): v for k, v in multipliers.items()}
     
