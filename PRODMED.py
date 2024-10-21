@@ -1,4 +1,4 @@
-import streamlit as st
+          import streamlit as st
 import pandas as pd
 from PIL import Image
 import requests
@@ -141,6 +141,7 @@ if xlsx_file:
 
                 # Create title sheet
                 pdf.add_page()
+                logo_path = BytesIO(requests.get(url).content)  # Load logo from GitHub
                 pdf.set_font('Arial', 'B', 24)
                 pdf.cell(0, 20, 'Relatório de produção', ln=True, align='C')
                 pdf.ln(10)
@@ -156,10 +157,9 @@ if xlsx_file:
                 pdf.ln(20)
 
                 # Add the logo
-                pdf.image(logo_path, x=80, y=50, w=100)
+                pdf.image(logo_path, x=80, y=50, w=120)
                 pdf.ln(20)
                 logo_path = BytesIO(requests.get(url).content)  # Load logo from GitHub
-                pdf.add_page()
 
                 # Add the logo to the first page
                 pdf.add_page()
