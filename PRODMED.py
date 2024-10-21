@@ -10,10 +10,6 @@ response = requests.get(url)
 logo = Image.open(BytesIO(response.content))
 st.sidebar.image(logo, use_column_width=True)
 
-import streamlit as st
-import pandas as pd
-import os
-
 # Load data from the Excel file
 def load_data(uploaded_file):
     if uploaded_file is not None:
@@ -36,10 +32,12 @@ def load_multipliers():
 
 # Function to calculate points
 def calculate_points(filtered_data, multipliers):
-    filtered_data['PONTOS'] = filtered_data.apply(
-        lambda x: multipliers.get(x['DESCRICAO_PROCEDIMENTO'], 0) * x['Count']
-        if x['GRUPO'] == 'GRUPO TOMOGRAFIA' else 0, axis=1
-    )
+    def calculate_row_points(row):
+        if row['GRUPO'] == 'GRUPO TOMOGRAFIA':
+            return multipliers.get(row['DESCRICAO_PROCEDIMENTO'], 0) * row['Count']
+        return 0
+
+    filtered_data['PONTOS'] = filtered_data.apply(calculate_row_points, axis=1)
     return filtered_data['PONTOS'].sum()
 
 # Streamlit App
@@ -110,6 +108,7 @@ if uploaded_file is not None:
         st.write("No data available for the selected date range.")
 else:
     st.write("Please upload an Excel file to proceed.")
+
 
 
 
