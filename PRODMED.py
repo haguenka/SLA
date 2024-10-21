@@ -70,7 +70,7 @@ if xlsx_file and csv_file:
 
     # Loop through each group (hospital, doctor, modality) and display data
     for (hospital, doctor, grupo), group_df in doctors_grouped:
-        if group_df['COUNT'].sum() > 0:  # Only display if the doctor approved exams in that modality
+        if len(group_df) > 0:  # Only display if the doctor approved exams in that modality
             st.write(f"Hospital: {hospital} | Doctor: {doctor} | Modality: {grupo}")
             grouped_summary = group_df.groupby('DESCRICAO_PROCEDIMENTO').agg({'MULTIPLIER': 'first', 'STATUS_APROVADO': 'count'}).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
             grouped_summary['POINTS'] = grouped_summary['COUNT'] * grouped_summary['MULTIPLIER']
@@ -86,6 +86,7 @@ if xlsx_file and csv_file:
 
 else:
     st.sidebar.write('Please upload both an Excel and a CSV file to continue.')
+
 
 
 
