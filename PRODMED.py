@@ -60,7 +60,7 @@ if xlsx_file:
     # Display full filtered dataframe for the selected doctor
     st.write('Full Filtered Dataframe for Selected Doctor:')
     filtered_columns = ['SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_APROVADO', 'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE']
-    st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
+st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
 
     # Merge filtered data with CSV to calculate points
     csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
@@ -165,7 +165,7 @@ if xlsx_file:
                 pdf.set_font('Arial', 'B', 16)
                 pdf.cell(0, 10, 'Medical Analysis Summary Report', ln=True, align='C')
                 pdf.ln(20)
-                pdf.set_font('Arial', '', 18)
+                pdf.set_font('Arial', '', 16)
                 pdf.cell(0, 10, f'Total Points for All Modalities: {total_points_sum}', ln=True)
                 pdf.ln(10)
                 
