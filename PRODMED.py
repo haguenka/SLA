@@ -22,7 +22,7 @@ def load_multipliers():
     csv_file_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
     try:
         multipliers_df = pd.read_csv(csv_file_url)
-        return multipliers_df.set_index('procedimento')['multiplicador'].to_dict()
+        return multipliers_df.set_index('PROCEDIMENTO')['MULTIPLIER'].to_dict()
     except Exception as e:
         st.error("Error loading multipliers from GitHub: " + str(e))
         return {}
