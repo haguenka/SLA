@@ -81,7 +81,7 @@ if xlsx_file:
     for hospital in doctor_grouped['UNIDADE'].unique():
         hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
         st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
-                for grupo in hospital_df['GRUPO'].unique():
+                    for grupo in hospital_df['GRUPO'].unique():
             grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
             grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
             total_points = grupo_df['POINTS'].sum()
@@ -153,7 +153,7 @@ if xlsx_file:
                 # Add hospital and modality dataframes to subsequent pages in table format
                 for hospital in doctor_grouped['UNIDADE'].unique():
     pdf.add_page()
-                    pdf.set_font('Arial', 'B', 20)
+                        pdf.set_font('Arial', 'B', 20)
     pdf.set_text_color(0, 0, 255)
     pdf.cell(0, 10, f'Hospital: {hospital}', ln=True, align='L')
     pdf.set_text_color(0, 0, 0)
