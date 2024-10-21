@@ -195,12 +195,7 @@ if xlsx_file:
                         # Add rows to the table
                         pdf.set_font('Arial', '', 10)
                         for _, row in grupo_df.iterrows():
-                            pdf.cell(60, 10, row['DESCRICAO_PROCEDIMENTO'][:30] + '...' if len(row['DESCRICAO_PROCEDIMENTO']) > 30 else row['DESCRICAO_PROCEDIMENTO'], 1, 0, 'L')
-                            pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
-                            pdf.cell(30, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
-                            pdf.cell(30, 10, f"{row['POINTS']:.1f}", 1, 1, 'C')
-                            if pdf.get_y() > 190:
-                                pdf.add_page()
+                            pdf.cell(80, 10, row['DESCRICAO_PROCEDIMENTO'][:30] + '...' if len(row['DESCRICAO_PROCEDIMENTO']) > 30 else row['DESCRICAO_PROCEDIMENTO'], 1, 0, 'L')
                             pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
                             pdf.cell(30, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
                             pdf.cell(30, 10, f"{row['POINTS']:.1f}", 1, 1, 'C')
