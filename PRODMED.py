@@ -34,8 +34,14 @@ def load_multipliers():
 
 # Function to calculate points
 def calculate_points(filtered_data, multipliers):
+    def clean_string(s):
+        return ''.join(e for e in s.lower() if e.isalnum() or e.isspace()).strip()
+
+    multipliers = {clean_string(k): v for k, v in multipliers.items()}
+    
     def calculate_row_points(row):
-        return multipliers.get(row['DESCRICAO_PROCEDIMENTO'], 0)
+        descricao = clean_string(row['DESCRICAO_PROCEDIMENTO'])
+        return multipliers.get(descricao, 0)
 
     if 'GRUPO' not in filtered_data.columns:
         st.error("The column 'GRUPO' is missing from the filtered data.")
@@ -109,6 +115,7 @@ if uploaded_file is not None:
         st.write("No data available for the selected date range.")
 else:
     st.write("Please upload an Excel file to proceed.")
+
 
 
 
