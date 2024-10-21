@@ -127,41 +127,45 @@ if xlsx_file:
 
     # Export summary as PDF report
     if st.button('Export Summary as PDF'):
-        from fpdf import FPDF
         try:
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font('Arial', 'B', 16)
-            pdf.cell(40, 10, 'Medical Analysis Summary Report')
-            pdf.ln(10)
-            pdf.set_font('Arial', '', 12)
-            pdf.cell(200, 10, f'Total Points for All Modalities: {total_points_sum}', ln=True)
-            pdf.ln(10)
-            for hospital in doctor_grouped['UNIDADE'].unique():
-                pdf.set_font('Arial', 'B', 14)
-                pdf.cell(200, 10, f'Hospital: {hospital}', ln=True)
-                hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
-                for grupo in hospital_df['GRUPO'].unique():
-                    pdf.set_font('Arial', 'B', 12)
-                    pdf.cell(200, 10, f'Modality: {grupo}', ln=True)
-                    grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
-                    total_points = grupo_df['POINTS'].sum()
-                    total_exams = grupo_df['COUNT'].sum()
-                    pdf.set_font('Arial', '', 12)
-                    pdf.cell(200, 10, f'Total Points: {total_points}', ln=True)
-                    pdf.cell(200, 10, f'Total Number of Exams: {total_exams}', ln=True)
-                    pdf.ln(5)
-            pdf_file_path = 'Medical_Analysis_Summary.pdf'
-            pdf.output(pdf_file_path)
-            st.success('Summary report exported successfully! You can download the file from the link below:')
-            with open(pdf_file_path, 'rb') as file:
-                btn = st.download_button(
-                    label='Download Summary PDF',
-                    data=file,
-                    file_name='Medical_Analysis_Summary.pdf'
-                )
-        except Exception as e:
-            st.error(f'An error occurred while exporting the PDF: {e}')
+            from fpdf import FPDF
+        except ImportError:
+            st.error('The required library fpdf is not installed. Please install it to export the summary as a PDF.')
+        else:
+            try:
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font('Arial', 'B', 16)
+                pdf.cell(40, 10, 'Medical Analysis Summary Report')
+                pdf.ln(10)
+                pdf.set_font('Arial', '', 12)
+                pdf.cell(200, 10, f'Total Points for All Modalities: {total_points_sum}', ln=True)
+                pdf.ln(10)
+                for hospital in doctor_grouped['UNIDADE'].unique():
+                    pdf.set_font('Arial', 'B', 14)
+                    pdf.cell(200, 10, f'Hospital: {hospital}', ln=True)
+                    hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
+                    for grupo in hospital_df['GRUPO'].unique():
+                        pdf.set_font('Arial', 'B', 12)
+                        pdf.cell(200, 10, f'Modality: {grupo}', ln=True)
+                        grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
+                        total_points = (grupo_df['COUNT'] * grupo_df['MULTIPLIER']).sum()
+                        total_exams = grupo_df['COUNT'].sum()
+                        pdf.set_font('Arial', '', 12)
+                        pdf.cell(200, 10, f'Total Points: {total_points}', ln=True)
+                        pdf.cell(200, 10, f'Total Number of Exams: {total_exams}', ln=True)
+                        pdf.ln(5)
+                pdf_file_path = 'Medical_Analysis_Summary.pdf'
+                pdf.output(pdf_file_path)
+                st.success('Summary report exported successfully! You can download the file from the link below:')
+                with open(pdf_file_path, 'rb') as file:
+                    btn = st.download_button(
+                        label='Download Summary PDF',
+                        data=file,
+                        file_name='Medical_Analysis_Summary.pdf'
+                    )
+            except Exception as e:
+                st.error(f'An error occurred while exporting the PDF: {e}')
         try:
             with pd.ExcelWriter('Medical_Analysis_Results.xlsx', engine='openpyxl') as writer:
                 # Write filtered data
