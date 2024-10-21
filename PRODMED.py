@@ -175,8 +175,8 @@ if xlsx_file:
                 for hospital in doctor_grouped['UNIDADE'].unique():
                     pdf.add_page()
                     pdf.set_font('Arial', 'B', 24)
-                pdf.set_text_color(0, 0, 255)
-                pdf.cell(0, 10, f'Hospital: {hospital}', ln=True, align='C')
+                    pdf.set_text_color(0, 0, 255)
+                    pdf.cell(0, 10, f'Hospital: {hospital}', ln=True, align='C')
                     pdf.set_text_color(0, 0, 0)
                     pdf.ln(10)
                     hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
