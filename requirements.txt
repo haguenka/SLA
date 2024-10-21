@@ -6,4 +6,4 @@ PyMuPDF
 streamlit
 plotly
 pillow
-fdpf2
+fpdf2
