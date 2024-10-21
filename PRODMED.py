@@ -216,6 +216,16 @@ if xlsx_file:
                         pdf.cell(0, 10, f'Total Number of Exams for {grupo}: {total_exams}', ln=True)
                         pdf.ln(10)
                 
+                # Add summary for each procedure and tipo_atendimento
+                pdf.add_page()
+                pdf.set_font('Arial', 'B', 16)
+                pdf.cell(0, 10, 'Procedure Summary', ln=True, align='C')
+                pdf.ln(10)
+                pdf.set_font('Arial', '', 12)
+                procedure_summary = merged_df.groupby('DESCRICAO_PROCEDIMENTO').agg({'POINTS': 'sum', 'STATUS_APROVADO': 'count', 'TIPO_ATENDIMENTO': 'nunique'}).rename(columns={'STATUS_APROVADO': 'Total Exams', 'TIPO_ATENDIMENTO': 'Tipo Atendimento Count'}).reset_index()
+                for _, row in procedure_summary.iterrows():
+                    pdf.cell(0, 10, f"Procedure: {row['DESCRICAO_PROCEDIMENTO']}, Total Points: {row['POINTS']:.1f}, Total Exams: {row['Total Exams']}, Tipo Atendimento: {row['Tipo Atendimento Count']}", ln=True)
+                
                 pdf_file_path = 'Medical_Analysis_Combined_Report.pdf'
                 pdf.output(pdf_file_path)
                 st.success('Combined report exported successfully! You can download the file from the link below:')
