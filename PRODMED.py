@@ -146,7 +146,7 @@ if xlsx_file:
                 pdf.cell(0, 20, 'Relatório de produção', ln=True, align='C')
                 pdf.ln(10)
                 pdf.set_font('Arial', '', 18)
-                pdf.cell(0, 10, f'Mês de {start_date.strftime("%B de %Y").capitalize()}', ln=True, align='C')
+                pdf.cell(0, 10, f'Mês de {start_date.strftime("%B de %Y").capitalize().replace("January", "Janeiro").replace("February", "Fevereiro").replace("March", "Março").replace("April", "Abril").replace("May", "Maio").replace("June", "Junho").replace("July", "Julho").replace("August", "Agosto").replace("September", "Setembro").replace("October", "Outubro").replace("November", "Novembro").replace("December", "Dezembro")}', ln=True, align='C')
                 pdf.ln(20)
                 # Add doctors name in uppercase, big and blue
                 pdf.set_font('Arial', 'B', 24)
