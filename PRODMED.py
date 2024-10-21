@@ -153,8 +153,10 @@ if xlsx_file:
                 # Add hospital and modality dataframes to subsequent pages in table format
                 for hospital in doctor_grouped['UNIDADE'].unique():
                     pdf.add_page()
-                    pdf.set_font('Arial', 'B', 14)
-                    pdf.cell(0, 10, f'Hospital: {hospital}', ln=True)
+                    pdf.set_font('Arial', 'B', 20)
+                pdf.set_text_color(0, 0, 255)
+                pdf.cell(0, 10, f'Hospital: {hospital}', ln=True, align='L')
+                pdf.set_text_color(0, 0, 0)
                     pdf.ln(10)
                     hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
                     for grupo in hospital_df['GRUPO'].unique():
@@ -166,10 +168,10 @@ if xlsx_file:
 
                         # Create table header
                         pdf.set_font('Arial', 'B', 10)
-                        pdf.cell(70, 10, 'Procedure', 1, 0, 'C')
-                        pdf.cell(40, 10, 'Count', 1, 0, 'C')
-                        pdf.cell(40, 10, 'Multiplier', 1, 0, 'C')
-                        pdf.cell(40, 10, 'Points', 1, 1, 'C')
+                        pdf.cell(60, 10, 'Procedure', 1, 0, 'C')
+                        pdf.cell(30, 10, 'Count', 1, 0, 'C')
+                        pdf.cell(30, 10, 'Multiplier', 1, 0, 'C')
+                        pdf.cell(30, 10, 'Points', 1, 1, 'C')
 
                         # Add rows to the table
                         pdf.set_font('Arial', '', 10)
