@@ -137,7 +137,7 @@ if xlsx_file:
             try:
                 pdf = FPDF(orientation='L', unit='mm', format='A4')
                 pdf.set_auto_page_break(auto=True, margin=15)
-                logo_path = BytesIO(requests.get(url).content)  # Update with the correct path to your logo image
+                logo_path = BytesIO(requests.get(url).content)  # Load logo from GitHub
 
                 # Add the logo to the first page
                 pdf.add_page()
@@ -149,26 +149,43 @@ if xlsx_file:
                 pdf.cell(0, 10, f'Total Points for All Modalities: {total_points_sum}', ln=True)
                 pdf.ln(10)
                 
-                # Add hospital and modality dataframes to subsequent pages
+                # Add hospital and modality dataframes to subsequent pages in table format
                 for hospital in doctor_grouped['UNIDADE'].unique():
                     pdf.add_page()
                     pdf.set_font('Arial', 'B', 14)
                     pdf.cell(0, 10, f'Hospital: {hospital}', ln=True)
+                    pdf.ln(10)
                     hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
                     for grupo in hospital_df['GRUPO'].unique():
                         pdf.set_font('Arial', 'B', 12)
                         pdf.cell(0, 10, f'Modality: {grupo}', ln=True)
+                        pdf.ln(10)
                         grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
                         grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
+
+                        # Create table header
+                        pdf.set_font('Arial', 'B', 10)
+                        pdf.cell(60, 10, 'Procedure', 1, 0, 'C')
+                        pdf.cell(30, 10, 'Count', 1, 0, 'C')
+                        pdf.cell(30, 10, 'Multiplier', 1, 0, 'C')
+                        pdf.cell(30, 10, 'Points', 1, 1, 'C')
+
+                        # Add rows to the table
+                        pdf.set_font('Arial', '', 10)
+                        for _, row in grupo_df.iterrows():
+                            pdf.cell(60, 10, row['DESCRICAO_PROCEDIMENTO'], 1, 0, 'C')
+                            pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
+                            pdf.cell(30, 10, str(row['MULTIPLIER']), 1, 0, 'C')
+                            pdf.cell(30, 10, str(row['POINTS']), 1, 1, 'C')
+                        
+                        # Summary for the modality
                         total_points = grupo_df['POINTS'].sum()
                         total_exams = grupo_df['COUNT'].sum()
-                        pdf.set_font('Arial', '', 12)
-                        pdf.cell(0, 10, f'Total Points: {total_points}', ln=True)
-                        pdf.cell(0, 10, f'Total Number of Exams: {total_exams}', ln=True)
                         pdf.ln(5)
-                        for _, row in grupo_df.iterrows():
-                            pdf.cell(0, 10, f"Procedure: {row['DESCRICAO_PROCEDIMENTO']}, Count: {row['COUNT']}, Multiplier: {row['MULTIPLIER']}, Points: {row['POINTS']}", ln=True)
-                        pdf.ln(5)
+                        pdf.set_font('Arial', 'B', 10)
+                        pdf.cell(0, 10, f'Total Points for {grupo}: {total_points}', ln=True)
+                        pdf.cell(0, 10, f'Total Number of Exams for {grupo}: {total_exams}', ln=True)
+                        pdf.ln(10)
                 
                 pdf_file_path = 'Medical_Analysis_Combined_Report.pdf'
                 pdf.output(pdf_file_path)
