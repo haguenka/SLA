@@ -3,6 +3,7 @@ import pandas as pd
 from PIL import Image
 import requests
 from io import BytesIO
+import matplotlib.pyplot as plt
 
 # Load and display logo from GitHub
 url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
@@ -34,7 +35,7 @@ if xlsx_file and csv_file:
     st.sidebar.header('Filter Options')
 
     # Date range filter
-    date_column = 'DATA_LAUDO'
+    date_column = 'STATUS_APROVADO'
     excel_df[date_column] = pd.to_datetime(excel_df[date_column], errors='coerce')
     min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
     start_date, end_date = st.sidebar.date_input('Select Date Range', [min_date, max_date])
@@ -69,7 +70,7 @@ if xlsx_file and csv_file:
     merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
 
     # Calculate points as count * multiplier
-    merged_df = merged_df.groupby('DESCRICAO_PROCEDIMENTO').agg({'MULTIPLIER': 'first', 'DATA_LAUDO': 'count'}).rename(columns={'DATA_LAUDO': 'COUNT'}).reset_index()
+    merged_df = merged_df.groupby('DESCRICAO_PROCEDIMENTO').agg({'MULTIPLIER': 'first', 'STATUS_APROVADO': 'count'}).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
     merged_df['POINTS'] = merged_df['COUNT'] * merged_df['MULTIPLIER']
 
     # Display filtered dataframe and count of exams
@@ -82,6 +83,7 @@ if xlsx_file and csv_file:
 
 else:
     st.sidebar.write('Please upload both an Excel and a CSV file to continue.')
+
 
 
 
