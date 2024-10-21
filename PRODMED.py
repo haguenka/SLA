@@ -146,18 +146,16 @@ if xlsx_file:
                 pdf.cell(0, 20, 'Relatório de produção', ln=True, align='C')
                 pdf.ln(10)
                 pdf.set_font('Arial', '', 18)
-                pdf.cell(0, 10, f'Mês de {start_date.strftime("%B de %Y")}', ln=True, align='C')
+                pdf.cell(0, 10, f'Mês de {start_date.strftime("%B de %Y").capitalize()}', ln=True, align='C')
                 pdf.ln(20)
-
                 # Add doctors name in uppercase, big and blue
                 pdf.set_font('Arial', 'B', 24)
                 pdf.set_text_color(0, 0, 255)
                 pdf.cell(0, 10, selected_doctor.upper(), ln=True, align='C')
                 pdf.set_text_color(0, 0, 0)
                 pdf.ln(20)
-
-                # Add the logo
-                pdf.image(logo_path, x=80, y=50, w=120)
+                # Add the logo below the doctor's name
+                pdf.image(logo_path, x=80, y=80, w=120)
                 pdf.ln(20)
                 logo_path = BytesIO(requests.get(url).content)  # Load logo from GitHub
 
