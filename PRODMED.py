@@ -157,8 +157,8 @@ if xlsx_file:
                 pdf.set_text_color(0, 0, 255)
                 pdf.cell(0, 10, f'Hospital: {hospital}', ln=True, align='L')
                 pdf.set_text_color(0, 0, 0)
-                    pdf.ln(10)
-                    hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
+                pdf.ln(10)
+                hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
                     for grupo in hospital_df['GRUPO'].unique():
                         pdf.set_font('Arial', 'B', 12)
                         pdf.cell(0, 10, f'Modality: {grupo}', ln=True)
