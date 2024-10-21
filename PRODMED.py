@@ -60,7 +60,7 @@ if xlsx_file:
     # Display full filtered dataframe for the selected doctor
     st.write('Full Filtered Dataframe for Selected Doctor:')
     filtered_columns = ['SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_APROVADO', 'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE']
-st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
+    st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
 
     # Merge filtered data with CSV to calculate points
     csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
