@@ -60,7 +60,7 @@ if xlsx_file:
     # Display full filtered dataframe for the selected doctor
     st.write('Full Filtered Dataframe for Selected Doctor:')
     filtered_columns = ['SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_APROVADO', 'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE']
-    st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
+st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
 
     # Merge filtered data with CSV to calculate points
     csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
@@ -199,6 +199,13 @@ if xlsx_file:
                             pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
                             pdf.cell(30, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
                             pdf.cell(30, 10, f"{row['POINTS']:.1f}", 1, 1, 'C')
+                            if pdf.get_y() > 190:  # Add a new page if the current page is about to overflow
+                                pdf.add_page()
+                                pdf.set_font('Arial', 'B', 10)
+                                pdf.cell(80, 10, 'Procedure', 1, 0, 'C')
+                                pdf.cell(30, 10, 'Count', 1, 0, 'C')
+                                pdf.cell(30, 10, 'Multiplier', 1, 0, 'C')
+                                pdf.cell(30, 10, 'Points', 1, 1, 'C')
                         
                         # Summary for the modality
                         total_points = grupo_df['POINTS'].sum()
