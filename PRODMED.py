@@ -94,7 +94,7 @@ if xlsx_file:
             st.write(f'Total Number of Exams for {grupo}: {total_exams}')
 
     # Display total points across all hospitals and modalities
-    st.markdown(f"<h2 style='color:#0a84ff;'>Total Points for All Modalities: {total_points_sum}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum}</h2>", unsafe_allow_html=True)
 
 else:
     st.sidebar.write('Please upload both an Excel and a CSV file to continue.')
