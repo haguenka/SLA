@@ -60,7 +60,7 @@ if xlsx_file:
     # Display full filtered dataframe for the selected doctor
     st.write('Full Filtered Dataframe for Selected Doctor:')
     filtered_columns = ['SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_APROVADO', 'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE']
-    st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
+st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
 
     # Merge filtered data with CSV to calculate points
     csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
@@ -224,7 +224,7 @@ if xlsx_file:
                 pdf.set_font('Arial', '', 12)
                 procedure_summary = merged_df.groupby(['DESCRICAO_PROCEDIMENTO', 'TIPO_ATENDIMENTO']).agg({'POINTS': 'sum', 'STATUS_APROVADO': 'count'}).rename(columns={'STATUS_APROVADO': 'Total Exams'}).reset_index()
                 for _, row in procedure_summary.iterrows():
-                    pdf.cell(0, 10, f"Procedure: {row['DESCRICAO_PROCEDIMENTO']}, Tipo Atendimento: {row['TIPO_ATENDIMENTO']}, Total Points: {row['POINTS']:.1f}, Total Exams: {row['Total Exams']}", ln=True)
+                    pdf.cell(0, 10, f"Procedure: {row['DESCRICAO_PROCEDIMENTO']}, Origem: {row['TIPO_ATENDIMENTO']}, Total Exames: {row['Total Exams']}", ln=True)
                 
                 pdf_file_path = 'Medical_Analysis_Combined_Report.pdf'
                 pdf.output(pdf_file_path)
