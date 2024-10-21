@@ -61,6 +61,10 @@ if xlsx_file and csv_file:
         (excel_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
     ]
 
+    # Display full filtered dataframe
+    st.write('Full Filtered Dataframe:')
+    st.dataframe(filtered_df)
+
     # Merge filtered data with CSV to calculate points
     csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
     filtered_df['DESCRICAO_PROCEDIMENTO'] = filtered_df['DESCRICAO_PROCEDIMENTO'].str.upper()
@@ -73,8 +77,8 @@ if xlsx_file and csv_file:
     merged_df = merged_df.groupby('DESCRICAO_PROCEDIMENTO').agg({'MULTIPLIER': 'first', 'STATUS_APROVADO': 'count'}).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
     merged_df['POINTS'] = merged_df['COUNT'] * merged_df['MULTIPLIER']
 
-    # Display filtered dataframe and count of exams
-    st.write('Filtered Dataframe:')
+    # Display summarized filtered dataframe and count of exams
+    st.write('Summarized Filtered Dataframe:')
     st.dataframe(merged_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']])
     total_points = merged_df['POINTS'].sum()
     total_exams = merged_df['COUNT'].sum()
