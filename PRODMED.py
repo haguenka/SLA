@@ -63,17 +63,20 @@ if xlsx_file and csv_file:
     merged_df = pd.merge(filtered_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='inner')
 
     # Calculate points as count * multiplier
-    merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce')
-    procedure_counts = merged_df['DESCRICAO_PROCEDIMENTO'].value_counts().reset_index()
-    procedure_counts.columns = ['DESCRICAO_PROCEDIMENTO', 'COUNT']
-    merged_df = pd.merge(procedure_counts, csv_df, on='DESCRICAO_PROCEDIMENTO', how='inner')
-    merged_df['POINTS'] = merged_df['COUNT'] * merged_df['MULTIPLIER']
+    if 'MULTIPLIER' in merged_df.columns:
+        merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce')
+        procedure_counts = merged_df['DESCRICAO_PROCEDIMENTO'].value_counts().reset_index()
+        procedure_counts.columns = ['DESCRICAO_PROCEDIMENTO', 'COUNT']
+        merged_df = pd.merge(procedure_counts, csv_df, on='DESCRICAO_PROCEDIMENTO', how='inner')
+        merged_df['POINTS'] = merged_df['COUNT'] * merged_df['MULTIPLIER']
 
-    # Display filtered dataframe and count of exams
-    st.write('Filtered Dataframe:')
-    st.dataframe(merged_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']])
-    st.write(f'Total Number of Exams: {len(filtered_df)}')
-    st.write(f'Total Points: {merged_df["POINTS"].sum()}')
+        # Display filtered dataframe and count of exams
+        st.write('Filtered Dataframe:')
+        st.dataframe(merged_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']])
+        st.write(f'Total Number of Exams: {len(filtered_df)}')
+        st.write(f'Total Points: {merged_df["POINTS"].sum()}')
+    else:
+        st.write('The CSV file must contain a "MULTIPLIER" column.')
 else:
     st.sidebar.write('Please upload both an Excel and a CSV file to continue.')
 
