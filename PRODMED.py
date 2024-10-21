@@ -4,17 +4,13 @@ from PIL import Image
 import requests
 from io import BytesIO
 import matplotlib.pyplot as plt
+import streamlit.components.v1 as components
 
 # Load and display logo from GitHub
 url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
 response = requests.get(url)
 logo = Image.open(BytesIO(response.content))
 st.sidebar.image(logo, use_column_width=True)
-
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-import streamlit.components.v1 as components
 
 # Streamlit app
 st.title('Medical Analysis Dashboard')
@@ -72,6 +68,9 @@ if xlsx_file and csv_file:
     # Fill NaN values in MULTIPLIER with 0 for procedures not listed in the CSV
     merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
 
+    # Calculate points for each procedure
+    merged_df['POINTS'] = merged_df['COUNT'] * merged_df['MULTIPLIER']
+
     # Group by UNIDADE, GRUPO, and DESCRICAO_PROCEDIMENTO to create dataframes for each doctor
     doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({'MULTIPLIER': 'first', 'STATUS_APROVADO': 'count'}).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
     total_points_sum = 0
@@ -98,6 +97,7 @@ if xlsx_file and csv_file:
 
 else:
     st.sidebar.write('Please upload both an Excel and a CSV file to continue.')
+
 
 
 
