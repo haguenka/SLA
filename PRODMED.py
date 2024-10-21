@@ -136,7 +136,7 @@ if xlsx_file:
         else:
             try:
                 pdf = FPDF(orientation='L', unit='mm', format='A4')
-                pdf.set_auto_page_break(auto=True, margin=15)
+                pdf.set_auto_page_break(auto=False, margin=15)
                 pdf.set_margins(left=5, top=5, right=5)
 
                 # Create title sheet
@@ -196,6 +196,11 @@ if xlsx_file:
                         pdf.set_font('Arial', '', 10)
                         for _, row in grupo_df.iterrows():
                             pdf.cell(80, 10, row['DESCRICAO_PROCEDIMENTO'][:30] + '...' if len(row['DESCRICAO_PROCEDIMENTO']) > 30 else row['DESCRICAO_PROCEDIMENTO'], 1, 0, 'L')
+                            pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
+                            pdf.cell(30, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
+                            pdf.cell(30, 10, f"{row['POINTS']:.1f}", 1, 1, 'C')
+                            if pdf.get_y() > 190:
+                                pdf.add_page()
                             pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
                             pdf.cell(30, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
                             pdf.cell(30, 10, f"{row['POINTS']:.1f}", 1, 1, 'C')
