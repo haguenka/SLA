@@ -18,12 +18,12 @@ st.title('Medical Analysis Dashboard')
 # Upload Excel and CSV files
 st.sidebar.header('Upload Files')
 xlsx_file = st.sidebar.file_uploader('Upload Excel File', type=['xlsx'])
-csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multiplier.csv'
+csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
 csv_df = pd.read_csv(csv_url)
 
 # Initialize dataframes
 excel_df = None
-csv_df = None
+csv_df = pd.read_csv(csv_url)
 
 if xlsx_file:
     # Load the files into dataframes
