@@ -165,7 +165,7 @@ if xlsx_file:
                 pdf.set_font('Arial', 'B', 16)
                 pdf.cell(0, 10, 'Medical Analysis Summary Report', ln=True, align='C')
                 pdf.ln(20)
-                pdf.set_font('Arial', '', 12)
+                pdf.set_font('Arial', '', 18)
                 pdf.cell(0, 10, f'Total Points for All Modalities: {total_points_sum}', ln=True)
                 pdf.ln(10)
                 
