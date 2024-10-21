@@ -98,7 +98,7 @@ if xlsx_file:
 
     # Export all results to Excel file
     if st.button('Export Results to Excel'):
-        with pd.ExcelWriter('Medical_Analysis_Results.xlsx') as writer:
+        with pd.ExcelWriter('Medical_Analysis_Results.xlsx', engine='openpyxl') as writer:
             filtered_df.to_excel(writer, sheet_name='Filtered Data', index=False)
             for hospital in doctor_grouped['UNIDADE'].unique():
                 hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
