@@ -1,3 +1,17 @@
+import streamlit as st
+import pandas as pd
+from PIL import Image
+import requests
+from io import BytesIO
+import matplotlib.pyplot as plt
+import streamlit.components.v1 as components
+
+# Load and display logo from GitHub
+url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
+response = requests.get(url)
+logo = Image.open(BytesIO(response.content))
+st.sidebar.image(logo, use_column_width=True)
+
 # Streamlit app
 st.title('Medical Analysis Dashboard')
 
@@ -123,28 +137,27 @@ if xlsx_file:
                 pdf.set_auto_page_break(auto=True, margin=15)
                 pdf.add_page()
                 pdf.set_font('Arial', 'B', 16)
-                pdf.cell(0, 10, 'Medical Analysis Summary Report', ln=True, align='C')
+                pdf.cell(40, 10, 'Medical Analysis Summary Report')
                 pdf.ln(10)
                 pdf.set_font('Arial', '', 12)
-                pdf.cell(0, 10, f'Total Points for All Modalities: {total_points_sum}', ln=True)
+                pdf.cell(200, 10, f'Total Points for All Modalities: {total_points_sum}', ln=True)
                 pdf.ln(10)
                 for hospital in doctor_grouped['UNIDADE'].unique():
                     pdf.set_font('Arial', 'B', 14)
-                    pdf.cell(0, 10, f'Hospital: {hospital}', ln=True)
+                    pdf.cell(200, 10, f'Hospital: {hospital}', ln=True)
                     hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
                     for grupo in hospital_df['GRUPO'].unique():
                         pdf.set_font('Arial', 'B', 12)
-                        pdf.cell(0, 10, f'Modality: {grupo}', ln=True)
+                        pdf.cell(200, 10, f'Modality: {grupo}', ln=True)
                         grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
-                        grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
-                        total_points = grupo_df['POINTS'].sum()
+                        total_points = (grupo_df['COUNT'] * grupo_df['MULTIPLIER']).sum()
                         total_exams = grupo_df['COUNT'].sum()
                         pdf.set_font('Arial', '', 12)
-                        pdf.cell(0, 10, f'Total Points: {total_points}', ln=True)
-                        pdf.cell(0, 10, f'Total Number of Exams: {total_exams}', ln=True)
+                        pdf.cell(200, 10, f'Total Points: {total_points}', ln=True)
+                        pdf.cell(200, 10, f'Total Number of Exams: {total_exams}', ln=True)
                         pdf.ln(5)
                         for _, row in grupo_df.iterrows():
-                            pdf.cell(0, 10, f"Procedure: {row['DESCRICAO_PROCEDIMENTO']}, Count: {row['COUNT']}, Multiplier: {row['MULTIPLIER']}, Points: {row['POINTS']}", ln=True)
+                            pdf.cell(200, 10, f"Procedure: {row['DESCRICAO_PROCEDIMENTO']}, Count: {row['COUNT']}, Multiplier: {row['MULTIPLIER']}, Points: {row['POINTS']}", ln=True)
                         pdf.ln(5)
                 pdf_file_path = 'Medical_Analysis_Combined_Report.pdf'
                 pdf.output(pdf_file_path)
@@ -184,5 +197,7 @@ if xlsx_file:
                 )
         except Exception as e:
             st.error(f'An error occurred while exporting: {e}')
+else:
+    st.sidebar.write('Please upload an Excel file to continue.')
 else:
     st.sidebar.write('Please upload an Excel file to continue.')
