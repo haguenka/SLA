@@ -11,6 +11,11 @@ response = requests.get(url)
 logo = Image.open(BytesIO(response.content))
 st.sidebar.image(logo, use_column_width=True)
 
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import streamlit.components.v1 as components
+
 # Streamlit app
 st.title('Medical Analysis Dashboard')
 
@@ -57,7 +62,7 @@ if xlsx_file and csv_file:
 
     # Display full filtered dataframe for the selected doctor
     st.write('Full Filtered Dataframe for Selected Doctor:')
-    st.dataframe(filtered_df)
+    st.dataframe(filtered_df, width=1200, height=400)
 
     # Merge filtered data with CSV to calculate points
     csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
@@ -74,7 +79,7 @@ if xlsx_file and csv_file:
     # Loop through each hospital and modality for the selected doctor
     for hospital in doctor_grouped['UNIDADE'].unique():
         hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
-        st.write(f"Hospital: {hospital}")
+        st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
         for grupo in hospital_df['GRUPO'].unique():
             grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
             grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
@@ -83,13 +88,13 @@ if xlsx_file and csv_file:
             total_exams = grupo_df['COUNT'].sum()
 
             # Display the grouped dataframe, total points, and total number of exams for this modality
-            st.write(f"Modality: {grupo}")
-            st.dataframe(grupo_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']])
+            st.markdown(f"<h3 style='color:#0a84ff;'>Modality: {grupo}</h3>", unsafe_allow_html=True)
+            st.dataframe(grupo_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']], width=1000, height=300)
             st.write(f'Total Points for {grupo}: {total_points}')
             st.write(f'Total Number of Exams for {grupo}: {total_exams}')
 
     # Display total points across all hospitals and modalities
-    st.write(f'Total Points for All Modalities: {total_points_sum}')
+    st.markdown(f"<h2 style='color:#0a84ff;'>Total Points for All Modalities: {total_points_sum}</h2>", unsafe_allow_html=True)
 
 else:
     st.sidebar.write('Please upload both an Excel and a CSV file to continue.')
