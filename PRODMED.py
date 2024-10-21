@@ -10,111 +10,73 @@ response = requests.get(url)
 logo = Image.open(BytesIO(response.content))
 st.sidebar.image(logo, use_column_width=True)
 
-# Load data from the Excel file
-def load_data(uploaded_file):
-    if uploaded_file is not None:
-        df = pd.read_excel(uploaded_file, sheet_name='Sheet1')
-        return df
-    return None
+# Streamlit app
+st.title('Medical Analysis Dashboard')
 
-# Load multipliers from CSV file automatically
-def load_multipliers():
-    csv_file_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
-    try:
-        multipliers_df = pd.read_csv(csv_file_url, index_col=0, encoding='latin1')
-        st.write("Loaded multipliers successfully.")  # Debugging information
-        st.write("Available columns in multipliers CSV:", multipliers_df.columns)  # Check available columns
-        return multipliers_df.set_index('DESCRICAO_PROCEDIMENTO')['MULTIPLIER'].to_dict()
-    except Exception as e:
-        st.error("Error loading multipliers from GitHub: " + str(e))
-        return {}
-    except Exception as e:
-        st.error("Error loading multipliers: " + str(e))
-        return {}
+# Upload Excel and CSV files
+st.sidebar.header('Upload Files')
+xlsx_file = st.sidebar.file_uploader('Upload Excel File', type=['xlsx'])
+csv_file = st.sidebar.file_uploader('Upload CSV File', type=['csv'])
 
-# Function to calculate points
-def calculate_points(filtered_data, multipliers):
-    def clean_string(s):
-        return s.lower().replace(' ', '').replace('-', '').replace('.', '').strip()
+# Initialize dataframes
+excel_df = None
+csv_df = None
 
-    multipliers = {clean_string(k): v for k, v in multipliers.items()}
-    
-    def calculate_row_points(row):
-        descricao = clean_string(row['DESCRICAO_PROCEDIMENTO'])
-        return multipliers.get(descricao, 0)
+if xlsx_file and csv_file:
+    # Load the files into dataframes
+    excel_df = pd.read_excel(xlsx_file)
+    csv_df = pd.read_csv(csv_file)
 
-    if 'GRUPO' not in filtered_data.columns:
-        st.error("The column 'GRUPO' is missing from the filtered data.")
-        return 0
+    # Sidebar filters
+    st.sidebar.header('Filter Options')
 
-    filtered_data['PONTOS'] = filtered_data.apply(calculate_row_points, axis=1)
-    return filtered_data['PONTOS'].sum()
+    # Date range filter
+    date_column = 'DATA_LAUDO'
+    excel_df[date_column] = pd.to_datetime(excel_df[date_column], errors='coerce')
+    min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
+    start_date, end_date = st.sidebar.date_input('Select Date Range', [min_date, max_date])
 
-# Streamlit App
-st.title('Event Counter for MEDICO_LAUDO_DEFINITIVO')
+    # Unidade filter
+    hospital_list = excel_df['UNIDADE'].unique()
+    selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
 
-# File Upload
-uploaded_file = st.sidebar.file_uploader("Choose an Excel file", type=["xlsx"])
+    # Grupo filter
+    grupo_list = excel_df['GRUPO'].unique()
+    selected_grupo = st.sidebar.selectbox('Select Exam Modality', grupo_list)
 
-# Load data
-if uploaded_file is not None:
-    data = load_data(uploaded_file)
+    # Medico_Laudo_Definitivo filter
+    doctor_list = excel_df['MEDICO_LAUDO_DEFINITIVO'].unique()
+    selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
 
-    # Sidebar Filters
-    st.sidebar.header('Filters')
+    # Apply filters to the dataframe
+    filtered_df = excel_df[
+        (excel_df[date_column] >= pd.to_datetime(start_date)) &
+        (excel_df[date_column] <= pd.to_datetime(end_date)) &
+        (excel_df['UNIDADE'] == selected_hospital) &
+        (excel_df['GRUPO'] == selected_grupo) &
+        (excel_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
+    ]
 
-    # Date Range Filter
-    data['STATUS_APROVADO'] = pd.to_datetime(data['STATUS_APROVADO'], format='%d-%m-%Y %H:%M', errors='coerce')
-    min_date = data['STATUS_APROVADO'].min() if pd.notna(data['STATUS_APROVADO'].min()) else pd.Timestamp.now()
-    max_date = data['STATUS_APROVADO'].max() if pd.notna(data['STATUS_APROVADO'].max()) else pd.Timestamp.now()
-    start_date = st.sidebar.date_input('Start Date', value=min_date.date(), min_value=min_date.date(), max_value=max_date.date())
-    end_date = st.sidebar.date_input('End Date', value=max_date.date(), min_value=min_date.date(), max_value=max_date.date())
+    # Merge filtered data with CSV to calculate points
+    csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
+    filtered_df['DESCRICAO_PROCEDIMENTO'] = filtered_df['DESCRICAO_PROCEDIMENTO'].str.upper()
+    merged_df = pd.merge(filtered_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='inner')
 
-    # Filter data by date range
-    filtered_data = data[(data['STATUS_APROVADO'] >= pd.to_datetime(start_date)) & (data['STATUS_APROVADO'] <= pd.to_datetime(end_date))]
+    # Calculate points as count * multiplier
+    merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce')
+    procedure_counts = merged_df['DESCRICAO_PROCEDIMENTO'].value_counts().reset_index()
+    procedure_counts.columns = ['DESCRICAO_PROCEDIMENTO', 'COUNT']
+    merged_df = pd.merge(procedure_counts, csv_df, on='DESCRICAO_PROCEDIMENTO', how='inner')
+    merged_df['POINTS'] = merged_df['COUNT'] * merged_df['MULTIPLIER']
 
-    # GRUPO and UNIDADE Filters
-    if not filtered_data.empty:
-        grupos = filtered_data['GRUPO'].dropna().unique()
-        selected_grupo = st.sidebar.selectbox('Select a GRUPO', ['All'] + list(grupos))
-
-        if selected_grupo != 'All':
-            filtered_data = filtered_data[filtered_data['GRUPO'] == selected_grupo]
-
-        unidades = filtered_data['UNIDADE'].dropna().unique()
-        selected_unidade = st.sidebar.selectbox('Select a UNIDADE', ['All'] + list(unidades))
-
-        if selected_unidade != 'All':
-            filtered_data = filtered_data[filtered_data['UNIDADE'] == selected_unidade]
-
-        # Get unique doctor names and let the user select
-        doctors = filtered_data['MEDICO_LAUDO_DEFINITIVO'].dropna().unique()
-        selected_doctor = st.sidebar.selectbox('Select a Doctor', ['All'] + list(doctors))
-
-        if selected_doctor != 'All':
-            filtered_data = filtered_data[filtered_data['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor]
-
-        # Load multipliers from CSV automatically
-        multipliers = load_multipliers()
-
-        # Calculate points for GRUPO TOMOGRAFIA
-        total_pontos = calculate_points(filtered_data, multipliers)
-
-        # Display the dataframe and total counts
-        st.write(f"Procedures for Dr. {selected_doctor}")
-        st.dataframe(filtered_data[['DESCRICAO_PROCEDIMENTO', 'PONTOS']])
-        
-        st.write(f"Total number of procedures: {filtered_data.shape[0]}")
-
-        # Display total count for filtered data
-        st.write(f"Total number of events in filtered data: {filtered_data.shape[0]}")
-
-        # Display total points
-        st.write(f"Total PONTOS: {total_pontos}")
-    else:
-        st.write("No data available for the selected date range.")
+    # Display filtered dataframe and count of exams
+    st.write('Filtered Dataframe:')
+    st.dataframe(merged_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']])
+    st.write(f'Total Number of Exams: {len(filtered_df)}')
+    st.write(f'Total Points: {merged_df["POINTS"].sum()}')
 else:
-    st.write("Please upload an Excel file to proceed.")
+    st.sidebar.write('Please upload both an Excel and a CSV file to continue.')
+
 
 
 
