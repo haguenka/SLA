@@ -18,13 +18,14 @@ st.title('Medical Analysis Dashboard')
 # Upload Excel and CSV files
 st.sidebar.header('Upload Files')
 xlsx_file = st.sidebar.file_uploader('Upload Excel File', type=['xlsx'])
-csv_file = st.sidebar.file_uploader('Upload CSV File', type=['csv'])
+csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multiplier.csv'
+csv_df = pd.read_csv(csv_url)
 
 # Initialize dataframes
 excel_df = None
 csv_df = None
 
-if xlsx_file and csv_file:
+if xlsx_file and csv_df is not None:
     # Load the files into dataframes
     excel_df = pd.read_excel(xlsx_file)
     csv_df = pd.read_csv(csv_file)
@@ -97,6 +98,7 @@ if xlsx_file and csv_file:
 
 else:
     st.sidebar.write('Please upload both an Excel and a CSV file to continue.')
+
 
 
 
