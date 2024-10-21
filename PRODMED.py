@@ -137,7 +137,7 @@ if xlsx_file:
             try:
                 pdf = FPDF(orientation='L', unit='mm', format='A4')
                 pdf.set_auto_page_break(auto=True, margin=15)
-                pdf.set_margins(left=10, top=10, right=10)
+                pdf.set_margins(left=5, top=5, right=5)
                 logo_path = BytesIO(requests.get(url).content)  # Load logo from GitHub
 
                 # Add the logo to the first page
@@ -166,18 +166,18 @@ if xlsx_file:
 
                         # Create table header
                         pdf.set_font('Arial', 'B', 10)
-                        pdf.cell(60, 10, 'Procedure', 1, 0, 'C')
-                        pdf.cell(30, 10, 'Count', 1, 0, 'C')
-                        pdf.cell(30, 10, 'Multiplier', 1, 0, 'C')
-                        pdf.cell(30, 10, 'Points', 1, 1, 'C')
+                        pdf.cell(70, 10, 'Procedure', 1, 0, 'C')
+                        pdf.cell(40, 10, 'Count', 1, 0, 'C')
+                        pdf.cell(40, 10, 'Multiplier', 1, 0, 'C')
+                        pdf.cell(40, 10, 'Points', 1, 1, 'C')
 
                         # Add rows to the table
                         pdf.set_font('Arial', '', 10)
                         for _, row in grupo_df.iterrows():
                             pdf.cell(60, 10, row['DESCRICAO_PROCEDIMENTO'], 1, 0, 'L')
-                        pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
-                        pdf.cell(30, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
-                        pdf.cell(30, 10, f"{row['POINTS']:.1f}", 1, 1, 'C')
+                            pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
+                            pdf.cell(30, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
+                            pdf.cell(30, 10, f"{row['POINTS']:.1f}", 1, 1, 'C')
                         
                         # Summary for the modality
                         total_points = grupo_df['POINTS'].sum()
