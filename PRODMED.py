@@ -81,7 +81,7 @@ if xlsx_file:
     for hospital in doctor_grouped['UNIDADE'].unique():
         hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
         st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
-        for grupo in hospital_df['GRUPO'].unique():
+                for grupo in hospital_df['GRUPO'].unique():
             grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
             grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
             total_points = grupo_df['POINTS'].sum()
@@ -138,12 +138,32 @@ if xlsx_file:
                 pdf = FPDF(orientation='L', unit='mm', format='A4')
                 pdf.set_auto_page_break(auto=True, margin=15)
                 pdf.set_margins(left=5, top=5, right=5)
+
+                # Create title sheet
+                pdf.add_page()
+                pdf.set_font('Arial', 'B', 24)
+                pdf.cell(0, 20, 'Relatório de produção', ln=True, align='C')
+                pdf.ln(10)
+                pdf.set_font('Arial', '', 18)
+                pdf.cell(0, 10, f'Mês de {start_date.strftime("%B de %Y")}', ln=True, align='C')
+                pdf.ln(20)
+
+                # Add doctors name in uppercase, big and blue
+                pdf.set_font('Arial', 'B', 24)
+                pdf.set_text_color(0, 0, 255)
+                pdf.cell(0, 10, selected_doctor.upper(), ln=True, align='C')
+                pdf.set_text_color(0, 0, 0)
+                pdf.ln(20)
+
+                # Add the logo
+                pdf.image(logo_path, x=80, y=50, w=100)
+                pdf.ln(20)
                 logo_path = BytesIO(requests.get(url).content)  # Load logo from GitHub
                 pdf.add_page()
 
                 # Add the logo to the first page
                 pdf.add_page()
-                pdf.image(logo_path, x=10, y=8, w=30)
+                pdf.image(logo_path, x=10, y=8, w=60)
                 pdf.set_font('Arial', 'B', 16)
                 pdf.cell(0, 10, 'Medical Analysis Summary Report', ln=True, align='C')
                 pdf.ln(20)
@@ -169,7 +189,7 @@ if xlsx_file:
 
                         # Create table header
                         pdf.set_font('Arial', 'B', 10)
-                        pdf.cell(60, 10, 'Procedure', 1, 0, 'C')
+                        pdf.cell(0, 10, 'Procedure', 1, 0, 'C')
                         pdf.cell(30, 10, 'Count', 1, 0, 'C')
                         pdf.cell(30, 10, 'Multiplier', 1, 0, 'C')
                         pdf.cell(30, 10, 'Points', 1, 1, 'C')
@@ -177,7 +197,7 @@ if xlsx_file:
                         # Add rows to the table
                         pdf.set_font('Arial', '', 10)
                         for _, row in grupo_df.iterrows():
-                            pdf.cell(60, 10, row['DESCRICAO_PROCEDIMENTO'], 1, 0, 'L')
+                            pdf.cell(0, 10, row['DESCRICAO_PROCEDIMENTO'], 1, 0, 'L')
                             pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
                             pdf.cell(30, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
                             pdf.cell(30, 10, f"{row['POINTS']:.1f}", 1, 1, 'C')
