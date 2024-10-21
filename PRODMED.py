@@ -77,7 +77,15 @@ if xlsx_file and csv_file:
         st.write('Filtered Dataframe:')
         st.dataframe(merged_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']])
         st.write(f'Total Number of Exams: {procedure_counts['COUNT'].sum()}')
-        st.write(f'Total Points: {merged_df["POINTS"].sum()}')
+        total_points = merged_df['POINTS'].sum()
+        st.write(f'Total Points: {total_points}')
+
+        # Visualization of total points
+        fig, ax = plt.subplots()
+        ax.bar(['Total Points'], [total_points], color='skyblue')
+        ax.set_ylabel('Points')
+        ax.set_title('Total Points Visualization')
+        st.pyplot(fig)
     else:
         st.write('The CSV file must contain a "MULTIPLIER" column.')
 else:
