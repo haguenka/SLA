@@ -21,7 +21,7 @@ def load_data(uploaded_file):
 def load_multipliers():
     csv_file_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
     try:
-        multipliers_df = pd.read_csv(csv_file_url, index_col=0)
+        multipliers_df = pd.read_csv(csv_file_url, index_col=0, encoding='latin1')
         st.write("Loaded multipliers successfully.")  # Debugging information
         st.write("Available columns in multipliers CSV:", multipliers_df.columns)  # Check available columns
         return multipliers_df.set_index('DESCRICAO_PROCEDIMENTO')['MULTIPLIER'].to_dict()
