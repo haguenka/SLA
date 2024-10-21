@@ -98,21 +98,31 @@ if xlsx_file:
 
     # Export all results to Excel file
     if st.button('Export Results to Excel'):
-        with pd.ExcelWriter('Medical_Analysis_Results.xlsx', engine='openpyxl') as writer:
-            filtered_df.to_excel(writer, sheet_name='Filtered Data', index=False)
-            for hospital in doctor_grouped['UNIDADE'].unique():
-                hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
-                for grupo in hospital_df['GRUPO'].unique():
-                    grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
-                    grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
-                    grupo_df.to_excel(writer, sheet_name=f'{hospital}_{grupo}', index=False)
-
-            # Add a summary sheet
-            summary_df = pd.DataFrame({'Total Points for All Modalities': [total_points_sum]})
-            summary_df.to_excel(writer, sheet_name='Summary', index=False)
-
-        st.success('Results exported successfully! You can download the file from the link below:')
-        st.markdown(f"[Download Results](Medical_Analysis_Results.xlsx)")
+        try:
+            with pd.ExcelWriter('Medical_Analysis_Results.xlsx', engine='openpyxl') as writer:
+                # Write filtered data
+                filtered_df.to_excel(writer, sheet_name='Filtered Data', index=False)
+                
+                # Write grouped data
+                for hospital in doctor_grouped['UNIDADE'].unique():
+                    hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
+                    for grupo in hospital_df['GRUPO'].unique():
+                        grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
+                        grupo_df.to_excel(writer, sheet_name=f'{hospital}_{grupo}', index=False)
+                
+                # Write summary sheet
+                summary_df = pd.DataFrame({'Total Points for All Modalities': [total_points_sum]})
+                summary_df.to_excel(writer, sheet_name='Summary', index=False)
+            
+            st.success('Results exported successfully! You can download the file from the link below:')
+            with open('Medical_Analysis_Results.xlsx', 'rb') as file:
+                btn = st.download_button(
+                    label='Download Results',
+                    data=file,
+                    file_name='Medical_Analysis_Results.xlsx'
+                )
+        except Exception as e:
+            st.error(f'An error occurred while exporting: {e}')
 else:
     st.sidebar.write('Please upload an Excel file to continue.')
 
