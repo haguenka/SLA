@@ -76,7 +76,7 @@ if xlsx_file and csv_file:
         # Display filtered dataframe and count of exams
         st.write('Filtered Dataframe:')
         st.dataframe(merged_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']])
-        st.write(f'Total Number of Exams: {len(filtered_df)}')
+        st.write(f'Total Number of Exams: {procedure_counts['COUNT'].sum()}')
         st.write(f'Total Points: {merged_df["POINTS"].sum()}')
     else:
         st.write('The CSV file must contain a "MULTIPLIER" column.')
