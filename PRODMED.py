@@ -24,7 +24,7 @@ def load_multipliers():
         multipliers_df = pd.read_csv(csv_file_url, index_col=0)
         st.write("Loaded multipliers successfully.")  # Debugging information
         st.write("Available columns in multipliers CSV:", multipliers_df.columns)  # Check available columns
-        return multipliers_df.set_index('PROCEDIMENTO')['MULTIPLIER'].to_dict()
+        return multipliers_df.set_index('DESCRICAO_PROCEDIMENTO')['MULTIPLIER'].to_dict()
     except Exception as e:
         st.error("Error loading multipliers from GitHub: " + str(e))
         return {}
