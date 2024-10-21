@@ -35,9 +35,7 @@ def load_multipliers():
 # Function to calculate points
 def calculate_points(filtered_data, multipliers):
     def calculate_row_points(row):
-        if row['GRUPO'] == 'GRUPO TOMOGRAFIA':
-            return multipliers.get(row['DESCRICAO_PROCEDIMENTO'], 0)
-        return 0
+        return multipliers.get(row['DESCRICAO_PROCEDIMENTO'], 0)
 
     if 'GRUPO' not in filtered_data.columns:
         st.error("The column 'GRUPO' is missing from the filtered data.")
@@ -98,6 +96,7 @@ if uploaded_file is not None:
 
         # Display the dataframe and total counts
         st.write(f"Procedures for Dr. {selected_doctor}")
+        st.dataframe(filtered_data[['DESCRICAO_PROCEDIMENTO', 'PONTOS']])
         
         st.write(f"Total number of procedures: {filtered_data.shape[0]}")
 
