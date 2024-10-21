@@ -35,9 +35,9 @@ if xlsx_file and csv_file:
 
     # Date range filter
     date_column = 'DATA_LAUDO'
-    excel_df[date_column] = pd.to_datetime(excel_df[date_column], errors='coerce').dt.strftime('%d/%m/%Y')
-    min_date, max_date = pd.to_datetime(excel_df[date_column], format='%d/%m/%Y').min(), pd.to_datetime(excel_df[date_column], format='%d/%m/%Y').max()
-    start_date, end_date = st.sidebar.date_input('Select Date Range', [min_date, max_date], format='%d/%m/%Y')
+    excel_df[date_column] = pd.to_datetime(excel_df[date_column], errors='coerce')
+    min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
+    start_date, end_date = st.sidebar.date_input('Select Date Range', [min_date, max_date])
 
     # Unidade filter
     hospital_list = excel_df['UNIDADE'].unique()
@@ -53,8 +53,8 @@ if xlsx_file and csv_file:
 
     # Apply filters to the dataframe
     filtered_df = excel_df[
-        (pd.to_datetime(excel_df[date_column], format='%d/%m/%Y') >= pd.to_datetime(start_date)) &
-        (pd.to_datetime(excel_df[date_column], format='%d/%m/%Y') <= pd.to_datetime(end_date)) &
+        (excel_df[date_column] >= pd.to_datetime(start_date)) &
+        (excel_df[date_column] <= pd.to_datetime(end_date)) &
         (excel_df['UNIDADE'] == selected_hospital) &
         (excel_df['GRUPO'] == selected_grupo) &
         (excel_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
