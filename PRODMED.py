@@ -69,7 +69,7 @@ if xlsx_file and csv_file:
     merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
 
     # Calculate points for each procedure
-    merged_df['POINTS'] = merged_df['COUNT'] * merged_df['MULTIPLIER']
+    merged_df['POINTS'] = merged_df['STATUS_APROVADO'].fillna(0) * merged_df['MULTIPLIER']
 
     # Group by UNIDADE, GRUPO, and DESCRICAO_PROCEDIMENTO to create dataframes for each doctor
     doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({'MULTIPLIER': 'first', 'STATUS_APROVADO': 'count'}).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
@@ -97,7 +97,6 @@ if xlsx_file and csv_file:
 
 else:
     st.sidebar.write('Please upload both an Excel and a CSV file to continue.')
-
 
 
 
