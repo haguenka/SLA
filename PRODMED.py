@@ -33,8 +33,8 @@ def load_multipliers():
 # Function to calculate points
 def calculate_points(filtered_data, multipliers):
     def calculate_row_points(row):
-        if 'GRUPO' in row and row['GRUPO'] == 'GRUPO TOMOGRAFIA':
-            return multipliers.get(row['DESCRICAO_PROCEDIMENTO'], 0) * row['Count']
+        if row['GRUPO'] == 'GRUPO TOMOGRAFIA':
+            return multipliers.get(row['DESCRICAO_PROCEDIMENTO'], 0)
         return 0
 
     if 'GRUPO' not in filtered_data.columns:
@@ -89,19 +89,18 @@ if uploaded_file is not None:
             filtered_data = filtered_data[filtered_data['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor]
 
         # Create a dataframe with "DESCRICAO_PROCEDIMENTO" and count events
-        procedure_counts = filtered_data['DESCRICAO_PROCEDIMENTO'].value_counts().reset_index()
-        procedure_counts.columns = ['DESCRICAO_PROCEDIMENTO', 'Count']
+        
 
         # Load multipliers from CSV automatically
         multipliers = load_multipliers()
 
         # Calculate points for GRUPO TOMOGRAFIA
-        total_pontos = calculate_points(procedure_counts, multipliers)
+        total_pontos = calculate_points(filtered_data, multipliers)
 
         # Display the dataframe and total counts
         st.write(f"Procedures for Dr. {selected_doctor}")
         st.dataframe(procedure_counts)
-        st.write(f"Total number of procedures: {procedure_counts['Count'].sum()}")
+        st.write(f"Total number of procedures: {filtered_data.shape[0]}")
 
         # Display total count for filtered data
         st.write(f"Total number of events in filtered data: {filtered_data.shape[0]}")
@@ -112,6 +111,7 @@ if uploaded_file is not None:
         st.write("No data available for the selected date range.")
 else:
     st.write("Please upload an Excel file to proceed.")
+
 
 
 
