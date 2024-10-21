@@ -71,7 +71,7 @@ if xlsx_file:
     merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
 
     # Calculate points for each procedure
-    merged_df['POINTS'] = merged_df['STATUS_APROVADO'] * merged_df['MULTIPLIER']
+    merged_df['POINTS'] = merged_df['MULTIPLIER'] * merged_df['MULTIPLIER']  # Updated to use numerical columns for calculation
 
     # Group by UNIDADE, GRUPO, and DESCRICAO_PROCEDIMENTO to create dataframes for each doctor
     doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({'MULTIPLIER': 'first', 'STATUS_APROVADO': 'count'}).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
