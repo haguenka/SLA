@@ -125,8 +125,8 @@ if xlsx_file:
         except Exception as e:
             st.error(f'An error occurred while exporting: {e}')
 
-    # Export summary as PDF report
-    if st.button('Export Summary as PDF'):
+    # Export summary and doctors' dataframes as a combined PDF report
+    if st.button('Export Summary and Doctors Dataframes as PDF'):
         try:
             from fpdf import FPDF
         except ImportError:
@@ -134,6 +134,7 @@ if xlsx_file:
         else:
             try:
                 pdf = FPDF()
+                pdf.set_auto_page_break(auto=True, margin=15)
                 pdf.add_page()
                 pdf.set_font('Arial', 'B', 16)
                 pdf.cell(40, 10, 'Medical Analysis Summary Report')
@@ -155,51 +156,22 @@ if xlsx_file:
                         pdf.cell(200, 10, f'Total Points: {total_points}', ln=True)
                         pdf.cell(200, 10, f'Total Number of Exams: {total_exams}', ln=True)
                         pdf.ln(5)
-                pdf_file_path = 'Medical_Analysis_Summary.pdf'
+                        for _, row in grupo_df.iterrows():
+                            pdf.cell(200, 10, f"Procedure: {row['DESCRICAO_PROCEDIMENTO']}, Count: {row['COUNT']}, Multiplier: {row['MULTIPLIER']}, Points: {row['POINTS']}", ln=True)
+                        pdf.ln(5)
+                pdf_file_path = 'Medical_Analysis_Combined_Report.pdf'
                 pdf.output(pdf_file_path)
-                st.success('Summary report exported successfully! You can download the file from the link below:')
+                st.success('Combined report exported successfully! You can download the file from the link below:')
                 with open(pdf_file_path, 'rb') as file:
                     btn = st.download_button(
-                        label='Download Summary PDF',
+                        label='Download Combined PDF',
                         data=file,
-                        file_name='Medical_Analysis_Summary.pdf'
+                        file_name='Medical_Analysis_Combined_Report.pdf'
                     )
             except Exception as e:
                 st.error(f'An error occurred while exporting the PDF: {e}')
 
-    # Export doctors' dataframes as PDF
-    if st.button('Export Doctors Dataframes as PDF'):
-        try:
-            pdf = FPDF()
-            pdf.set_auto_page_break(auto=True, margin=15)
-            pdf.add_page()
-            pdf.set_font('Arial', 'B', 16)
-            pdf.cell(40, 10, 'Doctors Dataframes Report')
-            pdf.ln(10)
-            pdf.set_font('Arial', '', 12)
-            for hospital in doctor_grouped['UNIDADE'].unique():
-                pdf.set_font('Arial', 'B', 14)
-                pdf.cell(200, 10, f'Hospital: {hospital}', ln=True)
-                hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
-                for grupo in hospital_df['GRUPO'].unique():
-                    pdf.set_font('Arial', 'B', 12)
-                    pdf.cell(200, 10, f'Modality: {grupo}', ln=True)
-                    grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
-                    for _, row in grupo_df.iterrows():
-                        pdf.set_font('Arial', '', 12)
-                        pdf.cell(200, 10, f"Procedure: {row['DESCRICAO_PROCEDIMENTO']}, Count: {row['COUNT']}, Multiplier: {row['MULTIPLIER']}, Points: {row['POINTS']}", ln=True)
-                    pdf.ln(5)
-            pdf_file_path = 'Doctors_Dataframes_Report.pdf'
-            pdf.output(pdf_file_path)
-            st.success('Doctors dataframes report exported successfully! You can download the file from the link below:')
-            with open(pdf_file_path, 'rb') as file:
-                btn = st.download_button(
-                    label='Download Doctors Dataframes PDF',
-                    data=file,
-                    file_name='Doctors_Dataframes_Report.pdf'
-                )
-        except Exception as e:
-            st.error(f'An error occurred while exporting the PDF: {e}')
+
         try:
             with pd.ExcelWriter('Medical_Analysis_Results.xlsx', engine='openpyxl') as writer:
                 # Write filtered data
@@ -227,6 +199,7 @@ if xlsx_file:
             st.error(f'An error occurred while exporting: {e}')
 else:
     st.sidebar.write('Please upload an Excel file to continue.')
+
 
 
 
