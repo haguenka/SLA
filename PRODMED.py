@@ -48,22 +48,13 @@ if xlsx_file and csv_file:
     doctor_list = excel_df[excel_df['UNIDADE'] == selected_hospital]['MEDICO_LAUDO_DEFINITIVO'].unique()
     selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
 
-    # Grupo filter
-    grupo_list = excel_df['GRUPO'].unique()
-    selected_grupo = st.sidebar.selectbox('Select Exam Modality', grupo_list)
-
     # Apply filters to the dataframe
     filtered_df = excel_df[
         (excel_df[date_column] >= pd.to_datetime(start_date)) &
         (excel_df[date_column] <= pd.to_datetime(end_date)) &
         (excel_df['UNIDADE'] == selected_hospital) &
-        (excel_df['GRUPO'] == selected_grupo) &
         (excel_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
     ]
-
-    # Display full filtered dataframe
-    st.write('Full Filtered Dataframe:')
-    st.dataframe(filtered_df)
 
     # Merge filtered data with CSV to calculate points
     csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
@@ -73,17 +64,25 @@ if xlsx_file and csv_file:
     # Fill NaN values in MULTIPLIER with 0 for procedures not listed in the CSV
     merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
 
-    # Calculate points as count * multiplier
-    merged_df = merged_df.groupby('DESCRICAO_PROCEDIMENTO').agg({'MULTIPLIER': 'first', 'STATUS_APROVADO': 'count'}).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
-    merged_df['POINTS'] = merged_df['COUNT'] * merged_df['MULTIPLIER']
+    # Group by UNIDADE, MEDICO_LAUDO_DEFINITIVO, and GRUPO to create dataframes for each doctor and modality
+    doctors_grouped = merged_df.groupby(['UNIDADE', 'MEDICO_LAUDO_DEFINITIVO', 'GRUPO'])
+    total_points_sum = 0
 
-    # Display summarized filtered dataframe and count of exams
-    st.write('Summarized Filtered Dataframe:')
-    st.dataframe(merged_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']])
-    total_points = merged_df['POINTS'].sum()
-    total_exams = merged_df['COUNT'].sum()
-    st.write(f'Total Number of Exams: {total_exams}')
-    st.write(f'Total Points: {total_points}')
+    # Loop through each group (hospital, doctor, modality) and display data
+    for (hospital, doctor, grupo), group_df in doctors_grouped:
+        if group_df['COUNT'].sum() > 0:  # Only display if the doctor approved exams in that modality
+            st.write(f"Hospital: {hospital} | Doctor: {doctor} | Modality: {grupo}")
+            grouped_summary = group_df.groupby('DESCRICAO_PROCEDIMENTO').agg({'MULTIPLIER': 'first', 'STATUS_APROVADO': 'count'}).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
+            grouped_summary['POINTS'] = grouped_summary['COUNT'] * grouped_summary['MULTIPLIER']
+            total_points = grouped_summary['POINTS'].sum()
+            total_points_sum += total_points
+
+            # Display the grouped dataframe and total points for this modality
+            st.dataframe(grouped_summary[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']])
+            st.write(f'Total Points for {grupo}: {total_points}')
+
+    # Display total points across all groups
+    st.write(f'Total Points for All Modalities: {total_points_sum}')
 
 else:
     st.sidebar.write('Please upload both an Excel and a CSV file to continue.')
