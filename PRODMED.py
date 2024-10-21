@@ -71,7 +71,7 @@ if xlsx_file:
     merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
 
     # Calculate points for each procedure
-    merged_df['POINTS'] = merged_df['MULTIPLIER']
+    merged_df['POINTS'] = merged_df['COUNT'] * merged_df['MULTIPLIER']
 
     # Group by UNIDADE, GRUPO, and DESCRICAO_PROCEDIMENTO to create dataframes for each doctor
     doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({'MULTIPLIER': 'first', 'STATUS_APROVADO': 'count'}).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
@@ -136,14 +136,16 @@ if xlsx_file:
         else:
             try:
                 pdf = FPDF(orientation='L', unit='mm', format='A4')
-                pdf.set_auto_page_break(auto=False, margin=15)
+                pdf.set_auto_page_break(auto=True, margin=15)
                 pdf.set_margins(left=5, top=5, right=5)
 
                 # Create title sheet
                 pdf.add_page()
                 logo_path = BytesIO(requests.get(url).content)  # Load logo from GitHub
+                pdf.image(logo_path, x=80, y=30, w=120)
                 pdf.set_font('Arial', 'B', 24)
-                pdf.cell(0, 20, 'Relatório de produção', ln=True, align='C')
+                pdf.ln(100)
+                pdf.cell(0, 10, 'Relatório de produção', ln=True, align='C')
                 pdf.ln(10)
                 pdf.set_font('Arial', '', 18)
                 pdf.cell(0, 10, f'Mês de {start_date.strftime("%B de %Y").capitalize().replace("January", "Janeiro").replace("February", "Fevereiro").replace("March", "Março").replace("April", "Abril").replace("May", "Maio").replace("June", "Junho").replace("July", "Julho").replace("August", "Agosto").replace("September", "Setembro").replace("October", "Outubro").replace("November", "Novembro").replace("December", "Dezembro")}', ln=True, align='C')
@@ -154,17 +156,12 @@ if xlsx_file:
                 pdf.cell(0, 10, selected_doctor.upper(), ln=True, align='C')
                 pdf.set_text_color(0, 0, 0)
                 pdf.ln(20)
-                # Add the logo below the doctor's name
-                pdf.image(logo_path, x=80, y=80, w=120)
-                pdf.ln(20)
-                logo_path = BytesIO(requests.get(url).content)  # Load logo from GitHub
-
-                # Add the logo to the first page
+                
+                # Add summary sheet
                 pdf.add_page()
-                pdf.image(logo_path, x=10, y=8, w=60)
                 pdf.set_font('Arial', 'B', 16)
                 pdf.cell(0, 10, 'Medical Analysis Summary Report', ln=True, align='C')
-                pdf.ln(20)
+                pdf.ln(10)
                 pdf.set_font('Arial', '', 16)
                 pdf.cell(0, 10, f'Total Points for All Modalities: {total_points_sum}', ln=True)
                 pdf.ln(10)
