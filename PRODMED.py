@@ -80,8 +80,7 @@ if xlsx_file:
     # Loop through each hospital and modality for the selected doctor
     for hospital in doctor_grouped['UNIDADE'].unique():
         hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
-        st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
-                        for grupo in hospital_df['GRUPO'].unique():
+        st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)    for grupo in hospital_df['GRUPO'].unique():
             grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
             grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
             total_points = grupo_df['POINTS'].sum()
@@ -139,6 +138,7 @@ if xlsx_file:
                 pdf.set_auto_page_break(auto=True, margin=15)
                 pdf.set_margins(left=5, top=5, right=5)
                 logo_path = BytesIO(requests.get(url).content)  # Load logo from GitHub
+                pdf.add_page()
 
                 # Add the logo to the first page
                 pdf.add_page()
