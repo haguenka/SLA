@@ -129,20 +129,29 @@ if xlsx_file:
     if st.button('Export Summary and Doctors Dataframes as PDF'):
         try:
             from fpdf import FPDF
+            import os
+            from PIL import Image
         except ImportError:
-            st.error('The required library fpdf is not installed. Please install it to export the summary as a PDF.')
+            st.error('The required libraries (fpdf, PIL) are not installed. Please install them to export the summary as a PDF.')
         else:
             try:
-                pdf = FPDF()
+                pdf = FPDF(orientation='L', unit='mm', format='A4')
                 pdf.set_auto_page_break(auto=True, margin=15)
+                logo_path = BytesIO(requests.get(url).content)  # Update with the correct path to your logo image
+
+                # Add the logo to the first page
                 pdf.add_page()
+                pdf.image(logo_path, x=10, y=8, w=30)
                 pdf.set_font('Arial', 'B', 16)
                 pdf.cell(0, 10, 'Medical Analysis Summary Report', ln=True, align='C')
-                pdf.ln(10)
+                pdf.ln(20)
                 pdf.set_font('Arial', '', 12)
                 pdf.cell(0, 10, f'Total Points for All Modalities: {total_points_sum}', ln=True)
                 pdf.ln(10)
+                
+                # Add hospital and modality dataframes to subsequent pages
                 for hospital in doctor_grouped['UNIDADE'].unique():
+                    pdf.add_page()
                     pdf.set_font('Arial', 'B', 14)
                     pdf.cell(0, 10, f'Hospital: {hospital}', ln=True)
                     hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
@@ -160,6 +169,7 @@ if xlsx_file:
                         for _, row in grupo_df.iterrows():
                             pdf.cell(0, 10, f"Procedure: {row['DESCRICAO_PROCEDIMENTO']}, Count: {row['COUNT']}, Multiplier: {row['MULTIPLIER']}, Points: {row['POINTS']}", ln=True)
                         pdf.ln(5)
+                
                 pdf_file_path = 'Medical_Analysis_Combined_Report.pdf'
                 pdf.output(pdf_file_path)
                 st.success('Combined report exported successfully! You can download the file from the link below:')
