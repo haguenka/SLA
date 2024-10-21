@@ -98,7 +98,7 @@ if xlsx_file:
 
     # Export all results to Excel file
     if st.button('Export Results to Excel'):
-        with pd.ExcelWriter('/mnt/data/Medical_Analysis_Results.xlsx', engine='openpyxl') as writer:
+        with pd.ExcelWriter('Medical_Analysis_Results.xlsx', engine='openpyxl') as writer:
             filtered_df.to_excel(writer, sheet_name='Filtered Data', index=False)
             for hospital in doctor_grouped['UNIDADE'].unique():
                 hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
@@ -112,10 +112,9 @@ if xlsx_file:
             summary_df.to_excel(writer, sheet_name='Summary', index=False)
 
         st.success('Results exported successfully! You can download the file from the link below:')
-        st.markdown(f"[Download Results](../mnt/data/Medical_Analysis_Results.xlsx)")
+        st.markdown(f"[Download Results](Medical_Analysis_Results.xlsx)")
 else:
     st.sidebar.write('Please upload an Excel file to continue.')
-
 
 
 
