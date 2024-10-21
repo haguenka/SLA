@@ -17,8 +17,25 @@ def load_data(uploaded_file):
         return df
     return None
 
+# Load multipliers from CSV file
+def load_multipliers():
+    try:
+        multipliers_df = pd.read_csv('multipliers.csv')
+        return multipliers_df.set_index('PROCEDIMENTO')['MULTIPLIER'].to_dict()
+    except Exception as e:
+        st.error("Error loading multipliers: " + str(e))
+        return {}
+
+# Function to calculate points
+def calculate_points(filtered_data, multipliers):
+    filtered_data['PONTOS'] = filtered_data.apply(
+        lambda x: multipliers.get(x['DESCRICAO_PROCEDIMENTO'], 0) * x['Count']
+        if x['GRUPO'] == 'GRUPO TOMOGRAFIA' else 0, axis=1
+    )
+    return filtered_data['PONTOS'].sum()
+
 # Streamlit App
-st.title('LAUDO MEDICO')
+st.title('Event Counter for MEDICO_LAUDO_DEFINITIVO')
 
 # File Upload
 uploaded_file = st.sidebar.file_uploader("Choose an Excel file", type=["xlsx"])
@@ -65,12 +82,11 @@ if uploaded_file is not None:
         procedure_counts = filtered_data['DESCRICAO_PROCEDIMENTO'].value_counts().reset_index()
         procedure_counts.columns = ['DESCRICAO_PROCEDIMENTO', 'Count']
 
-        # Assign points based on GRUPO
-        filtered_data['PONTOS'] = filtered_data.apply(
-            lambda x: 1 * procedure_counts.loc[procedure_counts['DESCRICAO_PROCEDIMENTO'] == x['DESCRICAO_PROCEDIMENTO'], 'Count'].values[0] if x['GRUPO'] == 'TOMOGRAFIA' else 
-                      2 * procedure_counts.loc[procedure_counts['DESCRICAO_PROCEDIMENTO'] == x['DESCRICAO_PROCEDIMENTO'], 'Count'].values[0] if x['GRUPO'] == 'RESSONANCIA' else 0, axis=1)
+        # Load multipliers from CSV
+        multipliers = load_multipliers()
 
-        total_pontos = filtered_data['PONTOS'].sum()
+        # Calculate points for GRUPO TOMOGRAFIA
+        total_pontos = calculate_points(procedure_counts, multipliers)
 
         # Display the dataframe and total counts
         st.write(f"Procedures for Dr. {selected_doctor}")
@@ -86,5 +102,6 @@ if uploaded_file is not None:
         st.write("No data available for the selected date range.")
 else:
     st.write("Please upload an Excel file to proceed.")
+
 
 
