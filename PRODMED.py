@@ -137,6 +137,7 @@ if xlsx_file:
             try:
                 pdf = FPDF(orientation='L', unit='mm', format='A4')
                 pdf.set_auto_page_break(auto=True, margin=15)
+                pdf.set_margins(left=10, top=10, right=10)
                 logo_path = BytesIO(requests.get(url).content)  # Load logo from GitHub
 
                 # Add the logo to the first page
@@ -173,10 +174,10 @@ if xlsx_file:
                         # Add rows to the table
                         pdf.set_font('Arial', '', 10)
                         for _, row in grupo_df.iterrows():
-                            pdf.cell(60, 10, row['DESCRICAO_PROCEDIMENTO'], 1, 0, 'C')
-                            pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
-                            pdf.cell(30, 10, str(row['MULTIPLIER']), 1, 0, 'C')
-                            pdf.cell(30, 10, str(row['POINTS']), 1, 1, 'C')
+                            pdf.cell(60, 10, row['DESCRICAO_PROCEDIMENTO'], 1, 0, 'L')
+                        pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
+                        pdf.cell(30, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
+                        pdf.cell(30, 10, f"{row['POINTS']:.1f}", 1, 1, 'C')
                         
                         # Summary for the modality
                         total_points = grupo_df['POINTS'].sum()
