@@ -10,6 +10,10 @@ response = requests.get(url)
 logo = Image.open(BytesIO(response.content))
 st.sidebar.image(logo, use_column_width=True)
 
+import streamlit as st
+import pandas as pd
+import os
+
 # Load data from the Excel file
 def load_data(uploaded_file):
     if uploaded_file is not None:
@@ -17,11 +21,15 @@ def load_data(uploaded_file):
         return df
     return None
 
-# Load multipliers from CSV file
+# Load multipliers from CSV file automatically
 def load_multipliers():
+    csv_file_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
     try:
-        multipliers_df = pd.read_csv('multipliers.csv')
+        multipliers_df = pd.read_csv(csv_file_url)
         return multipliers_df.set_index('PROCEDIMENTO')['MULTIPLIER'].to_dict()
+    except Exception as e:
+        st.error("Error loading multipliers from GitHub: " + str(e))
+        return {}
     except Exception as e:
         st.error("Error loading multipliers: " + str(e))
         return {}
@@ -82,7 +90,7 @@ if uploaded_file is not None:
         procedure_counts = filtered_data['DESCRICAO_PROCEDIMENTO'].value_counts().reset_index()
         procedure_counts.columns = ['DESCRICAO_PROCEDIMENTO', 'Count']
 
-        # Load multipliers from CSV
+        # Load multipliers from CSV automatically
         multipliers = load_multipliers()
 
         # Calculate points for GRUPO TOMOGRAFIA
@@ -102,6 +110,7 @@ if uploaded_file is not None:
         st.write("No data available for the selected date range.")
 else:
     st.write("Please upload an Excel file to proceed.")
+
 
 
 
