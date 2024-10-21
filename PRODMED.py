@@ -68,7 +68,7 @@ if xlsx_file and csv_file:
     # Calculate points as count * multiplier
     if 'MULTIPLIER' in merged_df.columns:
         merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce')
-        merged_df = merged_df.groupby('DESCRICAO_PROCEDIMENTO').agg({'DESCRICAO_PROCEDIMENTO': 'first', 'MULTIPLIER': 'first', 'DATA_LAUDO': 'count'}).rename(columns={'DATA_LAUDO': 'COUNT'}).reset_index(drop=True)
+        merged_df = merged_df.groupby('DESCRICAO_PROCEDIMENTO').agg({'MULTIPLIER': 'first', 'DATA_LAUDO': 'count'}).rename(columns={'DATA_LAUDO': 'COUNT'}).reset_index()
         merged_df['POINTS'] = merged_df['COUNT'] * merged_df['MULTIPLIER']
 
         # Display filtered dataframe and count of exams
@@ -80,7 +80,7 @@ if xlsx_file and csv_file:
         st.write(f'Total Points: {total_points}')
 
         # Visualization of total points
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(6, 4))
         ax.bar(['Total Points'], [total_points], color='skyblue')
         ax.set_ylabel('Points')
         ax.set_title('Total Points Visualization')
