@@ -27,6 +27,9 @@ if xlsx_file and csv_file:
     excel_df = pd.read_excel(xlsx_file)
     csv_df = pd.read_csv(csv_file)
 
+    # Strip any leading/trailing whitespace from CSV column names
+    csv_df.columns = csv_df.columns.str.strip()
+
     # Sidebar filters
     st.sidebar.header('Filter Options')
 
