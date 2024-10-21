@@ -22,6 +22,8 @@ def load_multipliers():
     csv_file_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
     try:
         multipliers_df = pd.read_csv(csv_file_url)
+        st.write("Loaded multipliers successfully.")  # Debugging information
+        st.write("Available columns in multipliers CSV:", multipliers_df.columns)  # Check available columns
         return multipliers_df.set_index('PROCEDIMENTO')['MULTIPLIER'].to_dict()
     except Exception as e:
         st.error("Error loading multipliers from GitHub: " + str(e))
@@ -88,9 +90,6 @@ if uploaded_file is not None:
         if selected_doctor != 'All':
             filtered_data = filtered_data[filtered_data['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor]
 
-        # Create a dataframe with "DESCRICAO_PROCEDIMENTO" and count events
-        
-
         # Load multipliers from CSV automatically
         multipliers = load_multipliers()
 
@@ -99,7 +98,7 @@ if uploaded_file is not None:
 
         # Display the dataframe and total counts
         st.write(f"Procedures for Dr. {selected_doctor}")
-        st.dataframe(procedure_counts)
+        
         st.write(f"Total number of procedures: {filtered_data.shape[0]}")
 
         # Display total count for filtered data
