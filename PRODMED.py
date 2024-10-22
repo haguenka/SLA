@@ -92,6 +92,14 @@ for hospital in doctor_grouped['UNIDADE'].unique():
 # Display total points across all hospitals and modalities
 st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum}</h2>", unsafe_allow_html=True)
 
+# Get the days each doctor has events
+st.write('Days Each Doctor Has Events:')
+days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO']].dropna()
+days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.day_name()
+days_df['DATE'] = days_df['STATUS_APROVADO'].dt.date
+days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK']).size().reset_index(name='EVENT_COUNT')
+st.dataframe(days_grouped, width=800, height=400)
+
 # Export all results to Excel file
 if st.button('Export Results to Excel'):
     try:
@@ -258,4 +266,3 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
         st.error(f'An error occurred while exporting: {e}')
 else:
     st.sidebar.write('Please upload an Excel file to continue.')
-
