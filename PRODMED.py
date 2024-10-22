@@ -16,7 +16,7 @@ st.sidebar.image(logo, use_column_width=True)
 st.title('Medical Analysis Dashboard')
 
 # Load Excel and CSV files from GitHub
-xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/Relatorio_SLA_VSET.xlsx'
+xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/VSET.xlsx'
 csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
 
 # Load the files into dataframes
