@@ -226,6 +226,15 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
             for _, row in procedure_summary.iterrows():
                 pdf.cell(0, 10, f"Procedure: {row['DESCRICAO_PROCEDIMENTO']}, Origem: {row['TIPO_ATENDIMENTO']}, Total Exames: {row['Total Exams']}", ln=True)
             
+            # Add days each doctor has events
+            pdf.add_page()
+            pdf.set_font('Arial', 'B', 16)
+            pdf.cell(0, 10, 'Days Each Doctor Has Events', ln=True, align='C')
+            pdf.ln(10)
+            pdf.set_font('Arial', '', 12)
+            for _, row in days_grouped.iterrows():
+                pdf.cell(0, 10, f"Doctor: {row['MEDICO_LAUDO_DEFINITIVO']}, Date: {row['DATE']}, Day: {row['DAY_OF_WEEK']}, Events: {row['EVENT_COUNT']}", ln=True)
+            
             pdf_file_path = 'Medical_Analysis_Combined_Report.pdf'
             pdf.output(pdf_file_path)
             st.success('Combined report exported successfully! You can download the file from the link below:')
