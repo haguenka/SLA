@@ -20,8 +20,10 @@ xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/VSET.xlsx'
 csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
 
 # Load the files into dataframes
-excel_df = pd.read_excel(xlsx_url)
-csv_df = pd.read_csv(csv_url)
+response = requests.get(xlsx_url)
+excel_df = pd.read_excel(BytesIO(response.content))
+response = requests.get(csv_url)
+csv_df = pd.read_csv(BytesIO(response.content))
 
 # Strip any leading/trailing whitespace from CSV column names
 csv_df.columns = csv_df.columns.str.strip()
