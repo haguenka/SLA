@@ -5,6 +5,7 @@ import requests
 from io import BytesIO
 import matplotlib.pyplot as plt
 import streamlit.components.v1 as components
+import datetime
 
 # Load and display logo from GitHub
 url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
@@ -92,12 +93,23 @@ for hospital in doctor_grouped['UNIDADE'].unique():
 # Display total points across all hospitals and modalities
 st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum}</h2>", unsafe_allow_html=True)
 
-# Get the days each doctor has events
+# Get the days and periods each doctor has events
 st.write('Days Each Doctor Has Events:')
 days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO']].dropna()
 days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.day_name()
 days_df['DATE'] = days_df['STATUS_APROVADO'].dt.date
-days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK']).size().reset_index(name='EVENT_COUNT')
+
+# Define time periods
+conditions = [
+    (days_df['STATUS_APROVADO'].dt.hour >= 7) & (days_df['STATUS_APROVADO'].dt.hour < 13),
+    (days_df['STATUS_APROVADO'].dt.hour >= 13) & (days_df['STATUS_APROVADO'].dt.hour < 19),
+    (days_df['STATUS_APROVADO'].dt.hour >= 19) & (days_df['STATUS_APROVADO'].dt.hour <= 23),
+    (days_df['STATUS_APROVADO'].dt.hour >= 0) & (days_df['STATUS_APROVADO'].dt.hour < 7)
+]
+choices = ['Morning', 'Afternoon', 'Night', 'Overnight']
+days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 6, 12, 18, 23], labels=['Overnight', 'Morning', 'Afternoon', 'Night'], ordered=False)
+
+days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
 st.dataframe(days_grouped, width=800, height=400)
 
 # Export all results to Excel file
@@ -233,7 +245,7 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
             pdf.ln(10)
             pdf.set_font('Arial', '', 12)
             for _, row in days_grouped.iterrows():
-                pdf.cell(0, 10, f"Doctor: {row['MEDICO_LAUDO_DEFINITIVO']}, Date: {row['DATE']}, Day: {row['DAY_OF_WEEK']}, Events: {row['EVENT_COUNT']}", ln=True)
+                pdf.cell(0, 10, f"Doctor: {row['MEDICO_LAUDO_DEFINITIVO']}, Date: {row['DATE']}, Day: {row['DAY_OF_WEEK']}, Period: {row['PERIOD']}, Events: {row['EVENT_COUNT']}", ln=True)
             
             pdf_file_path = 'Medical_Analysis_Combined_Report.pdf'
             pdf.output(pdf_file_path)
