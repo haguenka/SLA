@@ -100,16 +100,10 @@ days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.day_name()
 days_df['DATE'] = days_df['STATUS_APROVADO'].dt.date
 
 # Define time periods
-conditions = [
-    (days_df['STATUS_APROVADO'].dt.hour >= 7) & (days_df['STATUS_APROVADO'].dt.hour < 13),
-    (days_df['STATUS_APROVADO'].dt.hour >= 13) & (days_df['STATUS_APROVADO'].dt.hour < 19),
-    (days_df['STATUS_APROVADO'].dt.hour >= 19) & (days_df['STATUS_APROVADO'].dt.hour <= 23),
-    (days_df['STATUS_APROVADO'].dt.hour >= 0) & (days_df['STATUS_APROVADO'].dt.hour < 7)
-]
-choices = ['Morning', 'Afternoon', 'Night', 'Overnight']
 days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 6, 12, 18, 23], labels=['Overnight', 'Morning', 'Afternoon', 'Night'], ordered=False)
 
 days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
+days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
 st.dataframe(days_grouped, width=800, height=400)
 
 # Export all results to Excel file
