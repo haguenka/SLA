@@ -4,13 +4,27 @@ from PIL import Image
 import requests
 from io import BytesIO
 import matplotlib.pyplot as plt
-import streamlit.components.v1 as components
 import datetime
 
+# Caching for performance improvement
+@st.cache_data
+def load_image(url):
+    response = requests.get(url)
+    return Image.open(BytesIO(response.content))
+
+@st.cache_data
+def load_excel_data(xlsx_url):
+    response = requests.get(xlsx_url)
+    return pd.read_excel(BytesIO(response.content))
+
+@st.cache_data
+def load_csv_data(csv_url):
+    response = requests.get(csv_url)
+    return pd.read_csv(BytesIO(response.content))
+
 # Load and display logo from GitHub
-url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
-response = requests.get(url)
-logo = Image.open(BytesIO(response.content))
+logo_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
+logo = load_image(logo_url)
 st.sidebar.image(logo, use_column_width=True)
 
 # Streamlit app
@@ -20,11 +34,8 @@ st.title('Medical Analysis Dashboard')
 xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/VSET.xlsx'
 csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
 
-# Load the files into dataframes
-response = requests.get(xlsx_url)
-excel_df = pd.read_excel(BytesIO(response.content))
-response = requests.get(csv_url)
-csv_df = pd.read_csv(BytesIO(response.content))
+excel_df = load_excel_data(xlsx_url)
+csv_df = load_csv_data(csv_url)
 
 # Strip any leading/trailing whitespace from CSV column names
 csv_df.columns = csv_df.columns.str.strip()
@@ -117,13 +128,11 @@ for period in ['Morning', 'Afternoon', 'Night', 'Overnight']:
         hour_map = {'Morning': 7, 'Afternoon': 13, 'Night': 19, 'Overnight': 1}
         period_df['START_HOUR'] = period_df['PERIOD'].map(hour_map)
 
-        # Create a line plot for each day showing event counts per hour
-        for date in period_df['DATE'].unique():
-            daily_df = period_df[period_df['DATE'] == date]
-            daily_df['HOUR'] = daily_df['START_HOUR'] + pd.to_timedelta(daily_df['EVENT_COUNT'], unit='h')
-            hourly_events = daily_df.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
-            ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', label=str(date))
+        # Use 'EVENT_COUNT' to adjust plotting rather than adding to a time delta
+        hourly_events = period_df.groupby('START_HOUR')['EVENT_COUNT'].sum().reset_index()
 
+        # Now plot event counts against hours
+        ax.plot(hourly_events['START_HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', label=str(period))
         ax.set_xlabel('Hour of the Day')
         ax.set_ylabel('Events Count')
         ax.set_title(f'Events Timeline for {period} (7 AM to 7 AM Next Day)')
@@ -131,6 +140,7 @@ for period in ['Morning', 'Afternoon', 'Night', 'Overnight']:
         ax.grid(True, which='both', linestyle='--', linewidth=0.5)
         plt.xticks(range(0, 24))
         st.pyplot(fig)
+
     
 # Export all results to Excel file
 if st.button('Export Results to Excel'):
