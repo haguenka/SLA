@@ -132,7 +132,7 @@ for day in days_df['DATE'].unique():
         hourly_events = day_df.groupby('HOUR').size().reset_index(name='EVENT_COUNT')
 
         # Plot events per hour for each day
-plt.style.use('dark_background')
+        plt.style.use('dark_background')
 
 # Plot event counts against hours
         ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', color='#1f77b4', label=str(day))
