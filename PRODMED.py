@@ -125,7 +125,6 @@ days_df['SHIFT'] = days_df['STATUS_APROVADO'].dt.hour.apply(medical_shift)
 
 days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
-import streamlit as st_aggrid
 from st_aggrid import AgGrid, GridOptionsBuilder
 
 def show_filtered_data(row):
@@ -134,7 +133,7 @@ def show_filtered_data(row):
         (filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_row['MEDICO_LAUDO_DEFINITIVO']) &
         (filtered_df['STATUS_APROVADO'].dt.date == selected_row['DATE']) &
         (filtered_df['STATUS_APROVADO'].dt.strftime('%A') == selected_row['DAY_OF_WEEK']) &
-        (filtered_df['STATUS_APROVADO'].dt.hour.isin(period_hours[selected_row['PERIOD']]))
+        (filtered_df['STATUS_APROVADO'].dt.hour.isin(range(7, 13) if selected_row['PERIOD'] == 'Morning' else range(13, 19) if selected_row['PERIOD'] == 'Afternoon' else range(19, 24) if selected_row['PERIOD'] == 'Night' else range(0, 7)))
     ]
     st.write('Filtered Dataframe for Selected Row:')
     st.dataframe(filtered_data[filtered_columns], width=1200, height=400)
@@ -163,7 +162,7 @@ for day in days_df['DATE'].unique():
         hourly_events = day_df.groupby('HOUR').size().reset_index(name='EVENT_COUNT')
 
         # Plot events per hour for each day
-        plt.style.use('dark_background')
+plt.style.use('dark_background')
 
 # Plot event counts against hours
         ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', color='#1f77b4', label=str(day))
