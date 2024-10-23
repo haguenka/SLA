@@ -115,7 +115,8 @@ for period in periods:
     if not period_df.empty:
         fig, ax = plt.subplots(figsize=(10, 6))
 
-        period_df['HOUR'] = period_df['DATE'].apply(lambda x: datetime.datetime.combine(x, datetime.time(7))) + pd.to_timedelta(period_df['PERIOD'].apply(lambda x: {'Morning': 6, 'Afternoon': 12, 'Night': 18, 'Overnight': 24}[x]), unit='h')
+        period_df = period_df.copy()
+        period_df['HOUR'] = period_df['DATE'].apply(lambda x: datetime.datetime.combine(x, datetime.time(7))) + pd.to_timedelta(period_df['PERIOD'].astype(str).apply(lambda x: {'Morning': 6, 'Afternoon': 12, 'Night': 18, 'Overnight': 24}.get(x, 0)), unit='h')
 
         events_timeline = period_df.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
         ax.plot(events_timeline['HOUR'], events_timeline['EVENT_COUNT'], marker='o', linestyle='-')
@@ -241,7 +242,7 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
                     pdf.cell(0, 10, f'Total Number of Exams for {grupo}: {total_exams}', ln=True)
                     pdf.ln(10)
             
-           # Add summary for each procedure and tipo_atendimento
+            # Add summary for each procedure and tipo_atendimento
             pdf.add_page()
             pdf.set_font('Arial', 'B', 16)
             pdf.cell(0, 10, 'Procedure Summary', ln=True, align='C')
@@ -255,19 +256,4 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
             pdf.add_page()
             pdf.set_font('Arial', 'B', 16)
             pdf.cell(0, 10, 'Days Each Doctor Has Events', ln=True, align='C')
-            pdf.ln(10)
-            pdf.set_font('Arial', '', 12)
-            for _, row in days_grouped.iterrows():
-                pdf.cell(0, 10, f"Doctor: {row['MEDICO_LAUDO_DEFINITIVO']}, Date: {row['DATE']}, Day: {row['DAY_OF_WEEK']}, Period: {row['PERIOD']}, Events: {row['EVENT_COUNT']}", ln=True)
-            
-            pdf_file_path = 'Medical_Analysis_Combined_Report.pdf'
-            pdf.output(pdf_file_path)
-            st.success('Combined report exported successfully! You can download the file from the link below:')
-            with open(pdf_file_path, 'rb') as file:
-                btn = st.download_button(
-                    label='Download Combined PDF',
-                    data=file,
-                    file_name='Medical_Analysis_Combined_Report.pdf'
-                )
-        except Exception as e:
-            st.error(f'An error occurred while exporting the PDF: {e}')
+            pdf.l
