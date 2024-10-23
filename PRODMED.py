@@ -106,21 +106,24 @@ days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK'
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
 st.dataframe(days_grouped, width=800, height=400)
 
-# Create a timeline graph for events count in each period (from 7-7am next day)
-st.write('Timeline of Events Count (7 AM to 7 AM Next Day):')
-fig, ax = plt.subplots(figsize=(10, 6))
+# Create separate timeline graphs for events count in each period (from 7-7am next day)
+periods = ['Morning', 'Afternoon', 'Night', 'Overnight']
 
-days_grouped['PERIOD'] = days_grouped['PERIOD'].astype(str)  # Convert PERIOD to string
+for period in periods:
+    st.write(f'Timeline of Events Count for {period} (7 AM to 7 AM Next Day):')
+    period_df = days_grouped[days_grouped['PERIOD'] == period]
+    if not period_df.empty:
+        fig, ax = plt.subplots(figsize=(10, 6))
 
-days_grouped['HOUR'] = days_grouped['DATE'].apply(lambda x: datetime.datetime.combine(x, datetime.time(7))) + pd.to_timedelta(days_grouped['PERIOD'].apply(lambda x: {'Morning': 6, 'Afternoon': 12, 'Night': 18, 'Overnight': 24}[x]), unit='h')
+        period_df['HOUR'] = period_df['DATE'].apply(lambda x: datetime.datetime.combine(x, datetime.time(7))) + pd.to_timedelta(period_df['PERIOD'].apply(lambda x: {'Morning': 6, 'Afternoon': 12, 'Night': 18, 'Overnight': 24}[x]), unit='h')
 
-events_timeline = days_grouped.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
-ax.plot(events_timeline['HOUR'], events_timeline['EVENT_COUNT'], marker='o', linestyle='-')
-ax.set_xlabel('Hour of the Day')
-ax.set_ylabel('Events Count')
-ax.set_title('Events Timeline (7 AM to 7 AM Next Day)')
-plt.xticks(rotation=45)
-st.pyplot(fig)
+        events_timeline = period_df.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
+        ax.plot(events_timeline['HOUR'], events_timeline['EVENT_COUNT'], marker='o', linestyle='-')
+        ax.set_xlabel('Hour of the Day')
+        ax.set_ylabel('Events Count')
+        ax.set_title(f'Events Timeline for {period} (7 AM to 7 AM Next Day)')
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
 
 # Export all results to Excel file
 if st.button('Export Results to Excel'):
@@ -238,7 +241,7 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
                     pdf.cell(0, 10, f'Total Number of Exams for {grupo}: {total_exams}', ln=True)
                     pdf.ln(10)
             
-            # Add summary for each procedure and tipo_atendimento
+           # Add summary for each procedure and tipo_atendimento
             pdf.add_page()
             pdf.set_font('Arial', 'B', 16)
             pdf.cell(0, 10, 'Procedure Summary', ln=True, align='C')
