@@ -144,7 +144,7 @@ gb.configure_selection(selection_mode='single', use_checkbox=True)
 grid_options = gb.build()
 
 selected_rows = AgGrid(days_grouped, gridOptions=grid_options, enable_enterprise_modules=False, width='100%')['selected_rows']
-if selected_rows:
+if not selected_rows.empty:
     selected_index = selected_rows[0]['_selectedRowNodeInfo']['nodeIndex']
     show_filtered_data(selected_index)
 
@@ -162,7 +162,7 @@ for day in days_df['DATE'].unique():
         hourly_events = day_df.groupby('HOUR').size().reset_index(name='EVENT_COUNT')
 
         # Plot events per hour for each day
-        plt.style.use('dark_background')
+plt.style.use('dark_background')
 
 # Plot event counts against hours
         ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', color='#1f77b4', label=str(day))
