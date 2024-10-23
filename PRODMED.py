@@ -111,32 +111,28 @@ days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO']].dropna()
 days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.day_name()
 days_df['DATE'] = days_df['STATUS_APROVADO'].dt.date
 
-# Define time periods
-days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 6, 12, 18, 23], labels=['Overnight', 'Morning', 'Afternoon', 'Night'], ordered=False)
-
-days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
+days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'STATUS_APROVADO']).size().reset_index(name='EVENT_COUNT')
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
 st.dataframe(days_grouped, width=800, height=400)
 
-# Fixing the 'PERIOD' mapping and hour calculation
-for period in ['Morning', 'Afternoon', 'Night', 'Overnight']:
-    st.write(f'Events Timeline for {period} (7 AM to 7 AM Next Day):')
-    period_df = days_grouped[days_grouped['PERIOD'] == period]
-    if not period_df.empty:
+# Plot events per hour for each day
+for day in days_grouped['DATE'].unique():
+    st.write(f'Events Timeline for {day}:')
+    day_df = days_grouped[days_grouped['DATE'] == day]
+    if not day_df.empty:
         fig, ax = plt.subplots(figsize=(10, 6))
 
-        # Map the period to the correct hour for 7 AM to 7 AM plotting
-        hour_map = {'Morning': 7, 'Afternoon': 13, 'Night': 19, 'Overnight': 1}
-        period_df['START_HOUR'] = period_df['PERIOD'].map(hour_map)
+        # Extract hour from STATUS_APROVADO for plotting
+        day_df['HOUR'] = day_df['STATUS_APROVADO'].dt.hour
 
-        # Use 'EVENT_COUNT' to adjust plotting rather than adding to a time delta
-        hourly_events = period_df.groupby('START_HOUR')['EVENT_COUNT'].sum().reset_index()
+        # Group by hour to get event counts
+        hourly_events = day_df.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
 
-        # Now plot event counts against hours
-        ax.plot(hourly_events['START_HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', label=str(period))
+        # Plot event counts against hours
+        ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', label=str(day))
         ax.set_xlabel('Hour of the Day')
         ax.set_ylabel('Events Count')
-        ax.set_title(f'Events Timeline for {period} (7 AM to 7 AM Next Day)')
+        ax.set_title(f'Events Timeline for {day}')
         ax.legend(title='Date')
         ax.grid(True, which='both', linestyle='--', linewidth=0.5)
         plt.xticks(range(0, 24))
