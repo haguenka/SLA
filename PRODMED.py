@@ -109,22 +109,27 @@ st.dataframe(days_grouped, width=800, height=400)
 # Create separate timeline graphs for events count in each period (from 7-7am next day)
 periods = ['Morning', 'Afternoon', 'Night', 'Overnight']
 
+# Filter for each time period to generate separate plots
 for period in periods:
-    st.write(f'Timeline of Events Count for {period} (7 AM to 7 AM Next Day):')
+    st.write(f'Events Timeline for {period} (7 AM to 7 AM Next Day):')
     period_df = days_grouped[days_grouped['PERIOD'] == period]
     if not period_df.empty:
         fig, ax = plt.subplots(figsize=(10, 6))
-
-        # Extract hour information from the STATUS_APROVADO timestamp
-        period_df['HOUR'] = period_df['STATUS_APROVADO'].dt.hour
-        events_timeline = period_df.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
-        ax.plot(events_timeline['HOUR'], events_timeline['EVENT_COUNT'], marker='o', linestyle='-', color='b')
-        ax.set_xlabel('Hour of the Day')
-        ax.set_ylabel('Events Count')
-        ax.set_title(f'Events Timeline for {period} (7 AM to 7 AM Next Day)')
-        ax.grid(True, which='both', linestyle='--', linewidth=0.5)
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
+        
+        # Ensure 'STATUS_APROVADO' is properly accessed and processed
+        if 'STATUS_APROVADO' in period_df.columns:
+            period_df['HOUR'] = period_df['STATUS_APROVADO'].dt.hour
+            events_timeline = period_df.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
+            
+            ax.plot(events_timeline['HOUR'], events_timeline['EVENT_COUNT'], marker='o', linestyle='-', color='b')
+            ax.set_xlabel('Hour of the Day')
+            ax.set_ylabel('Events Count')
+            ax.set_title(f'Events Timeline for {period} (7 AM to 7 AM Next Day)')
+            ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+            plt.xticks(rotation=45)
+            st.pyplot(fig)
+        else:
+            st.error(f"'STATUS_APROVADO' column missing in dataframe for period: {period}")
 
 # Export all results to Excel file
 if st.button('Export Results to Excel'):
