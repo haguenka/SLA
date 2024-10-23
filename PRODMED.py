@@ -116,9 +116,9 @@ for period in periods:
     if not period_df.empty:
         fig, ax = plt.subplots(figsize=(10, 6))
         
-        # Ensure 'STATUS_APROVADO' is properly accessed and processed
-        if 'STATUS_APROVADO' in period_df.columns:
-            period_df['HOUR'] = period_df['STATUS_APROVADO'].dt.hour
+        # Ensure 'DATE' is properly accessed and processed
+        if 'DATE' in period_df.columns:
+            period_df['HOUR'] = period_df['DATE'].apply(lambda x: datetime.datetime.combine(x, datetime.time(7))) + pd.to_timedelta(period_df['PERIOD'].apply(lambda x: {'Morning': 6, 'Afternoon': 12, 'Night': 18, 'Overnight': 24}[x]), unit='h')
             events_timeline = period_df.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
             
             ax.plot(events_timeline['HOUR'], events_timeline['EVENT_COUNT'], marker='o', linestyle='-', color='b')
@@ -129,7 +129,7 @@ for period in periods:
             plt.xticks(rotation=45)
             st.pyplot(fig)
         else:
-            st.error(f"'STATUS_APROVADO' column missing in dataframe for period: {period}")
+            st.error(f"'DATE' column missing in dataframe for period: {period}")
 
 # Export all results to Excel file
 if st.button('Export Results to Excel'):
