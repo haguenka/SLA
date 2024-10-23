@@ -118,7 +118,7 @@ for period in periods:
         
         # Ensure 'DATE' is properly accessed and processed
         if 'DATE' in period_df.columns:
-            period_df['HOUR'] = period_df['DATE'].apply(lambda x: datetime.datetime.combine(x, datetime.time(7))) + pd.to_timedelta(period_df['PERIOD'].apply(lambda x: {'Morning': 6, 'Afternoon': 12, 'Night': 18, 'Overnight': 24}[x]), unit='h')
+            period_df['HOUR'] = period_df['DATE'].apply(lambda x: datetime.datetime.combine(x, datetime.time(7))) + pd.to_timedelta(period_df['PERIOD'].apply(lambda x: {'Morning': 0, 'Afternoon': 6, 'Night': 12, 'Overnight': 18}[x]), unit='h')
             events_timeline = period_df.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
             
             ax.plot(events_timeline['HOUR'], events_timeline['EVENT_COUNT'], marker='o', linestyle='-', color='b')
