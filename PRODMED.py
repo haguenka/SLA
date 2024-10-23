@@ -114,9 +114,40 @@ days_df['DATE'] = days_df['STATUS_APROVADO'].dt.date
 # Define time periods
 days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 7, 13, 19, 24], labels=['Overnight', 'Morning', 'Afternoon', 'Night'], ordered=False)
 
+# Define medical shifts
+def medical_shift(hour):
+    if 7 <= hour < 19:
+        return 'Day Shift'
+    else:
+        return 'Night Shift'
+
+days_df['SHIFT'] = days_df['STATUS_APROVADO'].dt.hour.apply(medical_shift)
+
 days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
-st.dataframe(days_grouped, width=800, height=400)
+import streamlit as st_aggrid
+from st_aggrid import AgGrid, GridOptionsBuilder
+
+def show_filtered_data(row):
+    selected_row = days_grouped.iloc[row]
+    filtered_data = filtered_df[
+        (filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_row['MEDICO_LAUDO_DEFINITIVO']) &
+        (filtered_df['STATUS_APROVADO'].dt.date == selected_row['DATE']) &
+        (filtered_df['STATUS_APROVADO'].dt.strftime('%A') == selected_row['DAY_OF_WEEK']) &
+        (filtered_df['STATUS_APROVADO'].dt.hour.isin(period_hours[selected_row['PERIOD']]))
+    ]
+    st.write('Filtered Dataframe for Selected Row:')
+    st.dataframe(filtered_data[filtered_columns], width=1200, height=400)
+
+# Use AgGrid for interactive table
+gb = GridOptionsBuilder.from_dataframe(days_grouped)
+gb.configure_selection(selection_mode='single', use_checkbox=True)
+grid_options = gb.build()
+
+selected_rows = AgGrid(days_grouped, gridOptions=grid_options, enable_enterprise_modules=False, width='100%')['selected_rows']
+if selected_rows:
+    selected_index = selected_rows[0]['_selectedRowNodeInfo']['nodeIndex']
+    show_filtered_data(selected_index)
 
 # Plot events per hour for each day
 for day in days_df['DATE'].unique():
@@ -132,7 +163,7 @@ for day in days_df['DATE'].unique():
         hourly_events = day_df.groupby('HOUR').size().reset_index(name='EVENT_COUNT')
 
         # Plot events per hour for each day
-        plt.style.use('dark_background')
+plt.style.use('dark_background')
 
 # Plot event counts against hours
         ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', color='#1f77b4', label=str(day))
