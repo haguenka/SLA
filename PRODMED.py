@@ -115,9 +115,8 @@ for period in periods:
     if not period_df.empty:
         fig, ax = plt.subplots(figsize=(10, 6))
 
-        period_df = period_df.copy()
-        period_df['HOUR'] = period_df['DATE'].apply(lambda x: datetime.datetime.combine(x, datetime.time(7))) + pd.to_timedelta(period_df['PERIOD'].astype(str).apply(lambda x: {'Morning': 6, 'Afternoon': 12, 'Night': 18, 'Overnight': 24}.get(x, 0)), unit='h')
-
+        # Extract hour information from the STATUS_APROVADO timestamp
+        period_df['HOUR'] = period_df['STATUS_APROVADO'].dt.hour
         events_timeline = period_df.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
         ax.plot(events_timeline['HOUR'], events_timeline['EVENT_COUNT'], marker='o', linestyle='-')
         ax.set_xlabel('Hour of the Day')
