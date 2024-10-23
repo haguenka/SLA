@@ -111,14 +111,17 @@ days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO']].dropna()
 days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.day_name()
 days_df['DATE'] = days_df['STATUS_APROVADO'].dt.date
 
-days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'STATUS_APROVADO']).size().reset_index(name='EVENT_COUNT')
+# Define time periods
+days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 7, 13, 19, 00], labels=['Overnight', 'Morning', 'Afternoon', 'Night'], ordered=False)
+
+days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
 st.dataframe(days_grouped, width=800, height=400)
 
 # Plot events per hour for each day
-for day in days_grouped['DATE'].unique():
+for day in days_df['DATE'].unique():
     st.write(f'Events Timeline for {day}:')
-    day_df = days_grouped[days_grouped['DATE'] == day]
+    day_df = days_df[days_df['DATE'] == day]
     if not day_df.empty:
         fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -126,7 +129,7 @@ for day in days_grouped['DATE'].unique():
         day_df['HOUR'] = day_df['STATUS_APROVADO'].dt.hour
 
         # Group by hour to get event counts
-        hourly_events = day_df.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
+        hourly_events = day_df.groupby('HOUR').size().reset_index(name='EVENT_COUNT')
 
         # Plot event counts against hours
         ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', label=str(day))
