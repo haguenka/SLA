@@ -131,9 +131,7 @@ for period in ['Morning', 'Afternoon', 'Night', 'Overnight']:
         ax.grid(True, which='both', linestyle='--', linewidth=0.5)
         plt.xticks(range(0, 24))
         st.pyplot(fig)
-        else:
-            st.error(f"'DATE' column missing in dataframe for period: {period}")
-
+    
 # Export all results to Excel file
 if st.button('Export Results to Excel'):
     try:
