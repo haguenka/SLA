@@ -110,6 +110,8 @@ st.dataframe(days_grouped, width=800, height=400)
 st.write('Timeline of Events Count (7 AM to 7 AM Next Day):')
 fig, ax = plt.subplots(figsize=(10, 6))
 
+days_grouped['PERIOD'] = days_grouped['PERIOD'].astype(str)  # Convert PERIOD to string
+
 days_grouped['HOUR'] = days_grouped['DATE'].apply(lambda x: datetime.datetime.combine(x, datetime.time(7))) + pd.to_timedelta(days_grouped['PERIOD'].apply(lambda x: {'Morning': 6, 'Afternoon': 12, 'Night': 18, 'Overnight': 24}[x]), unit='h')
 
 events_timeline = days_grouped.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
