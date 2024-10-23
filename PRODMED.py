@@ -121,14 +121,18 @@ for period in periods:
             period_df['PERIOD'] = period_df['PERIOD'].astype(str)  # Ensure 'PERIOD' is of string type
             period_df['HOUR'] = pd.to_datetime(period_df['DATE'].astype(str) + ' 07:00') + pd.to_timedelta(period_df['PERIOD'].map({'Morning': 0, 'Afternoon': 6, 'Night': 12, 'Overnight': 18}).fillna(0), unit='h')
 
-            events_timeline = period_df.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
-            
-            ax.plot(events_timeline['HOUR'].dt.hour, events_timeline['EVENT_COUNT'], marker='o', linestyle='-', color='b')
+            # Create a line plot for each day showing event counts per hour
+            for date in period_df['DATE'].unique():
+                daily_df = period_df[period_df['DATE'] == date]
+                hourly_events = daily_df.groupby(daily_df['STATUS_APROVADO'].dt.hour)['EVENT_COUNT'].sum().reset_index()
+                ax.plot(hourly_events['STATUS_APROVADO'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', label=str(date))
+
             ax.set_xlabel('Hour of the Day')
             ax.set_ylabel('Events Count')
             ax.set_title(f'Events Timeline for {period} (7 AM to 7 AM Next Day)')
+            ax.legend(title='Date')
             ax.grid(True, which='both', linestyle='--', linewidth=0.5)
-            plt.xticks(rotation=45)
+            plt.xticks(range(0, 24))
             st.pyplot(fig)
         else:
             st.error(f"'DATE' column missing in dataframe for period: {period}")
