@@ -112,7 +112,7 @@ days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.day_name()
 days_df['DATE'] = days_df['STATUS_APROVADO'].dt.date
 
 # Define time periods
-days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 7, 13, 19, 00], labels=['Overnight', 'Morning', 'Afternoon', 'Night'], ordered=False)
+days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 7, 13, 19, 24], labels=['Overnight', 'Morning', 'Afternoon', 'Night'], ordered=False)
 
 days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
