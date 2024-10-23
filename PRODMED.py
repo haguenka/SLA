@@ -118,10 +118,11 @@ for period in periods:
         # Extract hour information from the STATUS_APROVADO timestamp
         period_df['HOUR'] = period_df['STATUS_APROVADO'].dt.hour
         events_timeline = period_df.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
-        ax.plot(events_timeline['HOUR'], events_timeline['EVENT_COUNT'], marker='o', linestyle='-')
+        ax.plot(events_timeline['HOUR'], events_timeline['EVENT_COUNT'], marker='o', linestyle='-', color='b')
         ax.set_xlabel('Hour of the Day')
         ax.set_ylabel('Events Count')
         ax.set_title(f'Events Timeline for {period} (7 AM to 7 AM Next Day)')
+        ax.grid(True, which='both', linestyle='--', linewidth=0.5)
         plt.xticks(rotation=45)
         st.pyplot(fig)
 
