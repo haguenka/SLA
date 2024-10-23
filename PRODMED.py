@@ -106,6 +106,20 @@ days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK'
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
 st.dataframe(days_grouped, width=800, height=400)
 
+# Create a timeline graph for events count in each period (from 7-7am next day)
+st.write('Timeline of Events Count (7 AM to 7 AM Next Day):')
+fig, ax = plt.subplots(figsize=(10, 6))
+
+days_grouped['HOUR'] = days_grouped['DATE'].apply(lambda x: datetime.datetime.combine(x, datetime.time(7))) + pd.to_timedelta(days_grouped['PERIOD'].apply(lambda x: {'Morning': 6, 'Afternoon': 12, 'Night': 18, 'Overnight': 24}[x]), unit='h')
+
+events_timeline = days_grouped.groupby('HOUR')['EVENT_COUNT'].sum().reset_index()
+ax.plot(events_timeline['HOUR'], events_timeline['EVENT_COUNT'], marker='o', linestyle='-')
+ax.set_xlabel('Hour of the Day')
+ax.set_ylabel('Events Count')
+ax.set_title('Events Timeline (7 AM to 7 AM Next Day)')
+plt.xticks(rotation=45)
+st.pyplot(fig)
+
 # Export all results to Excel file
 if st.button('Export Results to Excel'):
     try:
@@ -235,49 +249,4 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
             # Add days each doctor has events
             pdf.add_page()
             pdf.set_font('Arial', 'B', 16)
-            pdf.cell(0, 10, 'Days Each Doctor Has Events', ln=True, align='C')
-            pdf.ln(10)
-            pdf.set_font('Arial', '', 12)
-            for _, row in days_grouped.iterrows():
-                pdf.cell(0, 10, f"Doctor: {row['MEDICO_LAUDO_DEFINITIVO']}, Date: {row['DATE']}, Day: {row['DAY_OF_WEEK']}, Period: {row['PERIOD']}, Events: {row['EVENT_COUNT']}", ln=True)
-            
-            pdf_file_path = 'Medical_Analysis_Combined_Report.pdf'
-            pdf.output(pdf_file_path)
-            st.success('Combined report exported successfully! You can download the file from the link below:')
-            with open(pdf_file_path, 'rb') as file:
-                btn = st.download_button(
-                    label='Download Combined PDF',
-                    data=file,
-                    file_name='Medical_Analysis_Combined_Report.pdf'
-                )
-        except Exception as e:
-            st.error(f'An error occurred while exporting the PDF: {e}')
-
-
-    try:
-        with pd.ExcelWriter('Medical_Analysis_Results.xlsx', engine='openpyxl') as writer:
-            # Write filtered data
-            filtered_df.to_excel(writer, sheet_name='Filtered Data', index=False)
-            
-            # Write grouped data
-            for hospital in doctor_grouped['UNIDADE'].unique():
-                hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
-                for grupo in hospital_df['GRUPO'].unique():
-                    grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
-                    grupo_df.to_excel(writer, sheet_name=f'{hospital}_{grupo}', index=False)
-            
-            # Write summary sheet
-            summary_df = pd.DataFrame({'Total Points for All Modalities': [total_points_sum]})
-            summary_df.to_excel(writer, sheet_name='Summary', index=False)
-        
-        st.success('Results exported successfully! You can download the file from the link below:')
-        with open('Medical_Analysis_Results.xlsx', 'rb') as file:
-            btn = st.download_button(
-                label='Download Results',
-                data=file,
-                file_name='Medical_Analysis_Results.xlsx'
-            )
-    except Exception as e:
-        st.error(f'An error occurred while exporting: {e}')
-else:
-    st.sidebar.write('Please upload an Excel file to continue.')
+            pdf.cell(0, 10, 'Days Each Doctor Has Events', ln
