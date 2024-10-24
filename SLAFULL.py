@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import requests
 from io import BytesIO
-import streamlit.cache
 
 # Streamlit app
 @st.cache_data
