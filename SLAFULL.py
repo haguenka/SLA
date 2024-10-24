@@ -54,7 +54,7 @@ def main():
 
             # Calculate DELTA_TIME excluding weekends
             df['END_DATE'] = df['STATUS_PRELIMINAR'].fillna(df['STATUS_APROVADO'])
-            df['DELTA_TIME'] = df.apply(lambda row: np.busday_count(row['STATUS_ALAUDAR'].date(), row['END_DATE'].date()) * 24 + (row['END_DATE'] - row['STATUS_ALAUDAR']).seconds / 3600 if not is_weekend(row['STATUS_ALAUDAR']) else np.nan, axis=1)
+            df['DELTA_TIME'] = df.apply(lambda row: (np.busday_count(row['STATUS_ALAUDAR'].date(), row['END_DATE'].date()) * 24) + ((row['END_DATE'] - row['STATUS_ALAUDAR']).seconds // 3600) if not pd.isna(row['STATUS_ALAUDAR']) and not pd.isna(row['END_DATE']) else np.nan, axis=1)
 
             # Define the conditions for SLA violations
             conditions = [
