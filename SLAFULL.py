@@ -52,14 +52,19 @@ def main():
                 st.error("'UNIDADE' or 'TIPO_ATENDIMENTO' column not found.")
                 return
 
-            # Calculate DELTA_TIME excluding weekends
+            # Calculate DELTA_TIME excluding weekends, except for 'Pronto Atendimento'
             df['END_DATE'] = df['STATUS_PRELIMINAR'].fillna(df['STATUS_APROVADO'])
-            df['DELTA_TIME'] = df.apply(lambda row: (np.busday_count(row['STATUS_ALAUDAR'].date(), row['END_DATE'].date()) * 24) + ((row['END_DATE'] - row['STATUS_ALAUDAR']).seconds // 3600) if not pd.isna(row['STATUS_ALAUDAR']) and not pd.isna(row['END_DATE']) else np.nan, axis=1)
+            df['DELTA_TIME'] = df.apply(
+                lambda row: (np.busday_count(row['STATUS_ALAUDAR'].date(), row['END_DATE'].date()) * 24) + ((row['END_DATE'] - row['STATUS_ALAUDAR']).seconds // 3600)
+                if row['TIPO_ATENDIMENTO'] != 'Pronto Atendimento' and not pd.isna(row['STATUS_ALAUDAR']) and not pd.isna(row['END_DATE'])
+                else (row['END_DATE'] - row['STATUS_ALAUDAR']).total_seconds() / 3600,
+                axis=1
+            )
 
             # Define the conditions for SLA violations
             conditions = [
-                (df['GRUPO'] == 'GRUPO RAIO-X') & (df['DELTA_TIME'] > 96),
-                (df['GRUPO'].isin(['GRUPO MAMOGRAFIA', 'GRUPO MEDICINA NUCLEAR'])) & (df['DELTA_TIME'] > (6 * 24)),
+                (df['GRUPO'] == 'GRUPO RAIO-X') & (df['DELTA_TIME'] > 72),
+                (df['GRUPO'].isin(['GRUPO MAMOGRAFIA', 'GRUPO MEDICINA NUCLEAR'])) & (df['DELTA_TIME'] > (5 * 24)),
                 (df['TIPO_ATENDIMENTO'] == 'Pronto Atendimento') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 1),
                 (df['TIPO_ATENDIMENTO'] == 'Internado') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 24),
                 (df['TIPO_ATENDIMENTO'] == 'Externo') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 96)
