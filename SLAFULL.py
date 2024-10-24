@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import requests
 from io import BytesIO
+import numpy as np
 
 # Streamlit app
 @st.cache_data
@@ -14,6 +15,9 @@ def load_logo(url):
 @st.cache_data
 def load_excel(uploaded_file):
     return pd.read_excel(uploaded_file)
+
+def is_weekend(date):
+    return date.weekday() >= 5
 
 def main():
     st.title("Analise de SLA Dashboard")
@@ -48,8 +52,9 @@ def main():
                 st.error("'UNIDADE' or 'TIPO_ATENDIMENTO' column not found.")
                 return
 
-            # Calculate DELTA_TIME using STATUS_PRELIMINAR if it exists, otherwise use STATUS_APROVADO
-            df['DELTA_TIME'] = (df['STATUS_PRELIMINAR'].fillna(df['STATUS_APROVADO']) - df['STATUS_ALAUDAR']).dt.total_seconds() / 3600  # in hours
+            # Calculate DELTA_TIME excluding weekends
+            df['END_DATE'] = df['STATUS_PRELIMINAR'].fillna(df['STATUS_APROVADO'])
+            df['DELTA_TIME'] = df.apply(lambda row: np.busday_count(row['STATUS_ALAUDAR'].date(), row['END_DATE'].date()) * 24 + (row['END_DATE'] - row['STATUS_ALAUDAR']).seconds / 3600 if not is_weekend(row['STATUS_ALAUDAR']) else np.nan, axis=1)
 
             # Define the conditions for SLA violations
             conditions = [
