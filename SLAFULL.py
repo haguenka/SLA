@@ -4,15 +4,24 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import requests
 from io import BytesIO
+import streamlit.cache
 
 # Streamlit app
+@st.cache_data
+def load_logo(url):
+    response = requests.get(url)
+    return Image.open(BytesIO(response.content))
+
+@st.cache_data
+def load_excel(uploaded_file):
+    return pd.read_excel(uploaded_file)
+
 def main():
     st.title("Analise de SLA Dashboard")
 
     # Load and display logo from GitHub
     url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
-    response = requests.get(url)
-    logo = Image.open(BytesIO(response.content))
+    logo = load_logo(url)
     st.sidebar.image(logo, use_column_width=True)
 
     # File upload
@@ -21,7 +30,7 @@ def main():
     if uploaded_file is not None:
         try:
             # Load the Excel file
-            df = pd.read_excel(uploaded_file)
+            df = load_excel(uploaded_file)
 
             # Filter by GRUPO to include only specific groups
             allowed_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO RAIO-X', 'GRUPO MAMOGRAFIA', 'GRUPO MEDICINA NUCLEAR', 'GRUPO ULTRASSOM']
