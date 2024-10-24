@@ -32,7 +32,7 @@ st.sidebar.image(logo, use_column_width=True)
 st.title('Medical Analysis Dashboard')
 
 # Load Excel and CSV files from GitHub
-xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/VSET.xlsx'
+xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/base.xlsx'
 csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
 
 excel_df = load_excel_data(xlsx_url)
