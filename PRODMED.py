@@ -109,7 +109,7 @@ st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total
 st.write('Days Each Doctor Has Events:')
 days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO']].dropna()
 days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.day_name()
-days_df['DATE'] = days_df['STATUS_APROVADO'].dt.date
+days_df['DATE'] = days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
 
 # Define time periods
 days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 7, 13, 19, 24], labels=['Overnight', 'Morning', 'Afternoon', 'Night'], ordered=False)
