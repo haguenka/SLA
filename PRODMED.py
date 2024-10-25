@@ -148,7 +148,7 @@ grid_options = gb.build()
 
 selected_rows = AgGrid(days_grouped, gridOptions=grid_options, enable_enterprise_modules=False, width='100%')['selected_rows']
 if isinstance(selected_rows, list) and len(selected_rows) > 0:
-    selected_index = selected_rows[0]['_selectedRowNodeInfo']['rowIndex'] if '_selectedRowNodeInfo' in selected_rows[0] else None
+    selected_index = days_grouped.index[days_grouped['DATE'] == selected_rows[0]['DATE']].tolist()[0] if len(selected_rows) > 0 else None
     if selected_index is not None:
         show_filtered_data(selected_index)
 
