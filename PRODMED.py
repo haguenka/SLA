@@ -129,7 +129,11 @@ days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK'
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
 
 def show_filtered_data(row):
-    selected_row = days_grouped.iloc[row]
+    if row < len(days_grouped):
+        selected_row = days_grouped.iloc[row]
+    else:
+        st.warning('Selected row is out of bounds.')
+        return
     filtered_data = filtered_df[
         (filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_row['MEDICO_LAUDO_DEFINITIVO']) &
         (filtered_df['STATUS_APROVADO'].dt.date == pd.to_datetime(selected_row['DATE']).date()) &
@@ -148,7 +152,8 @@ days_options = days_grouped.apply(lambda x: f"{x['MEDICO_LAUDO_DEFINITIVO']} - {
 selected_option = st.selectbox('Select a day with events:', days_options)
 
 # Find the index of the selected row
-selected_index = days_options[days_options == selected_option].index[0] if not days_options[days_options == selected_option].empty else None
+selected_index = days_options[days_options == selected_option].index
+selected_index = selected_index[0] if len(selected_index) > 0 else None
 
 # Show the filtered dataframe for the selected row
 if selected_index is not None:
