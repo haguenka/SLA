@@ -157,7 +157,7 @@ days_options = days_grouped.index
 selected_option = st.selectbox('Select a day with events:', days_grouped.apply(lambda x: f"{x['MEDICO_LAUDO_DEFINITIVO']} - {x['DATE']} - {x['DAY_OF_WEEK']} - {x['PERIOD']} ({x['EVENT_COUNT']} eventos)", axis=1))
 
 # Find the index of the selected row
-selected_index = selected_option
+selected_index = int(selected_option)
 
 
 # Show the filtered dataframe for the selected row
