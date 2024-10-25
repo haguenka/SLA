@@ -58,7 +58,7 @@ selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
 # Filter doctor names based on selected hospital
 doctor_list = excel_df[excel_df['UNIDADE'] == selected_hospital]['MEDICO_LAUDO_DEFINITIVO'].unique()
 selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
-st.markdown(f"<h3 style='color:red;'>{selected_doctor}</h3>", unsafe_allow_html=True)
+st.markdown(f"<h2 style='color:red;'>{selected_doctor}</h2>", unsafe_allow_html=True)
 
 # Apply filters to the dataframe for date and doctor
 filtered_df = excel_df[
