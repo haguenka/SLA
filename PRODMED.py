@@ -139,9 +139,7 @@ def show_filtered_data(row):
     ]
     if not filtered_data.empty:
         st.write('Filtered Dataframe for Selected Row:')
-        if not filtered_data.empty:
-        (filtered_data[filtered_columns], width=1200, height=400)
-st.dataframe(filtered_data[filtered_columns], width=1200, height=400)
+        st.dataframe(filtered_data[filtered_columns], width=1200, height=400)
 
 # Use AgGrid for interactive table
 gb = GridOptionsBuilder.from_dataframe(days_grouped)
