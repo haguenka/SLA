@@ -115,8 +115,6 @@ days_df['DATE'] = days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
 # Define time periods
 days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 7, 13, 19, 24], labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'], ordered=False)
 
-# Define medical shifts
-days_df['SHIFT'] = days_df['STATUS_APROVADO'].dt.hour.apply(medical_shift)
 
 days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
