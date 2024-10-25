@@ -137,9 +137,10 @@ def show_filtered_data(row):
         (filtered_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'}) == selected_row['DAY_OF_WEEK']) &
         (filtered_df['STATUS_APROVADO'].dt.hour.isin(range(7, 13) if selected_row['PERIOD'] == 'Manhã' else range(13, 19) if selected_row['PERIOD'] == 'Tarde' else range(19, 24) if selected_row['PERIOD'] == 'Noite' else range(0, 7)))
     ]
-    st.write('Filtered Dataframe for Selected Row:')
+    if not filtered_data.empty:
+        st.write('Filtered Dataframe for Selected Row:')
+        if not filtered_data.empty:
     st.dataframe(filtered_data[filtered_columns], width=1200, height=400)
-    st.write('Filtered Dataframe for Selected Row (Expanded View):')
 st.dataframe(filtered_data[filtered_columns], width=1200, height=400)
 
 # Use AgGrid for interactive table
