@@ -129,17 +129,9 @@ days_df['SHIFT'] = days_df['STATUS_APROVADO'].dt.hour.apply(medical_shift)
 days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
 
-def show_filtered_data(row):
-    selected_row = days_grouped.iloc[row]
-    filtered_data = filtered_df[
-        (filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_row['MEDICO_LAUDO_DEFINITIVO']) &
-        (filtered_df['STATUS_APROVADO'].dt.date == pd.to_datetime(selected_row['DATE']).date()) &
-        (filtered_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'}) == selected_row['DAY_OF_WEEK']) &
-        (filtered_df['STATUS_APROVADO'].dt.hour.isin(range(7, 13) if selected_row['PERIOD'] == 'Manhã' else range(13, 19) if selected_row['PERIOD'] == 'Tarde' else range(19, 24) if selected_row['PERIOD'] == 'Noite' else range(0, 7)))
-    ]
-    if not filtered_data.empty:
-        st.write('Filtered Dataframe for Selected Row:')
-        st.dataframe(filtered_data[filtered_columns], width=1200, height=400)
+def show_filtered_data(selected_row_data):
+    st.write('Filtered Dataframe for Selected Row:')
+    st.dataframe(selected_row_data, width=1200, height=400)
 
 # Use AgGrid for interactive table
 gb = GridOptionsBuilder.from_dataframe(days_grouped)
@@ -150,7 +142,13 @@ selected_rows = AgGrid(days_grouped, gridOptions=grid_options, enable_enterprise
 if isinstance(selected_rows, list) and len(selected_rows) > 0:
     selected_index = days_grouped.index[days_grouped['DATE'] == selected_rows[0]['DATE']].tolist()[0] if len(selected_rows) > 0 else None
     if selected_index is not None:
-        show_filtered_data(selected_index)
+    selected_row_data = filtered_df[
+        (filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_rows[0]['MEDICO_LAUDO_DEFINITIVO']) &
+        (filtered_df['STATUS_APROVADO'].dt.date == pd.to_datetime(selected_rows[0]['DATE']).date()) &
+        (filtered_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'}) == selected_rows[0]['DAY_OF_WEEK']) &
+        (filtered_df['STATUS_APROVADO'].dt.hour.isin(range(7, 13) if selected_rows[0]['PERIOD'] == 'Manhã' else range(13, 19) if selected_rows[0]['PERIOD'] == 'Tarde' else range(19, 24) if selected_rows[0]['PERIOD'] == 'Noite' else range(0, 7)))
+    ]
+    show_filtered_data(selected_row_data)
 
 # Plot events per hour for each day
 for day in days_df['DATE'].unique():
