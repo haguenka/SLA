@@ -109,7 +109,7 @@ st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total
 # Get the days and periods each doctor has events
 st.write('Dias com eventos de Laudo:')
 days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO']].dropna()
-days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.day_name()
+days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'})
 days_df['DATE'] = days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
 
 # Define time periods
@@ -132,7 +132,7 @@ def show_filtered_data(row):
     filtered_data = filtered_df[
         (filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_row['MEDICO_LAUDO_DEFINITIVO']) &
         (filtered_df['STATUS_APROVADO'].dt.date == pd.to_datetime(selected_row['DATE']).date()) &
-        (filtered_df['STATUS_APROVADO'].dt.strftime('%A') == selected_row['DAY_OF_WEEK']) &
+        (filtered_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'}) == selected_row['DAY_OF_WEEK']) &
         (filtered_df['STATUS_APROVADO'].dt.hour.isin(range(7, 13) if selected_row['PERIOD'] == 'Manhã' else range(13, 19) if selected_row['PERIOD'] == 'Tarde' else range(19, 24) if selected_row['PERIOD'] == 'Noite' else range(0, 7)))
     ]
     st.write('Filtered Dataframe for Selected Row:')
