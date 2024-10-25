@@ -214,6 +214,56 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
         pdf.cell(0, 10, f'Total Points for All Modalities: {total_points_sum}', ln=True)
         pdf.ln(10)
         
+        # Add days each doctor has events in table format
+        pdf.add_page()
+        pdf.set_font('Arial', 'B', 16)
+        pdf.cell(0, 10, 'Days Each Doctor Has Events', ln=True, align='C')
+        pdf.ln(10)
+        pdf.set_font('Arial', 'B', 10)
+        pdf.cell(50, 10, 'Doctor', 1, 0, 'C')
+        pdf.cell(30, 10, 'Date', 1, 0, 'C')
+        pdf.cell(30, 10, 'Day of Week', 1, 0, 'C')
+        pdf.cell(30, 10, 'Period', 1, 0, 'C')
+        pdf.cell(30, 10, 'Event Count', 1, 1, 'C')
+        pdf.set_font('Arial', '', 10)
+        for _, row in days_grouped.iterrows():
+            pdf.cell(50, 10, row['MEDICO_LAUDO_DEFINITIVO'], 1, 0, 'L')
+            pdf.cell(30, 10, row['DATE'], 1, 0, 'C')
+            pdf.cell(30, 10, row['DAY_OF_WEEK'], 1, 0, 'C')
+            pdf.cell(30, 10, row['PERIOD'], 1, 0, 'C')
+            pdf.cell(30, 10, str(row['EVENT_COUNT']), 1, 1, 'C')
+        pdf.ln(10)
+    try:
+        pdf = FPDF(orientation='L', unit='mm', format='A4')
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.set_margins(left=5, top=5, right=5)
+
+        # Create title sheet
+        pdf.add_page()
+        pdf.image(logo_url, x=80, y=30, w=120)
+        pdf.set_font('Arial', 'B', 24)
+        pdf.ln(100)
+        pdf.cell(0, 10, 'Relatório de produção', ln=True, align='C')
+        pdf.ln(10)
+        pdf.set_font('Arial', '', 18)
+        pdf.cell(0, 10, f'Mês de {start_date.strftime("%B de %Y").capitalize()}', ln=True, align='C')
+        pdf.ln(20)
+        # Add doctors name in uppercase, big and blue
+        pdf.set_font('Arial', 'B', 24)
+        pdf.set_text_color(0, 0, 255)
+        pdf.cell(0, 10, selected_doctor.upper(), ln=True, align='C')
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(20)
+        
+        # Add summary sheet
+        pdf.add_page()
+        pdf.set_font('Arial', 'B', 16)
+        pdf.cell(0, 10, 'Medical Analysis Summary Report', ln=True, align='C')
+        pdf.ln(10)
+        pdf.set_font('Arial', '', 16)
+        pdf.cell(0, 10, f'Total Points for All Modalities: {total_points_sum}', ln=True)
+        pdf.ln(10)
+        
         # Add hospital and modality dataframes to subsequent pages in table format
         for hospital in doctor_grouped['UNIDADE'].unique():
             pdf.add_page()
