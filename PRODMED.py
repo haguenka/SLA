@@ -31,7 +31,7 @@ st.sidebar.image(logo, use_column_width=True)
 
 # Streamlit app
 st.title('Report de Produção Médica')
-st.markdown(f"<h3 style='color:red;'>{selected_doctor}</h3>", unsafe_allow_html=True)
+
 
 # Load Excel and CSV files from GitHub
 xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/VSET.xlsx'
@@ -59,6 +59,7 @@ selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
 # Filter doctor names based on selected hospital
 doctor_list = excel_df[excel_df['UNIDADE'] == selected_hospital]['MEDICO_LAUDO_DEFINITIVO'].unique()
 selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
+st.markdown(f"<h3 style='color:red;'>{selected_doctor}</h3>", unsafe_allow_html=True)
 
 # Apply filters to the dataframe for date and doctor
 filtered_df = excel_df[
