@@ -30,7 +30,6 @@ logo = load_image(logo_url)
 st.sidebar.image(logo, use_column_width=True)
 
 # Streamlit app
-selected_doctor = selected_doctor if 'selected_doctor' in locals() else ''
 st.title('Report de Produção Médica')
 st.markdown(f"<h3 style='color:red;'>{selected_doctor}</h3>", unsafe_allow_html=True)
 
