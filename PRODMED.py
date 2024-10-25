@@ -120,13 +120,7 @@ days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK'
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
 
 st.write('Dias com eventos de Laudo:')
-
-days_grouped['COLOR'] = days_grouped['PERIOD'].map(lambda x: '#f0f0f0' if x in ['Madrugada', 'Noite'] else '#d3d3d3')
-st.write('Dias com eventos de Laudo:')
-for _, row in days_grouped.iterrows():
-    st.markdown(f"<div style='background-color:{row['COLOR']}; padding: 5px;'>"
-                f"{row['MEDICO_LAUDO_DEFINITIVO']} - {row['DATE']} - {row['DAY_OF_WEEK']} - {row['PERIOD']} - {row['EVENT_COUNT']} eventos"
-                f"</div>", unsafe_allow_html=True)
+st.dataframe(days_grouped.style.apply(lambda x: ['background-color: #d3d3d3' if x['PERIOD'] == 'Madrugada' else 'background-color: #b0e0e6' if x['PERIOD'] == 'Manhã' else 'background-color: #f0e68c' if x['PERIOD'] == 'Tarde' else 'background-color: #ffa07a' for _ in x], axis=1), width=1200, height=400)
 days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO']].dropna()
 days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'})
 days_df['DATE'] = days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
