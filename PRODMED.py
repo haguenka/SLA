@@ -6,7 +6,6 @@ from io import BytesIO
 import matplotlib.pyplot as plt
 import datetime
 from fpdf import FPDF
-from st_aggrid import AgGrid, GridOptionsBuilder
 
 # Caching for performance improvement
 @st.cache_data
@@ -142,11 +141,17 @@ def show_filtered_data(row):
         st.dataframe(filtered_data[filtered_columns], width=1200, height=400)
 
 # Use AgGrid for interactive table
-gb = GridOptionsBuilder.from_dataframe(days_grouped)
-gb.configure_selection(selection_mode='single', use_checkbox=True)
-grid_options = gb.build()
 
-selected_rows = AgGrid(days_grouped, gridOptions=grid_options, enable_enterprise_modules=False, width='100%')['selected_rows']
+# Use selectbox for selecting a row
+st.write('Dias com eventos de Laudo:')
+days_options = days_grouped.apply(lambda x: f"{x['MEDICO_LAUDO_DEFINITIVO']} - {x['DATE']} - {x['DAY_OF_WEEK']} - {x['PERIOD']} ({x['EVENT_COUNT']} eventos)", axis=1)
+selected_option = st.selectbox('Select a day with events:', days_options)
+
+# Find the index of the selected row
+selected_index = days_options[days_options == selected_option].index[0]
+
+# Show the filtered dataframe for the selected row
+show_filtered_data(selected_index)
 if isinstance(selected_rows, list) and len(selected_rows) > 0:
     selected_index = days_grouped.index[days_grouped['DATE'] == selected_rows[0]['DATE']].tolist()[0] if len(selected_rows) > 0 else None
     if selected_index is not None:
