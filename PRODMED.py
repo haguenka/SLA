@@ -139,8 +139,8 @@ def show_filtered_data(row):
     ]
     st.write('Filtered Dataframe for Selected Row:')
     st.dataframe(filtered_data[filtered_columns], width=1200, height=400)
-    with st.expander('Filtered Dataframe Pop-up:'):
-        st.dataframe(filtered_data[filtered_columns], width=1200, height=400)
+    st.write('Filtered Dataframe for Selected Row (Expanded View):')
+st.dataframe(filtered_data[filtered_columns], width=1200, height=400)
 
 # Use AgGrid for interactive table
 gb = GridOptionsBuilder.from_dataframe(days_grouped)
