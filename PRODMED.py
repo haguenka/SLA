@@ -233,10 +233,10 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
             pdf.cell(30, 10, row['PERIOD'], 1, 0, 'C')
             pdf.cell(30, 10, str(row['EVENT_COUNT']), 1, 1, 'C')
             pdf.ln(10)
-              try:
-              pdf = FPDF(orientation='L', unit='mm', format='A4')
-              pdf.set_auto_page_break(auto=True, margin=15)
-              pdf.set_margins(left=5, top=5, right=5)
+        try:
+            pdf = FPDF(orientation='L', unit='mm', format='A4')
+            pdf.set_auto_page_break(auto=True, margin=15)
+            pdf.set_margins(left=5, top=5, right=5)
 
         # Create title sheet
         pdf.add_page()
