@@ -148,16 +148,15 @@ def show_filtered_data(row):
 
 # Use selectbox for selecting a row
 st.write('Dias com eventos de Laudo:')
-days_options = days_grouped.apply(lambda x: f"{x['MEDICO_LAUDO_DEFINITIVO']} - {x['DATE']} - {x['DAY_OF_WEEK']} - {x['PERIOD']} ({x['EVENT_COUNT']} eventos)", axis=1)
-selected_option = st.selectbox('Select a day with events:', days_options)
+days_options = days_grouped.index
+selected_option = st.selectbox('Select a day with events:', days_grouped.apply(lambda x: f"{x['MEDICO_LAUDO_DEFINITIVO']} - {x['DATE']} - {x['DAY_OF_WEEK']} - {x['PERIOD']} ({x['EVENT_COUNT']} eventos)", axis=1))
 
 # Find the index of the selected row
-selected_index = days_options[days_options == selected_option].index
-selected_index = selected_index[0] if len(selected_index) > 0 else None
+selected_index = selected_option
+
 
 # Show the filtered dataframe for the selected row
-if selected_index is not None:
-    show_filtered_data(selected_index)
+show_filtered_data(selected_index)
 
 # Plot events per hour for each day
 for day in days_df['DATE'].unique():
