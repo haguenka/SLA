@@ -31,6 +31,7 @@ st.sidebar.image(logo, use_column_width=True)
 
 # Streamlit app
 st.title('Report de Produção Médica')
+st.markdown(f"<h3 style='color:red;'>{selected_doctor}</h3>", unsafe_allow_html=True)
 
 # Load Excel and CSV files from GitHub
 xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/VSET.xlsx'
