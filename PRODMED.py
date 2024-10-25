@@ -30,7 +30,7 @@ logo = load_image(logo_url)
 st.sidebar.image(logo, use_column_width=True)
 
 # Streamlit app
-st.title('Medical Analysis Dashboard')
+st.title('Report de Produção Médica')
 
 # Load Excel and CSV files from GitHub
 xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/VSET.xlsx'
@@ -107,13 +107,13 @@ for hospital in doctor_grouped['UNIDADE'].unique():
 st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
 
 # Get the days and periods each doctor has events
-st.write('Days Each Doctor Has Events:')
+st.write('Dias com eventos de Laudo:')
 days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO']].dropna()
 days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.day_name()
 days_df['DATE'] = days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
 
 # Define time periods
-days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 7, 13, 19, 24], labels=['Overnight', 'Morning', 'Afternoon', 'Night'], ordered=False)
+days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 7, 13, 19, 24], labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'], ordered=False)
 
 # Define medical shifts
 def medical_shift(hour):
@@ -133,7 +133,7 @@ def show_filtered_data(row):
         (filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_row['MEDICO_LAUDO_DEFINITIVO']) &
         (filtered_df['STATUS_APROVADO'].dt.date == pd.to_datetime(selected_row['DATE']).date()) &
         (filtered_df['STATUS_APROVADO'].dt.strftime('%A') == selected_row['DAY_OF_WEEK']) &
-        (filtered_df['STATUS_APROVADO'].dt.hour.isin(range(7, 13) if selected_row['PERIOD'] == 'Morning' else range(13, 19) if selected_row['PERIOD'] == 'Afternoon' else range(19, 24) if selected_row['PERIOD'] == 'Night' else range(0, 7)))
+        (filtered_df['STATUS_APROVADO'].dt.hour.isin(range(7, 13) if selected_row['PERIOD'] == 'Manhã' else range(13, 19) if selected_row['PERIOD'] == 'Tarde' else range(19, 24) if selected_row['PERIOD'] == 'Noite' else range(0, 7)))
     ]
     st.write('Filtered Dataframe for Selected Row:')
     st.dataframe(filtered_data[filtered_columns], width=1200, height=400)
