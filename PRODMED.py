@@ -6,6 +6,7 @@ from io import BytesIO
 import matplotlib.pyplot as plt
 import datetime
 from fpdf import FPDF
+from st_aggrid import AgGrid, GridOptionsBuilder
 
 # Caching for performance improvement
 @st.cache_data
@@ -125,13 +126,12 @@ days_df['SHIFT'] = days_df['STATUS_APROVADO'].dt.hour.apply(medical_shift)
 
 days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
-from st_aggrid import AgGrid, GridOptionsBuilder
 
 def show_filtered_data(row):
     selected_row = days_grouped.iloc[row]
     filtered_data = filtered_df[
         (filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_row['MEDICO_LAUDO_DEFINITIVO']) &
-        (filtered_df['STATUS_APROVADO'].dt.date == selected_row['DATE']) &
+        (filtered_df['STATUS_APROVADO'].dt.date == pd.to_datetime(selected_row['DATE']).date()) &
         (filtered_df['STATUS_APROVADO'].dt.strftime('%A') == selected_row['DAY_OF_WEEK']) &
         (filtered_df['STATUS_APROVADO'].dt.hour.isin(range(7, 13) if selected_row['PERIOD'] == 'Morning' else range(13, 19) if selected_row['PERIOD'] == 'Afternoon' else range(19, 24) if selected_row['PERIOD'] == 'Night' else range(0, 7)))
     ]
@@ -146,7 +146,8 @@ grid_options = gb.build()
 selected_rows = AgGrid(days_grouped, gridOptions=grid_options, enable_enterprise_modules=False, width='100%')['selected_rows']
 if isinstance(selected_rows, list) and len(selected_rows) > 0:
     selected_index = selected_rows[0]['_selectedRowNodeInfo']['rowIndex'] if '_selectedRowNodeInfo' in selected_rows[0] else None
-    show_filtered_data(selected_index)
+    if selected_index is not None:
+        show_filtered_data(selected_index)
 
 # Plot events per hour for each day
 for day in days_df['DATE'].unique():
@@ -173,11 +174,6 @@ for day in days_df['DATE'].unique():
         ax.tick_params(colors='white')
         ax.legend(title='Date', facecolor='#3a3a3a', edgecolor='white')
         ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray')
-        ax.set_xlabel('Hour of the Day')
-        ax.set_ylabel('Events Count')
-        ax.set_title(f'Events Timeline for {day}')
-        ax.legend(title='Date')
-        ax.grid(True, which='both', linestyle='--', linewidth=0.5)
         plt.xticks(range(0, 24))
         st.pyplot(fig)
 
@@ -232,36 +228,6 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
             pdf.cell(30, 10, row['DAY_OF_WEEK'], 1, 0, 'C')
             pdf.cell(30, 10, row['PERIOD'], 1, 0, 'C')
             pdf.cell(30, 10, str(row['EVENT_COUNT']), 1, 1, 'C')
-            pdf.ln(10)
-        try:
-            pdf = FPDF(orientation='L', unit='mm', format='A4')
-            pdf.set_auto_page_break(auto=True, margin=15)
-            pdf.set_margins(left=5, top=5, right=5)
-
-        # Create title sheet
-        pdf.add_page()
-        pdf.image(logo_url, x=80, y=30, w=120)
-        pdf.set_font('Arial', 'B', 24)
-        pdf.ln(100)
-        pdf.cell(0, 10, 'Relatório de produção', ln=True, align='C')
-        pdf.ln(10)
-        pdf.set_font('Arial', '', 18)
-        pdf.cell(0, 10, f'Mês de {start_date.strftime("%B de %Y").capitalize()}', ln=True, align='C')
-        pdf.ln(20)
-        # Add doctors name in uppercase, big and blue
-        pdf.set_font('Arial', 'B', 24)
-        pdf.set_text_color(0, 0, 255)
-        pdf.cell(0, 10, selected_doctor.upper(), ln=True, align='C')
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(20)
-        
-        # Add summary sheet
-        pdf.add_page()
-        pdf.set_font('Arial', 'B', 16)
-        pdf.cell(0, 10, 'Medical Analysis Summary Report', ln=True, align='C')
-        pdf.ln(10)
-        pdf.set_font('Arial', '', 16)
-        pdf.cell(0, 10, f'Total Points for All Modalities: {total_points_sum}', ln=True)
         pdf.ln(10)
         
         # Add hospital and modality dataframes to subsequent pages in table format
