@@ -152,10 +152,6 @@ selected_index = days_options[days_options == selected_option].index[0]
 
 # Show the filtered dataframe for the selected row
 show_filtered_data(selected_index)
-if isinstance(selected_rows, list) and len(selected_rows) > 0:
-    selected_index = days_grouped.index[days_grouped['DATE'] == selected_rows[0]['DATE']].tolist()[0] if len(selected_rows) > 0 else None
-    if selected_index is not None:
-        show_filtered_data(selected_index)
 
 # Plot events per hour for each day
 for day in days_df['DATE'].unique():
