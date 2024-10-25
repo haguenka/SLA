@@ -6,6 +6,7 @@ from io import BytesIO
 import matplotlib.pyplot as plt
 import datetime
 from fpdf import FPDF
+from st_aggrid import AgGrid, GridOptionsBuilder
 
 # Caching for performance improvement
 @st.cache_data
@@ -140,8 +141,16 @@ def show_filtered_data(row):
         st.write('Filtered Dataframe for Selected Row:')
         st.dataframe(filtered_data[filtered_columns], width=1200, height=400)
 
-for row in range(len(days_grouped)):
-    show_filtered_data(row)
+# Use AgGrid for interactive table
+gb = GridOptionsBuilder.from_dataframe(days_grouped)
+gb.configure_selection(selection_mode='single', use_checkbox=True)
+grid_options = gb.build()
+
+selected_rows = AgGrid(days_grouped, gridOptions=grid_options, enable_enterprise_modules=False, width='100%')['selected_rows']
+if isinstance(selected_rows, list) and len(selected_rows) > 0:
+    selected_index = days_grouped.index[days_grouped['DATE'] == selected_rows[0]['DATE']].tolist()[0] if len(selected_rows) > 0 else None
+    if selected_index is not None:
+        show_filtered_data(selected_index)
 
 # Plot events per hour for each day
 for day in days_df['DATE'].unique():
