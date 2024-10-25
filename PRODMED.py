@@ -144,7 +144,7 @@ gb.configure_selection(selection_mode='single', use_checkbox=True)
 grid_options = gb.build()
 
 selected_rows = AgGrid(days_grouped, gridOptions=grid_options, enable_enterprise_modules=False, width='100%')['selected_rows']
-if selected_rows and isinstance(selected_rows, list) and len(selected_rows) > 0:
+if isinstance(selected_rows, list) and len(selected_rows) > 0:
     selected_index = selected_rows[0]['_selectedRowNodeInfo']['rowIndex'] if '_selectedRowNodeInfo' in selected_rows[0] else None
     show_filtered_data(selected_index)
 
