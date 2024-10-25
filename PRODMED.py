@@ -145,7 +145,7 @@ grid_options = gb.build()
 
 selected_rows = AgGrid(days_grouped, gridOptions=grid_options, enable_enterprise_modules=False, width='100%')['selected_rows']
 if selected_rows is not None and len(selected_rows) > 0:
-    selected_index = selected_rows[0]['_selectedRowNodeInfo']['rowIndex']
+    selected_index = selected_rows[0].get('index', None)
     show_filtered_data(selected_index)
 
 # Plot events per hour for each day
