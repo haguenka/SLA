@@ -121,9 +121,8 @@ days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days w
 
 st.write('Dias com eventos de Laudo:')
 def style_shift_periods(df):
-    shift_colors = {'Day Shift': '#f0f0f0', 'Night Shift': '#d3d3d3'}
-    shift_group = df['SHIFT']
-    colors = [shift_colors[shift] for shift in shift_group]
+    shift_colors = {'Madrugada': '#f0f0f0', 'Manhã': '#d3d3d3', 'Tarde': '#b0e0e6', 'Noite': '#ffa07a'}
+    colors = [shift_colors[period] for period in df['PERIOD']]
     return pd.DataFrame([colors] * len(df.columns), index=df.index, columns=df.columns)
 
 st.dataframe(days_grouped.style.apply(style_shift_periods, axis=None), width=1200, height=400)
