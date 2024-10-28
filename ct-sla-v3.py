@@ -11,6 +11,10 @@ def load_logo(url):
     response = requests.get(url)
     return Image.open(BytesIO(response.content))
 
+@st.cache_data
+def load_excel(uploaded_file):
+    return pd.read_excel(uploaded_file)
+
 # Streamlit file uploader
 st.title("SLA Dashboard for CT Exams")
 
@@ -24,7 +28,7 @@ uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx"])
 
 if uploaded_file is not None:
     # Load the uploaded Excel file
-    df = pd.read_excel(uploaded_file)
+    df = load_excel(uploaded_file)
 
     # Filter the data for 'CT' modality and 'Pronto Atendimento'
     filtered_df = df[(df['MODALIDADE'] == 'CT') & (df['TIPO_ATENDIMENTO'] == 'Pronto Atendimento')]
