@@ -6,10 +6,6 @@ from PIL import Image
 import requests
 from io import BytesIO
 
-@st.cache_data
-def load_logo(url):
-    response = requests.get(url)
-    return Image.open(BytesIO(response.content))
 
 # Streamlit file uploader
 st.title("SLA Dashboard for CT Exams")
@@ -20,7 +16,11 @@ response = requests.get(url)
 logo = Image.open(BytesIO(response.content))
 st.sidebar.image(logo, use_column_width=True)
 
-uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx"])
+@st.cache_data
+def load_excel():
+    uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx"])
+    response = requests.get(url)
+    return pd.read_excel(BytesIO(response.content)))
 
 if uploaded_file is not None:
     # Load the uploaded Excel file
