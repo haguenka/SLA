@@ -6,6 +6,11 @@ from PIL import Image
 import requests
 from io import BytesIO
 
+@st.cache_data
+def load_logo(url):
+    response = requests.get(url)
+    return Image.open(BytesIO(response.content))
+
 # Streamlit file uploader
 st.title("SLA Dashboard for CT Exams")
 
