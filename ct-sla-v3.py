@@ -20,7 +20,7 @@ st.sidebar.image(logo, use_column_width=True)
 def load_excel():
     uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx"])
     response = requests.get(url)
-    return pd.read_excel(BytesIO(response.content)))
+    return pd.read_excel(BytesIO(response.content))
 
 if uploaded_file is not None:
     # Load the uploaded Excel file
