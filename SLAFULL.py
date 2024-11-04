@@ -52,6 +52,11 @@ def main():
             return
 
     try:
+        # Ensure 'MEDICO_SOLICITANTE' column exists
+        if 'MEDICO_SOLICITANTE' not in df.columns:
+            st.error("'MEDICO_SOLICITANTE' column not found in the data.")
+            return
+
         # Filter by GRUPO to include only specific groups
         allowed_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO RAIO-X', 'GRUPO MAMOGRAFIA', 'GRUPO MEDICINA NUCLEAR', 'GRUPO ULTRASSOM']
         df = df[df['GRUPO'].isin(allowed_groups)]
