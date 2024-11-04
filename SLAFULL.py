@@ -14,7 +14,7 @@ def load_logo(url):
 
 @st.cache_data
 def load_excel():
-    url = 'https://raw.githubusercontent.com/haguenka/SLA/main/base.xlsx'
+    url = 'https://raw.githubusercontent.com/haguenka/SLA/main/basesla.xlsx'
     response = requests.get(url)
     return pd.read_excel(BytesIO(response.content))
 
