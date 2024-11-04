@@ -12,11 +12,11 @@ def load_logo(url):
     response = requests.get(url)
     return Image.open(BytesIO(response.content))
 
-@st.cache_data
-def load_excel():
-    url = 'https://raw.githubusercontent.com/haguenka/SLA/main/basesla.xlsx'
-    response = requests.get(url)
-    return pd.read_excel(BytesIO(response.content))
+#@st.cache_data
+#def load_excel():
+#    url = 'https://raw.githubusercontent.com/haguenka/SLA/main/basesla.xlsx'
+#    response = requests.get(url)
+#   return pd.read_excel(BytesIO(response.content))
 
 def is_weekend(date):
     return date.weekday() >= 5
@@ -30,7 +30,14 @@ def main():
     st.sidebar.image(logo, use_column_width=True)
 
     # Load the Excel file
-    df = load_excel()
+    # File upload
+    st.sidebar.header("Carregar arquivo")
+    uploaded_file = st.sidebar.file_uploader("Escolher um arquivo Excel", type=['xlsx'])
+    if uploaded_file is not None:
+        try:
+            # Load the Excel file
+            df = load_excel(uploaded_file)
+
 
     # Filter by GRUPO to include only specific groups
     allowed_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO RAIO-X', 'GRUPO MAMOGRAFIA', 'GRUPO MEDICINA NUCLEAR', 'GRUPO ULTRASSOM']
