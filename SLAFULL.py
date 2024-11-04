@@ -142,7 +142,7 @@ def main():
         df.update(df_filtered_editable[['SAME', 'OBSERVACAO']])
 
         # Display the filtered dataframe
-        st.dataframe(df_filtered)
+        # st.dataframe(df_filtered)
 
         # Display total number of exams
         total_exams = len(df_filtered)
