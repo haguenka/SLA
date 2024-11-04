@@ -101,10 +101,13 @@ def main():
         df['SLA_STATUS'] = 'SLA DENTRO DO PERÍODO'
         df.loc[condition_1 | condition_2 | condition_3 | condition_4 | condition_5 | condition_6 | condition_7, 'SLA_STATUS'] = 'SLA FORA DO PERÍODO'
 
+        # Add an observation column for user input
+        df['OBSERVACAO'] = ''
+
         # Select only relevant columns
         selected_columns = [
             'SAME', 'NOME_PACIENTE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO', 'MEDICO_LAUDO_DEFINITIVO',
-            'UNIDADE', 'TIPO_ATENDIMENTO', 'STATUS_ALAUDAR', 'STATUS_PRELIMINAR', 'STATUS_APROVADO', 'MEDICO_SOLICITANTE', 'DELTA_TIME', 'SLA_STATUS'
+            'UNIDADE', 'TIPO_ATENDIMENTO', 'STATUS_ALAUDAR', 'STATUS_PRELIMINAR', 'STATUS_APROVADO', 'MEDICO_SOLICITANTE', 'DELTA_TIME', 'SLA_STATUS', 'OBSERVACAO'
         ]
 
         df_selected = df[selected_columns]
@@ -131,8 +134,8 @@ def main():
                                   (df_selected['STATUS_ALAUDAR'] >= pd.Timestamp(start_date)) &
                                   (df_selected['STATUS_ALAUDAR'] <= pd.Timestamp(end_date))]
 
-        # Display the filtered dataframe
-        st.dataframe(df_filtered)
+        # Display the filtered dataframe with editable observations
+        edited_rows = st.experimental_data_editor(df_filtered, num_rows="dynamic")
 
         # Display total number of exams
         total_exams = len(df_filtered)
