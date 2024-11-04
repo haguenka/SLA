@@ -86,7 +86,7 @@ def main():
         # Define the conditions for SLA violations
         condition_1 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (df['TIPO_ATENDIMENTO'] == 'Externo') & (df['MEDICO_SOLICITANTE'].isin(['HENRIQUE ARUME GUENKA', 'MARCELO JACOBINA DE ABREU'])) & (df['DELTA_TIME'] > (10 * 24))
         condition_2 = (df['GRUPO'] == 'GRUPO RAIO-X') & (df['DELTA_TIME'] > 72)
-        condition_3 = (df['GRUPO'].isin(['GRUPO MAMOGRAFIA', 'GRUPO MEDICINA NUCLEAR'])) & ~condition_1 & (df['DELTA_TIME'] > (5 * 24))
+        condition_3 = (df['GRUPO'].isin(['GRUPO MAMOGRAFIA', 'GRUPO MEDICINA NUCLEAR'])) & (df['DELTA_TIME'] > (5 * 24))
         condition_4 = (df['TIPO_ATENDIMENTO'] == 'Pronto Atendimento') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 1)
         condition_5 = (df['TIPO_ATENDIMENTO'] == 'Internado') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 24)
         condition_6 = (df['TIPO_ATENDIMENTO'] == 'Externo') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 96)
