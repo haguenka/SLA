@@ -57,6 +57,9 @@ def main():
             st.error("'MEDICO_SOLICITANTE' column not found in the data.")
             return
 
+        # Standardize 'MEDICO_SOLICITANTE' column to handle any inconsistencies in casing or extra spaces
+        df['MEDICO_SOLICITANTE'] = df['MEDICO_SOLICITANTE'].str.strip().str.lower()
+
         # Filter by GRUPO to include only specific groups
         allowed_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO RAIO-X', 'GRUPO MAMOGRAFIA', 'GRUPO MEDICINA NUCLEAR', 'GRUPO ULTRASSOM']
         df = df[df['GRUPO'].isin(allowed_groups)]
@@ -84,7 +87,7 @@ def main():
         )
 
         # Define the conditions for SLA violations
-        condition_1 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (df['MEDICO_SOLICITANTE'].isin(['HENRIQUE ARUME GUENKA', 'MARCELO JACOBINA DE ABREU'])) & (df['DELTA_TIME'] > (10 * 24))
+        condition_1 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (df['MEDICO_SOLICITANTE'].isin(['henrique arume guenka', 'marcelo jacobina de abreu'])) & (df['DELTA_TIME'] > (10 * 24))
         condition_2 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & ~condition_1 & (df['DELTA_TIME'] > 120)
         condition_3 = (df['GRUPO'] == 'GRUPO RAIO-X') & (df['DELTA_TIME'] > 72)
         condition_4 = (df['GRUPO'] == 'GRUPO MEDICINA NUCLEAR') & (df['DELTA_TIME'] > 120)
