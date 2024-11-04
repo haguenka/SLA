@@ -135,12 +135,8 @@ def main():
                                   (df_selected['STATUS_ALAUDAR'] >= pd.Timestamp(start_date)) &
                                   (df_selected['STATUS_ALAUDAR'] <= pd.Timestamp(end_date))]
 
-        # Create a copy of the filtered dataframe to edit observations only
-        df_filtered_editable = df_filtered.copy()
-
-        # Allow user to edit the 'OBSERVACAO' field only
-        for index, row in df_filtered_editable.iterrows():
-            df_filtered_editable.at[index, 'OBSERVACAO'] = st.text_input(f"Observação para SAME {row['SAME']}", value=row['OBSERVACAO'], key=f"obs_{index}")
+        # Allow user to edit the 'OBSERVACAO' field only using st.data_editor
+        df_filtered_editable = st.data_editor(df_filtered, num_rows="dynamic", disabled=df_filtered.columns.difference(['OBSERVACAO']).tolist())
 
         # Save changes to the original dataframe
         df.update(df_filtered_editable[['SAME', 'OBSERVACAO']])
