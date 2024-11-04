@@ -79,24 +79,21 @@ def main():
         )
 
         # Define the conditions for SLA violations
-        conditions = [
-            (df['GRUPO'] == 'GRUPO RAIO-X') & (df['DELTA_TIME'] > 72),
-            (df['GRUPO'].isin(['GRUPO MEDICINA NUCLEAR'])) & (df['DELTA_TIME'] > (5 * 24)),
-            (df['TIPO_ATENDIMENTO'] == 'Pronto Atendimento') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 1),
-            (df['TIPO_ATENDIMENTO'] == 'Internado') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 24),
-            (df['TIPO_ATENDIMENTO'] == 'Externo') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 96),
-            (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (df['TIPO_ATENDIMENTO'] == 'Externo') & (df['MEDICO_SOLICITANTE'].isin(['HENRIQUE ARUME GUENKA', 'MARCELO JACOBINA DE ABREU'])) & (df['DELTA_TIME'] > (10 * 24))
-        ]
+        condition_1 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (df['TIPO_ATENDIMENTO'] == 'Externo') & (df['MEDICO_SOLICITANTE'].isin(['HENRIQUE ARUME GUENKA', 'MARCELO JACOBINA DE ABREU'])) & (df['DELTA_TIME'] > (10 * 24))
+        condition_2 = (df['GRUPO'] == 'GRUPO RAIO-X') & (df['DELTA_TIME'] > 72)
+        condition_3 = (df['GRUPO'].isin(['GRUPO MAMOGRAFIA', 'GRUPO MEDICINA NUCLEAR'])) & ~condition_1 & (df['DELTA_TIME'] > (5 * 24))
+        condition_4 = (df['TIPO_ATENDIMENTO'] == 'Pronto Atendimento') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 1)
+        condition_5 = (df['TIPO_ATENDIMENTO'] == 'Internado') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 24)
+        condition_6 = (df['TIPO_ATENDIMENTO'] == 'Externo') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 96)
 
         # Set the default SLA status and apply conditions
         df['SLA_STATUS'] = 'SLA DENTRO DO PERÍODO'
-        for condition in conditions:
-            df.loc[condition, 'SLA_STATUS'] = 'SLA FORA DO PERÍODO'
+        df.loc[condition_1 | condition_2 | condition_3 | condition_4 | condition_5 | condition_6, 'SLA_STATUS'] = 'SLA FORA DO PERÍODO'
 
         # Select only relevant columns
         selected_columns = [
             'SAME', 'NOME_PACIENTE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO', 'MEDICO_LAUDO_DEFINITIVO',
-            'UNIDADE', 'TIPO_ATENDIMENTO', 'STATUS_ALAUDAR', 'STATUS_PRELIMINAR', 'STATUS_APROVADO', 'DELTA_TIME', 'SLA_STATUS'
+            'UNIDADE', 'TIPO_ATENDIMENTO', 'STATUS_ALAUDAR', 'STATUS_PRELIMINAR', 'STATUS_APROVADO', 'MEDICO_SOLICITANTE', 'DELTA_TIME', 'SLA_STATUS'
         ]
 
         df_selected = df[selected_columns]
