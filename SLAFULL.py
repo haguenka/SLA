@@ -140,7 +140,7 @@ def main():
 
         # Allow user to edit the 'OBSERVACAO' field only
         for index, row in df_filtered_editable.iterrows():
-            df_filtered_editable.at[index, 'OBSERVACAO'] = st.text_input(f"Observação para SAME {row['SAME']}", value=row['OBSERVACAO'])
+            df_filtered_editable.at[index, 'OBSERVACAO'] = st.text_input(f"Observação para SAME {row['SAME']}", value=row['OBSERVACAO'], key=f"obs_{index}")
 
         # Save changes to the original dataframe
         df.update(df_filtered_editable[['SAME', 'OBSERVACAO']])
