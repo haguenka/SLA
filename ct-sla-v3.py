@@ -138,7 +138,7 @@ if uploaded_file is not None:
 
 
         # Calculate totals and averages
-        total_patients = filtered_df.shape[0]
+        total_patients = filtered_df.shape[0] - espera_df.shape[0]
         avg_process_time = filtered_df['PROCESS_TIME_HOURS'].mean()
 
         # --- Layout starts here ---
