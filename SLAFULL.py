@@ -135,7 +135,7 @@ def main():
                                   (df_selected['STATUS_ALAUDAR'] <= pd.Timestamp(end_date))]
 
         # Display the filtered dataframe with editable observations
-        edited_rows = st.experimental_data_editor(df_filtered, num_rows="dynamic")
+        edited_rows = st.data_editor(df_filtered, num_rows="dynamic")
 
         # Display total number of exams
         total_exams = len(df_filtered)
