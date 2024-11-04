@@ -102,7 +102,8 @@ def main():
         df.loc[condition_1 | condition_2 | condition_3 | condition_4 | condition_5 | condition_6 | condition_7, 'SLA_STATUS'] = 'SLA FORA DO PERÍODO'
 
         # Add an observation column for user input
-        df['OBSERVACAO'] = ''
+        if 'OBSERVACAO' not in df.columns:
+            df['OBSERVACAO'] = ''
 
         # Select only relevant columns
         selected_columns = [
@@ -134,8 +135,18 @@ def main():
                                   (df_selected['STATUS_ALAUDAR'] >= pd.Timestamp(start_date)) &
                                   (df_selected['STATUS_ALAUDAR'] <= pd.Timestamp(end_date))]
 
-        # Display the filtered dataframe with editable observations
-        edited_rows = st.data_editor(df_filtered, num_rows="dynamic")
+        # Create a copy of the filtered dataframe to edit observations only
+        df_filtered_editable = df_filtered.copy()
+
+        # Allow user to edit the 'OBSERVACAO' field only
+        for index, row in df_filtered_editable.iterrows():
+            df_filtered_editable.at[index, 'OBSERVACAO'] = st.text_input(f"Observação para SAME {row['SAME']}", value=row['OBSERVACAO'])
+
+        # Save changes to the original dataframe
+        df.update(df_filtered_editable[['SAME', 'OBSERVACAO']])
+
+        # Display the filtered dataframe
+        st.dataframe(df_filtered)
 
         # Display total number of exams
         total_exams = len(df_filtered)
