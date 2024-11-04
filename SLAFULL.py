@@ -135,14 +135,8 @@ def main():
                                   (df_selected['STATUS_ALAUDAR'] >= pd.Timestamp(start_date)) &
                                   (df_selected['STATUS_ALAUDAR'] <= pd.Timestamp(end_date))]
 
-        # Allow user to edit the 'OBSERVACAO' field only using st.data_editor
-        df_filtered_editable = st.data_editor(df_filtered, num_rows="dynamic", disabled=df_filtered.columns.difference(['OBSERVACAO']).tolist())
-
-        # Save changes to the original dataframe
-        df.update(df_filtered_editable[['SAME', 'OBSERVACAO']])
-
         # Display the filtered dataframe
-        # st.dataframe(df_filtered)
+        st.dataframe(df_filtered)
 
         # Display total number of exams
         total_exams = len(df_filtered)
