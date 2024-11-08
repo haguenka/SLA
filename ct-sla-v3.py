@@ -30,12 +30,9 @@ response = requests.get(url)
 logo = Image.open(BytesIO(response.content))
 st.sidebar.image(logo, use_column_width=True)
 
-uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx"])
+df = load_excel_from_github()
 
-if uploaded_file is not None:
-    # Load Excel file from uploaded file
-    df = pd.read_excel(uploaded_file)
-
+if df is not None:
     # Filter the data for 'CT' modality and 'Pronto Atendimento'
     filtered_df = df[(df['MODALIDADE'] == 'CT') & (df['TIPO_ATENDIMENTO'] == 'Pronto Atendimento')]
 
