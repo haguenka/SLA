@@ -12,14 +12,8 @@ def load_logo(url):
     return Image.open(BytesIO(response.content))
 
 @st.cache_data
-def load_excel_from_github():
-    try:
-        url = 'https://raw.githubusercontent.com/haguenka/SLA/main/basesla4.xlsx'
-        response = requests.get(url)
-        response.raise_for_status()
-        return pd.read_excel(BytesIO(response.content))
-    except requests.exceptions.RequestException:
-        return None
+def load_excel(uploaded_file):
+    return pd.read_excel(uploaded_file)
 
 # Streamlit file uploader
 st.title("SLA Dashboard for CT Exams")
@@ -30,9 +24,12 @@ response = requests.get(url)
 logo = Image.open(BytesIO(response.content))
 st.sidebar.image(logo, use_column_width=True)
 
-df = load_excel_from_github()
+uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx"])
 
-if df is not None:
+if uploaded_file is not None:
+    # Load the uploaded Excel file
+    df = load_excel(uploaded_file)
+
     # Filter the data for 'CT' modality and 'Pronto Atendimento'
     filtered_df = df[(df['MODALIDADE'] == 'CT') & (df['TIPO_ATENDIMENTO'] == 'Pronto Atendimento')]
 
