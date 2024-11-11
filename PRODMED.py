@@ -51,6 +51,9 @@ min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
 start_date, end_date = st.sidebar.date_input('Select Date Range', [min_date, max_date])
 
 # Ensure start_date and end_date are within the valid range
+start_date = pd.to_datetime(start_date)
+end_date = pd.to_datetime(end_date)
+
 if start_date < min_date:
     start_date = min_date
 if end_date > max_date:
@@ -67,8 +70,8 @@ st.markdown(f"<h3 style='color:red;'>{selected_doctor}</h3>", unsafe_allow_html=
 
 # Apply filters to the dataframe for date and doctor
 filtered_df = excel_df[
-    (excel_df[date_column] >= pd.to_datetime(start_date)) &
-    (excel_df[date_column] <= pd.to_datetime(end_date)) &
+    (excel_df[date_column] >= start_date) &
+    (excel_df[date_column] <= end_date) &
     (excel_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
 ]
 
