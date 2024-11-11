@@ -31,7 +31,6 @@ st.sidebar.image(logo, use_column_width=True)
 # Streamlit app
 st.title('Report de Produção Médica')
 
-
 # Load Excel and CSV files from GitHub
 xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/basesla5.xlsx'
 csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
@@ -50,6 +49,12 @@ date_column = 'STATUS_APROVADO'
 excel_df[date_column] = pd.to_datetime(excel_df[date_column], errors='coerce')
 min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
 start_date, end_date = st.sidebar.date_input('Select Date Range', [min_date, max_date])
+
+# Ensure start_date and end_date are within the valid range
+if start_date < min_date:
+    start_date = min_date
+if end_date > max_date:
+    end_date = max_date
 
 # Unidade filter
 hospital_list = excel_df['UNIDADE'].unique()
@@ -115,7 +120,6 @@ days_df['DATE'] = days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
 # Define time periods
 days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 7, 13, 19, 24], labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'], ordered=False)
 
-
 days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
 
@@ -139,7 +143,6 @@ days_df['SHIFT'] = days_df['STATUS_APROVADO'].dt.hour.apply(medical_shift)
 
 days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
-
 
 # Plot events per hour for each day
 for day in days_df['DATE'].unique():
