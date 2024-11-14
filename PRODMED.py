@@ -32,7 +32,7 @@ st.sidebar.image(logo, use_column_width=True)
 st.title('Report de Produção Médica')
 
 # Load Excel and CSV files from GitHub
-xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/basesla5.xlsx'
+xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/basesla6.xlsx'
 csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
 
 excel_df = load_excel_data(xlsx_url)
