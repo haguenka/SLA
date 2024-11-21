@@ -46,14 +46,12 @@ st.sidebar.header('Filter Options')
 
 # Date range filter
 date_column = 'STATUS_APROVADO'
-excel_df[date_column] = pd.to_datetime(excel_df[date_column], errors='coerce', format='%Y-%m-%d')
+excel_df[date_column] = pd.to_datetime(excel_df[date_column], errors='coerce')
 min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
-start_date, end_date = st.sidebar.date_input('Select Date Range', value=[min_date, max_date], min_value=min_date, max_value=max_date)
+start_date, end_date = st.sidebar.date_input('Select Date Range', value=[min_date, max_date], min_value=min_date.date(), max_value=max_date.date())
 
 # Apply date filter
-start_date = pd.to_datetime(start_date).strftime('%Y-%m-%d')
-end_date = pd.to_datetime(end_date).strftime('%Y-%m-%d')
-filtered_df = excel_df[(excel_df[date_column] >= start_date) & (excel_df[date_column] <= end_date)]
+filtered_df = excel_df[(excel_df[date_column] >= pd.to_datetime(start_date)) & (excel_df[date_column] <= pd.to_datetime(end_date))]
 
 # Unidade filter
 hospital_list = filtered_df['UNIDADE'].unique()
