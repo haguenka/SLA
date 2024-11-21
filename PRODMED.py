@@ -29,7 +29,7 @@ logo = load_image(logo_url)
 st.sidebar.image(logo, use_column_width=True)
 
 # Streamlit app
-st.title('Report de Produção Médica')
+st.title('Medical Production Report')
 
 # Load Excel and CSV files from GitHub
 xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/basesla6.xlsx'
@@ -51,8 +51,8 @@ min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
 start_date, end_date = st.sidebar.date_input('Select Date Range', [min_date, max_date])
 
 # Ensure start_date and end_date are within the valid range
-start_date = pd.to_datetime(start_date)
-end_date = pd.to_datetime(end_date)
+start_date = pd.to_datetime(start_date[0])
+end_date = pd.to_datetime(end_date[1])
 
 if start_date < min_date:
     start_date = min_date
@@ -126,27 +126,8 @@ days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 8, 13, 
 days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
 
-st.write('Dias com eventos de Laudo:')
+st.write('Days with Reporting Events:')
 st.dataframe(days_grouped.style.apply(lambda x: ['background-color: #555555; color: #ffffff' if x['PERIOD'] == 'Madrugada' else 'background-color: #4682b4; color: #ffffff' if x['PERIOD'] == 'Manhã' else 'background-color: #f0ad4e; color: #ffffff' if x['PERIOD'] == 'Tarde' else 'background-color: #c0392b; color: #ffffff' for _ in x], axis=1), width=1200, height=400)
-days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO']].dropna()
-days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'})
-days_df['DATE'] = days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
-
-# Define time periods
-days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 8, 13, 19, 24], labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'], ordered=False)
-
-
-# Define medical shifts
-def medical_shift(hour):
-    if 7 <= hour < 19:
-        return 'Day Shift'
-    else:
-        return 'Night Shift'
-
-days_df['SHIFT'] = days_df['STATUS_APROVADO'].dt.hour.apply(medical_shift)
-
-days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
-days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
 
 # Plot events per hour for each day
 for day in days_df['DATE'].unique():
@@ -175,6 +156,7 @@ for day in days_df['DATE'].unique():
         ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray')
         plt.xticks(range(0, 24))
         st.pyplot(fig)
+
 
 # Export summary and doctors' dataframes as a combined PDF report
 if st.button('Export Summary and Doctors Dataframes as PDF'):
