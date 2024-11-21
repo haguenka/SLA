@@ -46,34 +46,26 @@ st.sidebar.header('Filter Options')
 
 # Date range filter
 date_column = 'STATUS_APROVADO'
-excel_df[date_column] = pd.to_datetime(excel_df[date_column], errors='coerce')
+excel_df[date_column] = pd.to_datetime(excel_df[date_column], errors='coerce', format='%Y-%m-%d')
 min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
-start_date, end_date = st.sidebar.date_input('Select Date Range', [min_date, max_date])
+start_date, end_date = st.sidebar.date_input('Select Date Range', value=[min_date, max_date], min_value=min_date, max_value=max_date)
 
-# Ensure start_date and end_date are within the valid range
-start_date = pd.to_datetime(start_date)
-end_date = pd.to_datetime(end_date)
-
-if start_date < min_date:
-    start_date = min_date
-if end_date > max_date:
-    end_date = max_date
+# Apply date filter
+start_date = pd.to_datetime(start_date).strftime('%Y-%m-%d')
+end_date = pd.to_datetime(end_date).strftime('%Y-%m-%d')
+filtered_df = excel_df[(excel_df[date_column] >= start_date) & (excel_df[date_column] <= end_date)]
 
 # Unidade filter
-hospital_list = excel_df['UNIDADE'].unique()
+hospital_list = filtered_df['UNIDADE'].unique()
 selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
 
 # Filter doctor names based on selected hospital
-doctor_list = excel_df[excel_df['UNIDADE'] == selected_hospital]['MEDICO_LAUDO_DEFINITIVO'].unique()
+doctor_list = filtered_df[filtered_df['UNIDADE'] == selected_hospital]['MEDICO_LAUDO_DEFINITIVO'].unique()
 selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
 st.markdown(f"<h3 style='color:red;'>{selected_doctor}</h3>", unsafe_allow_html=True)
 
-# Apply filters to the dataframe for date and doctor
-filtered_df = excel_df[
-    (excel_df[date_column] >= start_date) &
-    (excel_df[date_column] <= end_date) &
-    (excel_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
-]
+# Apply filters to the dataframe for selected doctor
+filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor]
 
 # Display full filtered dataframe for the selected doctor
 st.write('Full Filtered Dataframe for Selected Doctor:')
