@@ -51,8 +51,8 @@ min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
 start_date, end_date = st.sidebar.date_input('Select Date Range', [min_date, max_date])
 
 # Ensure start_date and end_date are within the valid range
-start_date = pd.to_datetime(start_date[0])
-end_date = pd.to_datetime(end_date[1])
+start_date = pd.to_datetime(start_date)
+end_date = pd.to_datetime(end_date)
 
 if start_date < min_date:
     start_date = min_date
