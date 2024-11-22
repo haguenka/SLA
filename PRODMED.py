@@ -92,14 +92,14 @@ for hospital in doctor_grouped['UNIDADE'].unique():
     for grupo in hospital_df['GRUPO'].unique():
         grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
         grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
-        total_points = grupo_df['POINTS'].sum()
+        total_points = round(grupo_df['POINTS'].sum(), 1)  # Ensure one decimal place
         total_points_sum += total_points
         total_exams = grupo_df['COUNT'].sum()
 
         # Display the grouped dataframe, total points, and total number of exams for this modality
         st.markdown(f"<h3 style='color:#0a84ff;'>Modality: {grupo}</h3>", unsafe_allow_html=True)
         st.dataframe(grupo_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']], width=1000, height=300)
-        st.write(f'Total Points for {grupo}: {total_points}')
+        st.write(f'Total Points for {grupo}: {total_points:.1f}')  # Use f-string formatting for one decimal
         st.write(f'Total Number of Exams for {grupo}: {total_exams}')
 
 # Display total points across all hospitals and modalities
