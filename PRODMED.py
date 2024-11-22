@@ -79,7 +79,7 @@ merged_df = pd.merge(filtered_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left
 merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
 
 # Calculate points for each procedure
-merged_df['POINTS'] = merged_df['DATA_LAUDO'].notna().astype(int) * merged_df['MULTIPLIER']
+merged_df['POINTS'] = (merged_df['DATA_LAUDO'].notna().astype(int) * merged_df['MULTIPLIER']).map(lambda x: f"{x:.1f}")
 
 # Group by UNIDADE, GRUPO, and DESCRICAO_PROCEDIMENTO to create dataframes for each doctor
 doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({'MULTIPLIER': 'first', 'DATA_LAUDO': 'count'}).rename(columns={'DATA_LAUDO': 'COUNT'}).reset_index()
