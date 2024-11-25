@@ -149,6 +149,10 @@ def main():
         ax.pie(sla_status_counts, labels=sla_status_counts.index, autopct='%1.1f%%', colors=colors)
         ax.set_title(f'SLA Status - {selected_unidade} - {selected_grupo} - {selected_tipo_atendimento}')
 
+        # Add logo to bottom left corner of the pie chart
+        logo = Image.open(BytesIO(requests.get(url).content))
+        fig.figimage(logo, 10, 10, zorder=1, alpha=0.5)
+
         # Display the pie chart
         st.pyplot(fig)
 
