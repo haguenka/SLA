@@ -151,8 +151,8 @@ def main():
 
         # Add logo to bottom left corner of the pie chart
         logo = Image.open(BytesIO(requests.get(url).content))
-        logo.thumbnail((300, 300))
-        fig.figimage(logo, 10, 10, zorder=1, alpha=0.5)
+        logo.thumbnail((400, 400))
+        fig.figimage(logo, 10, 10, zorder=1, alpha=0.7)
 
         # Display the pie chart
         st.pyplot(fig)
