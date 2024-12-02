@@ -87,10 +87,6 @@ if min_date is not None and max_date is not None:
     # Format the filtered DataFrame to exclude seconds when displaying
     filtered_df[date_column] = filtered_df[date_column].dt.strftime('%d-%m-%Y %H:%M')
 
-    # Display the filtered data in Streamlit
-    st.write(f"Showing data from {start_date.date()} to {end_date.date()}:")
-    st.dataframe(filtered_df)
-
 else:
     st.warning("No valid dates found in the dataset.")
 
