@@ -175,34 +175,6 @@ st.dataframe(
     height=400
 )
 
-# Plot events per hour for each day
-for day in days_df['DATE'].unique():
-    st.write(f'Events Timeline for {day}:')
-    day_df = days_df[days_df['DATE'] == day]
-    if not day_df.empty:
-        fig, ax = plt.subplots(figsize=(10, 6))
-
-        # Extract hour from STATUS_APROVADO for plotting
-        day_df['HOUR'] = day_df['STATUS_APROVADO'].dt.hour
-
-        # Group by hour to get event counts
-        hourly_events = day_df.groupby('HOUR').size().reset_index(name='EVENT_COUNT')
-
-        # Plot events per hour for each day
-        plt.style.use('dark_background')
-
-        # Plot event counts against hours
-        ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', color='#1f77b4', label=str(day))
-        ax.set_facecolor('#2e2e2e')
-        ax.set_xlabel('Hour of the Day', color='white')
-        ax.set_ylabel('Events Count', color='white')
-        ax.set_title(f'Events Timeline for {day}', color='white')
-        ax.tick_params(colors='white')
-        ax.legend(title='Date', facecolor='#3a3a3a', edgecolor='white')
-        ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray')
-        plt.xticks(range(0, 24))
-        st.pyplot(fig)
-
 
 # Export summary and doctors' dataframes as a combined PDF report
 if st.button('Export Summary and Doctors Dataframes as PDF'):
