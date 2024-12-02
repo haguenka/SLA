@@ -111,36 +111,38 @@ days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.strftime('%A').replace({'
 days_df['DATE'] = days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
 
 # Define time periods
-#days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 8, 13, 19, 24], labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'], ordered=False)
+# Ensure STATUS_APROVADO is a datetime
+days_df['STATUS_APROVADO'] = pd.to_datetime(days_df['STATUS_APROVADO'], errors='coerce')
+
+# Define the periods correctly using left-inclusive intervals
 days_df['PERIOD'] = pd.cut(
     days_df['STATUS_APROVADO'].dt.hour,
-    bins=[-1, 6, 12, 18, 23],  # Bins: Madrugada ends at 6:59, Manhã starts at 7:00
-    labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'],  # Correct labels
-    right=False  # Make intervals left-inclusive, so 7:00 is classified as 'Manhã'
+    bins=[-1, 6, 12, 18, 24],  # Madrugada ends at 6:59, Manhã starts at 7:00
+    labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'],  # Period labels
+    right=False  # Left-inclusive, so 7:00 goes to 'Manhã'
 )
 
-# Group by required fields
+# Grouping logic as before
 days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
-
-# Filter to show only days with events
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]
 
-# Styling the dataframe for display in Streamlit
+# Display using Streamlit
 st.write('Days with Reporting Events:')
 st.dataframe(
     days_grouped.style.apply(
-        lambda x: [
-            'background-color: #555555; color: #ffffff' if row['PERIOD'] == 'Madrugada' 
-            else 'background-color: #4682b4; color: #ffffff' if row['PERIOD'] == 'Manhã' 
-            else 'background-color: #f0ad4e; color: #ffffff' if row['PERIOD'] == 'Tarde' 
-            else 'background-color: #c0392b; color: #ffffff' 
-            for _, row in days_grouped.iterrows()
+        lambda row: [
+            'background-color: #555555; color: #ffffff' if period == 'Madrugada'
+            else 'background-color: #4682b4; color: #ffffff' if period == 'Manhã'
+            else 'background-color: #f0ad4e; color: #ffffff' if period == 'Tarde'
+            else 'background-color: #c0392b; color: #ffffff'
+            for period in row['PERIOD']
         ],
         axis=1
     ),
     width=1200,
     height=400
 )
+
 
 # Plot events per hour for each day
 for day in days_df['DATE'].unique():
