@@ -45,7 +45,7 @@ csv_df.columns = csv_df.columns.str.strip()
 st.sidebar.header('Filter Options')
 
 # Date range filter
-date_column = 'DATA_LAUDO'
+date_column = 'STATUS_APROVADO'
 excel_df[date_column] = pd.to_datetime(excel_df[date_column], format='%d-%m-%Y %H:%M', errors='coerce')
 min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
 start_date, end_date = st.sidebar.date_input('Select Date Range', value=[min_date, max_date], min_value=min_date.date(), max_value=max_date.date())
@@ -67,7 +67,7 @@ filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doc
 
 # Display full filtered dataframe for the selected doctor
 st.write('Full Filtered Dataframe for Selected Doctor:')
-filtered_columns = ['SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'DATA_LAUDO', 'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE']
+filtered_columns = ['SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_APROVADO', 'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE']
 st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
 
 # Merge filtered data with CSV to calculate points
@@ -79,10 +79,10 @@ merged_df = pd.merge(filtered_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left
 merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
 
 # Calculate points and ensure one decimal slot
-merged_df['POINTS'] = (merged_df['DATA_LAUDO'].notna().astype(int) * merged_df['MULTIPLIER']).round(1)
+merged_df['POINTS'] = (merged_df['STATUS_APROVADO'].notna().astype(int) * merged_df['MULTIPLIER']).round(1)
 
 # Group by UNIDADE, GRUPO, and DESCRICAO_PROCEDIMENTO to create dataframes for each doctor
-doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({'MULTIPLIER': 'first', 'DATA_LAUDO': 'count'}).rename(columns={'DATA_LAUDO': 'COUNT'}).reset_index()
+doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({'MULTIPLIER': 'first', 'DATA_LAUDO': 'count'}).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
 total_points_sum = 0
 
 # Loop through each hospital and modality for the selected doctor
@@ -106,12 +106,12 @@ for hospital in doctor_grouped['UNIDADE'].unique():
 st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
 
 # Get the days and periods each doctor has events
-days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'DATA_LAUDO']].dropna()
+days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO']].dropna()
 days_df['DAY_OF_WEEK'] = days_df['DATA_LAUDO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'})
 days_df['DATE'] = days_df['DATA_LAUDO'].dt.strftime('%Y-%m-%d')
 
 # Define time periods
-days_df['PERIOD'] = pd.cut(days_df['DATA_LAUDO'].dt.hour, bins=[-1, 8, 13, 19, 24], labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'], ordered=False)
+days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 7, 13, 19, 24], labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'], ordered=False)
 
 days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]  # Only show days with events
@@ -127,7 +127,7 @@ for day in days_df['DATE'].unique():
         fig, ax = plt.subplots(figsize=(10, 6))
 
         # Extract hour from DATA_LAUDO for plotting
-        day_df['HOUR'] = day_df['DATA_LAUDO'].dt.hour
+        day_df['HOUR'] = day_df['STATUS_APROVADO'].dt.hour
 
         # Group by hour to get event counts
         hourly_events = day_df.groupby('HOUR').size().reset_index(name='EVENT_COUNT')
