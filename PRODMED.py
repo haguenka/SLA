@@ -145,22 +145,22 @@ days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO']].dropna()
 days_df['STATUS_APROVADO'] = pd.to_datetime(days_df['STATUS_APROVADO'], errors='coerce')
 
 # Ensure STATUS_APROVADO is properly recognized as datetime
-days_df = days_df[days_df['STATUS_APROVADO'].notna()]
+valid_days_df = days_df[days_df['STATUS_APROVADO'].notna()].copy()
 
 # Extract day of the week and other information
-days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'})
-days_df['DATE'] = days_df['STATUS_APROVADO'].dt.strftime('%d-%m-%Y')
+valid_days_df['DAY_OF_WEEK'] = valid_days_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'})
+valid_days_df['DATE'] = valid_days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
 
 # Define the periods correctly using left-inclusive intervals
-days_df['PERIOD'] = pd.cut(
-    days_df['STATUS_APROVADO'].dt.hour,
+valid_days_df['PERIOD'] = pd.cut(
+    valid_days_df['STATUS_APROVADO'].dt.hour,
     bins=[-1, 6, 12, 18, 24],  # Madrugada ends at 6:59, Manhã starts at 7:00
     labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'],  # Period labels
     right=False  # Left-inclusive, so 7:00 goes to 'Manhã'
 )
 
 # Grouping logic as before
-days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
+days_grouped = valid_days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
 days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]
 
 # Display using Streamlit
@@ -181,9 +181,9 @@ st.dataframe(
 )
 
 # Plot events per hour for each day
-for day in days_df['DATE'].unique():
+for day in valid_days_df['DATE'].unique():
     st.write(f'Events Timeline for {day}:')
-    day_df = days_df[days_df['DATE'] == day]
+    day_df = valid_days_df[valid_days_df['DATE'] == day]
     if not day_df.empty:
         fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -207,7 +207,6 @@ for day in days_df['DATE'].unique():
         ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray')
         plt.xticks(range(0, 24))
         st.pyplot(fig)
-
 
 
 # Export summary and doctors' dataframes as a combined PDF report
