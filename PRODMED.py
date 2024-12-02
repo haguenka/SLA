@@ -56,10 +56,6 @@ excel_df[date_column] = pd.to_datetime(
 # Format 'STATUS_APROVADO' as a string with no seconds
 excel_df[date_column] = excel_df[date_column].dt.strftime('%d-%m-%Y %H:%M').astype(str)
 
-# Display in Streamlit (seconds will not appear)
-st.write("Filtered Data without Seconds in STATUS_APROVADO:")
-st.dataframe(excel_df)
-
 
 # Remove rows with invalid or missing dates (optional, based on your needs)
 excel_df = excel_df[excel_df[date_column].notna()]
@@ -85,7 +81,7 @@ if min_date is not None and max_date is not None:
     filtered_df = excel_df[(excel_df[date_column] >= start_date) & (excel_df[date_column] <= end_date)]
 
     # Format the filtered DataFrame to exclude seconds when displaying
-    filtered_df[date_column] = filtered_df[date_column].dt.strftime('%d-%m-%Y %H:%M')
+    filtered_df[date_column] = filtered_df[date_column].dt.strftime('%d-%m-%Y %H:%M').astype(str)
 
 else:
     st.warning("No valid dates found in the dataset.")
