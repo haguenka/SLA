@@ -142,7 +142,12 @@ st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total
 
 # Get the days and periods each doctor has events
 days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO']].dropna()
-days_df['STATUS_APROVADO'] = pd.to_datetime(days_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M', errors='coerce')
+days_df['STATUS_APROVADO'] = pd.to_datetime(days_df['STATUS_APROVADO'], errors='coerce')
+
+# Ensure STATUS_APROVADO is properly recognized as datetime
+days_df = days_df[days_df['STATUS_APROVADO'].notna()]
+
+# Extract day of the week and other information
 days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'})
 days_df['DATE'] = days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
 
@@ -174,6 +179,35 @@ st.dataframe(
     width=1200,
     height=400
 )
+
+# Plot events per hour for each day
+for day in days_df['DATE'].unique():
+    st.write(f'Events Timeline for {day}:')
+    day_df = days_df[days_df['DATE'] == day]
+    if not day_df.empty:
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        # Extract hour from STATUS_APROVADO for plotting
+        day_df['HOUR'] = day_df['STATUS_APROVADO'].dt.hour
+
+        # Group by hour to get event counts
+        hourly_events = day_df.groupby('HOUR').size().reset_index(name='EVENT_COUNT')
+
+        # Plot events per hour for each day
+        plt.style.use('dark_background')
+
+        # Plot event counts against hours
+        ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', color='#1f77b4', label=str(day))
+        ax.set_facecolor('#2e2e2e')
+        ax.set_xlabel('Hour of the Day', color='white')
+        ax.set_ylabel('Events Count', color='white')
+        ax.set_title(f'Events Timeline for {day}', color='white')
+        ax.tick_params(colors='white')
+        ax.legend(title='Date', facecolor='#3a3a3a', edgecolor='white')
+        ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray')
+        plt.xticks(range(0, 24))
+        st.pyplot(fig)
+
 
 
 # Export summary and doctors' dataframes as a combined PDF report
