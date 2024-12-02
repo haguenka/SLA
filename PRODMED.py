@@ -46,7 +46,7 @@ st.sidebar.header('Filter Options')
 
 # Date range filter
 date_column = 'STATUS_APROVADO'
-excel_df[date_column] = pd.to_datetime(excel_df[date_column], format='%d-%m-%Y %H:%M', errors='coerce')
+excel_df[date_column] = pd.to_datetime(excel_df[date_column], format='%d-%m-%Y %H:%M:%S', errors='coerce')
 min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
 start_date, end_date = st.sidebar.date_input('Select Date Range', value=[min_date, max_date], min_value=min_date.date(), max_value=max_date.date())
 
