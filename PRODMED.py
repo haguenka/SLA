@@ -45,10 +45,40 @@ csv_df.columns = csv_df.columns.str.strip()
 st.sidebar.header('Filter Options')
 
 # Date range filter
+# Convert the 'STATUS_APROVADO' column to datetime format
 date_column = 'STATUS_APROVADO'
 excel_df[date_column] = pd.to_datetime(excel_df[date_column], format='%d-%m-%Y %H:%M:%S', errors='coerce')
+
+# Remove rows with invalid or missing dates (optional, based on your needs)
+excel_df = excel_df[excel_df[date_column].notna()]
+
+# Determine the minimum and maximum dates from the 'STATUS_APROVADO' column
 min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
-start_date, end_date = st.sidebar.date_input('Select Date Range', value=[min_date, max_date], min_value=min_date.date(), max_value=max_date.date())
+
+# Safely handle cases where min_date or max_date might be missing
+if min_date is not None and max_date is not None:
+    # Display a Streamlit sidebar date input widget for selecting a date range
+    start_date, end_date = st.sidebar.date_input(
+        'Select Date Range',
+        value=[min_date, max_date],
+        min_value=min_date.date(),
+        max_value=max_date.date()
+    )
+    
+    # Convert the selected date range back to Timestamps for filtering
+    start_date = pd.Timestamp(start_date)
+    end_date = pd.Timestamp(end_date)
+
+    # Filter the DataFrame based on the selected date range
+    filtered_df = excel_df[(excel_df[date_column] >= start_date) & (excel_df[date_column] <= end_date)]
+
+    # Display the filtered data in Streamlit
+    st.write(f"Showing data from {start_date.date()} to {end_date.date()}:")
+    st.dataframe(filtered_df)
+
+else:
+    st.warning("No valid dates found in the dataset.")
+
 
 # Apply date filter
 filtered_df = excel_df[(excel_df[date_column] >= pd.to_datetime(start_date)) & (excel_df[date_column] <= pd.to_datetime(end_date))]
