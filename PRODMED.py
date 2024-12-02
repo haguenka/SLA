@@ -45,9 +45,13 @@ csv_df.columns = csv_df.columns.str.strip()
 st.sidebar.header('Filter Options')
 
 # Date range filter
-# Convert the 'STATUS_APROVADO' column to datetime format
+# Convert the 'STATUS_APROVADO' column to datetime format (no seconds in the original data)
 date_column = 'STATUS_APROVADO'
-excel_df[date_column] = pd.to_datetime(excel_df[date_column], format='%Y-%m-%d %H:%M:%S', errors='coerce')
+excel_df[date_column] = pd.to_datetime(
+    excel_df[date_column], 
+    format='%d-%m-%Y %H:%M',  # Format matches the original Excel data
+    errors='coerce'
+)
 
 # Remove rows with invalid or missing dates (optional, based on your needs)
 excel_df = excel_df[excel_df[date_column].notna()]
@@ -72,12 +76,16 @@ if min_date is not None and max_date is not None:
     # Filter the DataFrame based on the selected date range
     filtered_df = excel_df[(excel_df[date_column] >= start_date) & (excel_df[date_column] <= end_date)]
 
+    # Format the filtered DataFrame to exclude seconds when displaying
+    filtered_df[date_column] = filtered_df[date_column].dt.strftime('%d-%m-%Y %H:%M')
+
     # Display the filtered data in Streamlit
     st.write(f"Showing data from {start_date.date()} to {end_date.date()}:")
     st.dataframe(filtered_df)
 
 else:
     st.warning("No valid dates found in the dataset.")
+
 
 
 # Apply date filter
