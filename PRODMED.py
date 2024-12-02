@@ -47,7 +47,7 @@ st.sidebar.header('Filter Options')
 # Date range filter
 # Convert the 'STATUS_APROVADO' column to datetime format
 date_column = 'STATUS_APROVADO'
-excel_df[date_column] = pd.to_datetime(excel_df[date_column], format='%d-%m-%Y %H:%M:%S', errors='coerce')
+excel_df[date_column] = pd.to_datetime(excel_df[date_column], format='%Y-%m-%d %H:%M:%S', errors='coerce')
 
 # Remove rows with invalid or missing dates (optional, based on your needs)
 excel_df = excel_df[excel_df[date_column].notna()]
