@@ -114,9 +114,9 @@ days_df['DATE'] = days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
 #days_df['PERIOD'] = pd.cut(days_df['STATUS_APROVADO'].dt.hour, bins=[-1, 8, 13, 19, 24], labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'], ordered=False)
 days_df['PERIOD'] = pd.cut(
     days_df['STATUS_APROVADO'].dt.hour,
-    bins=[-1, 7, 13, 19, 24],  # Adjusted bins to reflect the correct intervals
+    bins=[-1, 6, 12, 18, 23],  # Adjusted bins: Madrugada ends at 6, Manhã starts at 7
     labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'],  # Corresponding labels
-    ordered=False  # The labels are not ordinal
+    ordered=False
 )
 
 
