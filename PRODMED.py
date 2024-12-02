@@ -147,66 +147,68 @@ days_df['STATUS_APROVADO'] = pd.to_datetime(days_df['STATUS_APROVADO'], errors='
 # Ensure STATUS_APROVADO is properly recognized as datetime
 valid_days_df = days_df[days_df['STATUS_APROVADO'].notna()].copy()
 
-# Extract day of the week and other information
-valid_days_df['DAY_OF_WEEK'] = valid_days_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'})
-valid_days_df['DATE'] = valid_days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
+# Extract day of the week and other information (with additional check for valid datetime values)
+if not valid_days_df.empty:
+    valid_days_df['DAY_OF_WEEK'] = valid_days_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'})
+    valid_days_df['DATE'] = valid_days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
 
-# Define the periods correctly using left-inclusive intervals
-valid_days_df['PERIOD'] = pd.cut(
-    valid_days_df['STATUS_APROVADO'].dt.hour,
-    bins=[-1, 6, 12, 18, 24],  # Madrugada ends at 6:59, Manhã starts at 7:00
-    labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'],  # Period labels
-    right=False  # Left-inclusive, so 7:00 goes to 'Manhã'
-)
+    # Define the periods correctly using left-inclusive intervals
+    valid_days_df['PERIOD'] = pd.cut(
+        valid_days_df['STATUS_APROVADO'].dt.hour,
+        bins=[-1, 6, 12, 18, 24],  # Madrugada ends at 6:59, Manhã starts at 7:00
+        labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'],  # Period labels
+        right=False  # Left-inclusive, so 7:00 goes to 'Manhã'
+    )
 
-# Grouping logic as before
-days_grouped = valid_days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
-days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]
+    # Grouping logic as before
+    days_grouped = valid_days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
+    days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]
 
-# Display using Streamlit
-st.write('Days with Reporting Events:')
-st.dataframe(
-    days_grouped.style.apply(
-        lambda row: [
-            'background-color: #555555; color: #ffffff' if period == 'Madrugada'
-            else 'background-color: #4682b4; color: #ffffff' if period == 'Manhã'
-            else 'background-color: #f0ad4e; color: #ffffff' if period == 'Tarde'
-            else 'background-color: #c0392b; color: #ffffff'
-            for period in row['PERIOD']
-        ],
-        axis=1
-    ),
-    width=1200,
-    height=400
-)
+    # Display using Streamlit
+    st.write('Days with Reporting Events:')
+    st.dataframe(
+        days_grouped.style.apply(
+            lambda row: [
+                'background-color: #555555; color: #ffffff' if period == 'Madrugada'
+                else 'background-color: #4682b4; color: #ffffff' if period == 'Manhã'
+                else 'background-color: #f0ad4e; color: #ffffff' if period == 'Tarde'
+                else 'background-color: #c0392b; color: #ffffff'
+                for period in row['PERIOD']
+            ],
+            axis=1
+        ),
+        width=1200,
+        height=400
+    )
 
-# Plot events per hour for each day
-for day in valid_days_df['DATE'].unique():
-    st.write(f'Events Timeline for {day}:')
-    day_df = valid_days_df[valid_days_df['DATE'] == day]
-    if not day_df.empty:
-        fig, ax = plt.subplots(figsize=(10, 6))
+    # Plot events per hour for each day
+    for day in valid_days_df['DATE'].unique():
+        st.write(f'Events Timeline for {day}:')
+        day_df = valid_days_df[valid_days_df['DATE'] == day]
+        if not day_df.empty:
+            fig, ax = plt.subplots(figsize=(10, 6))
 
-        # Extract hour from STATUS_APROVADO for plotting
-        day_df['HOUR'] = day_df['STATUS_APROVADO'].dt.hour
+            # Extract hour from STATUS_APROVADO for plotting
+            day_df['HOUR'] = day_df['STATUS_APROVADO'].dt.hour
 
-        # Group by hour to get event counts
-        hourly_events = day_df.groupby('HOUR').size().reset_index(name='EVENT_COUNT')
+            # Group by hour to get event counts
+            hourly_events = day_df.groupby('HOUR').size().reset_index(name='EVENT_COUNT')
 
-        # Plot events per hour for each day
-        plt.style.use('dark_background')
+            # Plot events per hour for each day
+            plt.style.use('dark_background')
 
-        # Plot event counts against hours
-        ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', color='#1f77b4', label=str(day))
-        ax.set_facecolor('#2e2e2e')
-        ax.set_xlabel('Hour of the Day', color='white')
-        ax.set_ylabel('Events Count', color='white')
-        ax.set_title(f'Events Timeline for {day}', color='white')
-        ax.tick_params(colors='white')
-        ax.legend(title='Date', facecolor='#3a3a3a', edgecolor='white')
-        ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray')
-        plt.xticks(range(0, 24))
-        st.pyplot(fig)
+            # Plot event counts against hours
+            ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', color='#1f77b4', label=str(day))
+            ax.set_facecolor('#2e2e2e')
+            ax.set_xlabel('Hour of the Day', color='white')
+            ax.set_ylabel('Events Count', color='white')
+            ax.set_title(f'Events Timeline for {day}', color='white')
+            ax.tick_params(colors='white')
+            ax.legend(title='Date', facecolor='#3a3a3a', edgecolor='white')
+            ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray')
+            plt.xticks(range(0, 24))
+            st.pyplot(fig)
+
 
 
 # Export summary and doctors' dataframes as a combined PDF report
