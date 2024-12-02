@@ -49,9 +49,16 @@ st.sidebar.header('Filter Options')
 date_column = 'STATUS_APROVADO'
 excel_df[date_column] = pd.to_datetime(
     excel_df[date_column], 
-    format='%d-%m-%Y %H:%M',  # Format matches the original Excel data
+    format='%d-%m-%Y %H:%M',  # Matches original Excel data format
     errors='coerce'
 )
+
+# Format the datetime objects for display (hour:minute only)
+excel_df[date_column] = excel_df[date_column].dt.strftime('%d-%m-%Y %H:%M')
+
+# Display the filtered data in Streamlit (or any other UI)
+st.write("Filtered Data without Seconds in STATUS_APROVADO:")
+st.dataframe(excel_df)
 
 # Remove rows with invalid or missing dates (optional, based on your needs)
 excel_df = excel_df[excel_df[date_column].notna()]
