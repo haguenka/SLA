@@ -45,46 +45,39 @@ csv_df.columns = csv_df.columns.str.strip()
 st.sidebar.header('Filter Options')
 
 # Date range filter
-# Convert 'STATUS_APROVADO' to datetime format (without seconds)
+# Convert 'STATUS_APROVADO' to datetime format (no seconds in the original data)
 date_column = 'STATUS_APROVADO'
 excel_df[date_column] = pd.to_datetime(
     excel_df[date_column], 
-    format='%d-%m-%Y %H:%M', 
-    errors='coerce'
+    format='%d-%m-%Y %H:%M',  # Matches original format
+    errors='coerce'  # Handle invalid entries
 )
 
-# Format 'STATUS_APROVADO' as a string with no seconds
-excel_df[date_column] = excel_df[date_column].dt.strftime('%d-%m-%Y %H:%M').astype(str)
-
-
-# Remove rows with invalid or missing dates (optional, based on your needs)
+# Remove invalid rows
 excel_df = excel_df[excel_df[date_column].notna()]
 
-# Determine the minimum and maximum dates from the 'STATUS_APROVADO' column
+# Determine the minimum and maximum dates
 min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
 
-# Safely handle cases where min_date or max_date might be missing
-if min_date is not None and max_date is not None:
-    # Display a Streamlit sidebar date input widget for selecting a date range
+# Sidebar date input
+if min_date and max_date:
     start_date, end_date = st.sidebar.date_input(
         'Select Date Range',
         value=[min_date, max_date],
         min_value=min_date.date(),
         max_value=max_date.date()
     )
-    
-    # Convert the selected date range back to Timestamps for filtering
+    # Convert back to timestamps for filtering
     start_date = pd.Timestamp(start_date)
     end_date = pd.Timestamp(end_date)
 
-    # Filter the DataFrame based on the selected date range
-    filtered_df = excel_df[(excel_df[date_column] >= start_date) & (excel_df[date_column] <= end_date)]
-
-    # Format the filtered DataFrame to exclude seconds when displaying
-    filtered_df[date_column] = filtered_df[date_column].dt.strftime('%d-%m-%Y %H:%M').astype(str)
-
+    # Filter based on date range
+    filtered_df = excel_df[
+        (excel_df[date_column] >= start_date) & (excel_df[date_column] <= end_date)
+    ]
 else:
     st.warning("No valid dates found in the dataset.")
+
 
 
 
@@ -104,9 +97,17 @@ st.markdown(f"<h3 style='color:red;'>{selected_doctor}</h3>", unsafe_allow_html=
 filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor]
 
 # Display full filtered dataframe for the selected doctor
-st.write('Full Filtered Dataframe for Selected Doctor:')
-filtered_columns = ['SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_APROVADO', 'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE']
+# Format 'STATUS_APROVADO' for display (remove seconds)
+filtered_df[date_column] = filtered_df[date_column].dt.strftime('%d-%m-%Y %H:%M')
+
+# Display filtered data
+filtered_columns = [
+    'SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 
+    'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_APROVADO', 
+    'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE'
+]
 st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
+
 
 # Merge filtered data with CSV to calculate points
 csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
