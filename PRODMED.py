@@ -23,6 +23,36 @@ def load_csv_data(csv_url):
     response = requests.get(csv_url)
     return pd.read_csv(BytesIO(response.content))
 
+# Define periods with more explicit hour ranges
+def assign_period(hour):
+    if 0 <= hour < 6:
+        return 'Madrugada'
+    elif 6 <= hour < 12:
+        return 'Manhã'
+    elif 12 <= hour < 18:
+        return 'Tarde'
+    else:
+        return 'Noite'
+
+# Color mapping for periods
+period_colors = {
+    'Madrugada': '#555555',
+    'Manhã': '#4682b4',
+    'Tarde': '#f0ad4e',
+    'Noite': '#c0392b'
+}
+
+# Day translations
+day_translations = {
+    'Monday': 'Segunda-feira', 
+    'Tuesday': 'Terça-feira', 
+    'Wednesday': 'Quarta-feira',
+    'Thursday': 'Quinta-feira', 
+    'Friday': 'Sexta-feira', 
+    'Saturday': 'Sábado', 
+    'Sunday': 'Domingo'
+}
+
 # Load and display logo from GitHub
 logo_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
 logo = load_image(logo_url)
@@ -47,169 +77,159 @@ st.sidebar.header('Filter Options')
 # Date range filter
 # Convert 'STATUS_APROVADO' to datetime format (no seconds in the original data)
 date_column = 'STATUS_APROVADO'
-excel_df[date_column] = pd.to_datetime(
-    excel_df[date_column], 
-    format='%d-%m-%Y %H:%M',  # Matches original format
-    errors='coerce'  # Handle invalid entries
-)
-
-# Remove invalid rows
-excel_df = excel_df[excel_df[date_column].notna()]
-
-# Determine the minimum and maximum dates
-min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
-
-# Sidebar date input
-if min_date and max_date:
-    start_date, end_date = st.sidebar.date_input(
-        'Select Date Range',
-        value=[min_date, max_date],
-        min_value=min_date.date(),
-        max_value=max_date.date()
-    )
-    # Convert back to timestamps for filtering
-    start_date = pd.Timestamp(start_date)
-    end_date = pd.Timestamp(end_date)
-
-    # Filter based on date range
-    filtered_df = excel_df[
-        (excel_df[date_column] >= start_date) & (excel_df[date_column] <= end_date)
-    ]
-else:
-    st.warning("No valid dates found in the dataset.")
-
-# Unidade filter
-hospital_list = filtered_df['UNIDADE'].unique()
-selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
-
-# Filter doctor names based on selected hospital
-doctor_list = filtered_df[filtered_df['UNIDADE'] == selected_hospital]['MEDICO_LAUDO_DEFINITIVO'].unique()
-selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
-st.markdown(f"<h3 style='color:red;'>{selected_doctor}</h3>", unsafe_allow_html=True)
-
-# Apply filters to the dataframe for selected doctor
-filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor]
-
-# Display full filtered dataframe for the selected doctor
-# Format 'STATUS_APROVADO' for display (remove seconds)
-filtered_df[date_column] = pd.to_datetime(filtered_df[date_column], errors='coerce').dt.strftime('%d-%m-%Y %H:%M')
-
-# Display filtered data
-filtered_columns = [
-    'SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 
-    'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_APROVADO', 
-    'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE'
-]
-st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
-
-# Merge filtered data with CSV to calculate points
-csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
-filtered_df['DESCRICAO_PROCEDIMENTO'] = filtered_df['DESCRICAO_PROCEDIMENTO'].str.upper()
-merged_df = pd.merge(filtered_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
-
-# Fill NaN values in MULTIPLIER with 0 for procedures not listed in the CSV
-merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
-
-# Calculate points and ensure one decimal slot
-merged_df['POINTS'] = (merged_df['STATUS_APROVADO'].notna().astype(int) * merged_df['MULTIPLIER']).round(1)
-
-# Group by UNIDADE, GRUPO, and DESCRICAO_PROCEDIMENTO to create dataframes for each doctor
-doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({'MULTIPLIER': 'first', 'STATUS_APROVADO': 'count'}).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
-total_points_sum = 0
-
-# Loop through each hospital and modality for the selected doctor
-for hospital in doctor_grouped['UNIDADE'].unique():
-    hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
-    st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
-    for grupo in hospital_df['GRUPO'].unique():
-        grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
-        grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
-        total_points = round(grupo_df['POINTS'].sum(), 1)  # Ensure one decimal place
-        total_points_sum += total_points
-        total_exams = grupo_df['COUNT'].sum()
-
-        # Display the grouped dataframe, total points, and total number of exams for this modality
-        st.markdown(f"<h3 style='color:#0a84ff;'>Modality: {grupo}</h3>", unsafe_allow_html=True)
-        st.dataframe(grupo_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']], width=1000, height=300)
-        st.write(f'Total Points for {grupo}: {total_points:.1f}')  # Use f-string formatting for one decimal
-        st.write(f'Total Number of Exams for {grupo}: {total_exams}')
-
-# Display total points across all hospitals and modalities
-st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
-
-# Get the days and periods each doctor has events
-days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO']].dropna()
-
-# Ensure STATUS_APROVADO is properly recognized as datetime
 try:
-    days_df['STATUS_APROVADO'] = pd.to_datetime(days_df['STATUS_APROVADO'], errors='raise')
-except Exception as e:
-    st.error("Failed to convert STATUS_APROVADO to datetime. Please check the data format.")
-    st.stop()
+    excel_df[date_column] = pd.to_datetime(
+        excel_df[date_column], 
+        format='%d-%m-%Y %H:%M',  # Matches original format
+        errors='coerce'  # Handle invalid entries
+    )
 
-# Extract day of the week and other information
-days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.strftime('%A').replace({
-    'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira',
-    'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'
-})
-days_df['DATE'] = days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
+    # Remove invalid rows
+    excel_df = excel_df[excel_df[date_column].notna()]
 
-# Define the periods correctly using left-inclusive intervals
-days_df['PERIOD'] = pd.cut(
-    days_df['STATUS_APROVADO'].dt.hour,
-    bins=[-1, 6, 12, 18, 24],  # Madrugada ends at 6:59, Manhã starts at 7:00
-    labels=['Madrugada', 'Manhã', 'Tarde', 'Noite'],  # Period labels
-    right=False  # Left-inclusive, so 7:00 goes to 'Manhã'
-)
+    # Determine the minimum and maximum dates
+    min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
 
-# Grouping logic as before
-days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='EVENT_COUNT')
-days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]
+    # Sidebar date input
+    if min_date and max_date:
+        start_date, end_date = st.sidebar.date_input(
+            'Select Date Range',
+            value=[min_date, max_date],
+            min_value=min_date.date(),
+            max_value=max_date.date()
+        )
+        # Convert back to timestamps for filtering
+        start_date = pd.Timestamp(start_date)
+        end_date = pd.Timestamp(end_date)
 
-# Display using Streamlit
-st.write('Days with Reporting Events:')
-st.dataframe(
-    days_grouped.style.apply(
-        lambda row: [
-            'background-color: #555555; color: #ffffff' if period == 'Madrugada'
-            else 'background-color: #4682b4; color: #ffffff' if period == 'Manhã'
-            else 'background-color: #f0ad4e; color: #ffffff' if period == 'Tarde'
-            else 'background-color: #c0392b; color: #ffffff'
-            for period in row['PERIOD']
-        ],
-        axis=1
-    ),
-    width=1200,
-    height=400
-)
+        # Filter based on date range
+        filtered_df = excel_df[
+            (excel_df[date_column] >= start_date) & (excel_df[date_column] <= end_date)
+        ]
+    else:
+        st.warning("No valid dates found in the dataset.")
+        filtered_df = excel_df
 
-# Plot events per hour for each day
-for day in days_df['DATE'].unique():
-    st.write(f'Events Timeline for {day}:')
-    day_df = days_df[days_df['DATE'] == day]
-    if not day_df.empty:
-        fig, ax = plt.subplots(figsize=(10, 6))
+    # Unidade filter
+    hospital_list = filtered_df['UNIDADE'].unique()
+    selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
 
-        # Extract hour from STATUS_APROVADO for plotting
-        day_df['HOUR'] = day_df['STATUS_APROVADO'].dt.hour
+    # Filter doctor names based on selected hospital
+    doctor_list = filtered_df[filtered_df['UNIDADE'] == selected_hospital]['MEDICO_LAUDO_DEFINITIVO'].unique()
+    selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
+    st.markdown(f"<h3 style='color:red;'>{selected_doctor}</h3>", unsafe_allow_html=True)
 
-        # Group by hour to get event counts
-        hourly_events = day_df.groupby('HOUR').size().reset_index(name='EVENT_COUNT')
+    # Apply filters to the dataframe for selected doctor
+    filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor]
+
+    # Format 'STATUS_APROVADO' for display (remove seconds)
+    filtered_df[date_column] = pd.to_datetime(filtered_df[date_column], errors='coerce').dt.strftime('%d-%m-%Y %H:%M')
+
+    # Display filtered data
+    filtered_columns = [
+        'SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 
+        'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_APROVADO', 
+        'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE'
+    ]
+    st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
+
+    # Merge filtered data with CSV to calculate points
+    csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
+    filtered_df['DESCRICAO_PROCEDIMENTO'] = filtered_df['DESCRICAO_PROCEDIMENTO'].str.upper()
+    merged_df = pd.merge(filtered_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
+
+    # Fill NaN values in MULTIPLIER with 0 for procedures not listed in the CSV
+    merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
+
+    # Calculate points and ensure one decimal slot
+    merged_df['POINTS'] = (merged_df['STATUS_APROVADO'].notna().astype(int) * merged_df['MULTIPLIER']).round(1)
+
+    # Group by UNIDADE, GRUPO, and DESCRICAO_PROCEDIMENTO to create dataframes for each doctor
+    doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({'MULTIPLIER': 'first', 'STATUS_APROVADO': 'count'}).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
+    total_points_sum = 0
+
+    # Loop through each hospital and modality for the selected doctor
+    for hospital in doctor_grouped['UNIDADE'].unique():
+        hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
+        st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
+        for grupo in hospital_df['GRUPO'].unique():
+            grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
+            grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
+            total_points = round(grupo_df['POINTS'].sum(), 1)  # Ensure one decimal place
+            total_points_sum += total_points
+            total_exams = grupo_df['COUNT'].sum()
+
+            # Display the grouped dataframe, total points, and total number of exams for this modality
+            st.markdown(f"<h3 style='color:#0a84ff;'>Modality: {grupo}</h3>", unsafe_allow_html=True)
+            st.dataframe(grupo_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']], width=1000, height=300)
+            st.write(f'Total Points for {grupo}: {total_points:.1f}')  # Use f-string formatting for one decimal
+            st.write(f'Total Number of Exams for {grupo}: {total_exams}')
+
+    # Display total points across all hospitals and modalities
+    st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
+
+    # Get the days and periods each doctor has events
+    try:
+        # Reconvert to datetime for processing
+        days_df = filtered_df.copy()
+        days_df['STATUS_APROVADO'] = pd.to_datetime(days_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M')
+        
+        # Extract day of week and date
+        days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.day_name().map(day_translations)
+        days_df['DATE'] = days_df['STATUS_APROVADO'].dt.date.astype(str)
+        
+        # Assign period
+        days_df['PERIOD'] = days_df['STATUS_APROVADO'].dt.hour.apply(assign_period)
+
+        # Grouping logic
+        days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'], dropna=False).size().reset_index(name='EVENT_COUNT')
+        days_grouped = days_grouped[days_grouped['EVENT_COUNT'] > 0]
+
+        # Styling function for rows
+        def color_rows(row):
+            return f'background-color: {period_colors.get(row.PERIOD, "white")}; color: white'
+
+        # Display days with reporting events
+        st.write('Days with Reporting Events:')
+        st.dataframe(
+            days_grouped.style.apply(color_rows, axis=1),
+            width=1200,
+            height=400
+        )
 
         # Plot events per hour for each day
-        plt.style.use('dark_background')
+        for day in days_df['DATE'].unique():
+            st.write(f'Events Timeline for {day}:')
+            day_df = days_df[days_df['DATE'] == day]
+            if not day_df.empty:
+                fig, ax = plt.subplots(figsize=(10, 6))
 
-        # Plot event counts against hours
-        ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', color='#1f77b4', label=str(day))
-        ax.set_facecolor('#2e2e2e')
-        ax.set_xlabel('Hour of the Day', color='white')
-        ax.set_ylabel('Events Count', color='white')
-        ax.set_title(f'Events Timeline for {day}', color='white')
-        ax.tick_params(colors='white')
-        ax.legend(title='Date', facecolor='#3a3a3a', edgecolor='white')
-        ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray')
-        plt.xticks(range(0, 24))
-        st.pyplot(fig)
+                # Extract hour from STATUS_APROVADO for plotting
+                day_df['HOUR'] = day_df['STATUS_APROVADO'].dt.hour
+
+                # Group by hour to get event counts
+                hourly_events = day_df.groupby('HOUR').size().reset_index(name='EVENT_COUNT')
+
+                # Plot events per hour for each day
+                plt.style.use('dark_background')
+
+                # Plot event counts against hours
+                ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', color='#1f77b4', label=str(day))
+                ax.set_facecolor('#2e2e2e')
+                ax.set_xlabel('Hour of the Day', color='white')
+                ax.set_ylabel('Events Count', color='white')
+                ax.set_title(f'Events Timeline for {day}', color='white')
+                ax.tick_params(colors='white')
+                ax.legend(title='Date', facecolor='#3a3a3a', edgecolor='white')
+                ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray')
+                plt.xticks(range(0, 24))
+                st.pyplot(fig)
+
+    except Exception as e:
+        st.error(f"Error processing event timeline: {e}")
+
+except Exception as e:
+    st.error(f"An error occurred while processing the data: {e}")
 
 
 
