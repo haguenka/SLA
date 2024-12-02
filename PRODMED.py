@@ -140,10 +140,6 @@ days_df = filtered_df[['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO']].dropna()
 days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'})
 days_df['DATE'] = days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
 
-# Define time periods
-# Ensure STATUS_APROVADO is a datetime
-days_df['STATUS_APROVADO'] = pd.to_datetime(days_df['STATUS_APROVADO'], errors='coerce')
-
 # Define the periods correctly using left-inclusive intervals
 days_df['PERIOD'] = pd.cut(
     days_df['STATUS_APROVADO'].dt.hour,
