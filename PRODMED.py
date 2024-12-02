@@ -45,20 +45,21 @@ csv_df.columns = csv_df.columns.str.strip()
 st.sidebar.header('Filter Options')
 
 # Date range filter
-# Convert the 'STATUS_APROVADO' column to datetime format (no seconds in the original data)
+# Convert 'STATUS_APROVADO' to datetime format (without seconds)
 date_column = 'STATUS_APROVADO'
 excel_df[date_column] = pd.to_datetime(
     excel_df[date_column], 
-    format='%d-%m-%Y %H:%M',  # Matches original Excel data format
+    format='%d-%m-%Y %H:%M', 
     errors='coerce'
 )
 
-# Format the datetime objects for display (hour:minute only)
+# Format 'STATUS_APROVADO' as a string with no seconds
 excel_df[date_column] = excel_df[date_column].dt.strftime('%d-%m-%Y %H:%M')
 
-# Display the filtered data in Streamlit (or any other UI)
+# Display in Streamlit (seconds will not appear)
 st.write("Filtered Data without Seconds in STATUS_APROVADO:")
 st.dataframe(excel_df)
+
 
 # Remove rows with invalid or missing dates (optional, based on your needs)
 excel_df = excel_df[excel_df[date_column].notna()]
