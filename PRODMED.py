@@ -182,7 +182,7 @@ for day in days_df['DATE'].unique():
     if not day_df.empty:
         fig, ax = plt.subplots(figsize=(10, 6))
 
-        # Extract hour from DATA_LAUDO for plotting
+        # Extract hour from STATUS_APROVADO for plotting
         day_df['HOUR'] = day_df['STATUS_APROVADO'].dt.hour
 
         # Group by hour to get event counts
