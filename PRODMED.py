@@ -78,9 +78,6 @@ if min_date and max_date:
 else:
     st.warning("No valid dates found in the dataset.")
 
-
-
-
 # Apply date filter
 filtered_df = excel_df[(excel_df[date_column] >= pd.to_datetime(start_date)) & (excel_df[date_column] <= pd.to_datetime(end_date))]
 
@@ -107,7 +104,6 @@ filtered_columns = [
     'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE'
 ]
 st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
-
 
 # Merge filtered data with CSV to calculate points
 csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
