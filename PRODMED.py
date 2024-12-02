@@ -149,8 +149,8 @@ valid_days_df = days_df[days_df['STATUS_APROVADO'].notna()].copy()
 
 # Extract day of the week and other information (with additional check for valid datetime values)
 if not valid_days_df.empty:
-    valid_days_df['DAY_OF_WEEK'] = valid_days_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'})
-    valid_days_df['DATE'] = valid_days_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
+    valid_days_df['DAY_OF_WEEK'] = filtered_df['STATUS_APROVADO'].dt.strftime('%A').replace({'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'})
+    valid_days_df['DATE'] = filtered_df['STATUS_APROVADO'].dt.strftime('%Y-%m-%d')
 
     # Define the periods correctly using left-inclusive intervals
     valid_days_df['PERIOD'] = pd.cut(
