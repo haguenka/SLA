@@ -54,7 +54,7 @@ excel_df[date_column] = pd.to_datetime(
 )
 
 # Format 'STATUS_APROVADO' as a string with no seconds
-excel_df[date_column] = excel_df[date_column].dt.strftime('%d-%m-%Y %H:%M')
+excel_df[date_column] = excel_df[date_column].dt.strftime('%d-%m-%Y %H:%M').astype(str)
 
 # Display in Streamlit (seconds will not appear)
 st.write("Filtered Data without Seconds in STATUS_APROVADO:")
