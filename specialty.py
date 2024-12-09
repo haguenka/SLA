@@ -48,11 +48,14 @@ def main():
         # Filter data based on selected specialty
         filtered_data = df[df['ESPECIALIDADE'] == selected_specialty]
 
+        # Group by unique procedure descriptions and related units
+        grouped_data = filtered_data[['DESCRICAO_PROCEDIMENTO', 'UNIDADE']].drop_duplicates()
+
         # Display filtered exams
         st.header(f"Exams for Specialty: {selected_specialty}")
-        if not filtered_data.empty:
-            filtered_data['DESCRICAO_PROCEDIMENTO'] = filtered_data['DESCRICAO_PROCEDIMENTO'] + " - " + filtered_data['UNIDADE']
-            st.write(filtered_data[['DESCRICAO_PROCEDIMENTO']])
+        if not grouped_data.empty:
+            grouped_data['DESCRICAO_PROCEDIMENTO'] = grouped_data['DESCRICAO_PROCEDIMENTO'] + " - " + grouped_data['UNIDADE']
+            st.write(grouped_data[['DESCRICAO_PROCEDIMENTO']])
         else:
             st.write("No exams found for the selected specialty.")
     else:
