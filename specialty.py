@@ -7,8 +7,13 @@ from PIL import Image
 # Load the data
 @st.cache_data
 def load_logo(url):
-    response = requests.get(url)
-    return Image.open(BytesIO(response.content))
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        return Image.open(BytesIO(response.content))
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error loading logo: {e}")
+        return None
 
 @st.cache_data
 def load_excel_from_github():
@@ -17,15 +22,17 @@ def load_excel_from_github():
         response = requests.get(url)
         response.raise_for_status()
         return pd.read_excel(BytesIO(response.content))
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error loading data: {e}")
         return None
 
 # Load and display logo from GitHub
-url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
-response = requests.get(url)
-logo = Image.open(BytesIO(response.content))
-st.sidebar.image(logo, use_column_width=True)
+logo_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
+logo = load_logo(logo_url)
+if logo:
+    st.sidebar.image(logo, use_column_width=True)
 
+# Load data
 df = load_excel_from_github()
 
 # Streamlit app
@@ -44,6 +51,7 @@ def main():
         # Display filtered exams
         st.header(f"Exams for Specialty: {selected_specialty}")
         if not filtered_data.empty:
+            filtered_data['DESCRICAO_PROCEDIMENTO'] = filtered_data['DESCRICAO_PROCEDIMENTO'] + " - " + filtered_data['UNIDADE']
             st.write(filtered_data[['DESCRICAO_PROCEDIMENTO']])
         else:
             st.write("No exams found for the selected specialty.")
