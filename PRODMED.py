@@ -22,7 +22,7 @@ def load_csv_data(csv_url):
     response = requests.get(csv_url)
     return pd.read_csv(BytesIO(response.content))
 
-# Define periods with more explicit hour ranges
+# Define periods with explicit hour ranges
 def assign_period(hour):
     if 0 <= hour < 6:
         return 'Madrugada'
@@ -87,7 +87,6 @@ excel_df = merge_hospital_names(excel_df, "UNIDADE")
 # Sidebar filters
 st.sidebar.header('Filter Options')
 
-# Date range filter
 try:
     # Convert 'STATUS_APROVADO' and 'STATUS_PRELIMINAR' to datetime
     excel_df['STATUS_APROVADO'] = pd.to_datetime(excel_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M', errors='coerce')
@@ -119,41 +118,44 @@ try:
     selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list, key='hospital_selectbox')
     filtered_df = filtered_df[filtered_df['UNIDADE'] == selected_hospital]
 
-    # Doctor selection
+    # Doctor selection from final laudos
     doctor_list = filtered_df['MEDICO_LAUDO_DEFINITIVO'].unique()
     selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list, key='doctor_selectbox')
 
-    # Filter by doctor for both statuses
+    # Filter dataframes by selected doctor
     preliminar_df = filtered_df[
-        (filtered_df['STATUS_PRELIMINAR'].notna()) & (filtered_df['MEDICO_LAUDOO_PRELIMINAR'] == selected_doctor)
+        (filtered_df['STATUS_PRELIMINAR'].notna()) &
+        (filtered_df['MEDICO_LAUDOO_PRELIMINAR'] == selected_doctor)
     ]
     aprovado_df = filtered_df[
-        (filtered_df['STATUS_APROVADO'].notna()) & (filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
+        (filtered_df['STATUS_APROVADO'].notna()) &
+        (filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
     ]
 
-
-    # Display total event counts
+    # Display total event counts for the selected doctor
     total_preliminar_events = len(preliminar_df)
     total_aprovado_events = len(aprovado_df)
-    st.markdown(f"<h3 style='color:#f0ad4e;'>Total Events for LAUDO PRELIMINAR: {total_preliminar_events}</h3>", unsafe_allow_html=True)
-    st.markdown(f"<h3 style='color:#4682b4;'>Total Events for LAUDO APROVADO: {total_aprovado_events}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:#f0ad4e;'>Total Events for LAUDO PRELIMINAR (Selected Doctor): {total_preliminar_events}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:#4682b4;'>Total Events for LAUDO APROVADO (Selected Doctor): {total_aprovado_events}</h3>", unsafe_allow_html=True)
 
-    # Display filtered data
+    # Display filtered data for selected doctor (both preliminar and aprovado)
+    # Combine both sets if you want to show all events by doctor
+    doctor_all_events = pd.concat([preliminar_df, aprovado_df], ignore_index=True)
     filtered_columns = [
         'SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 'DESCRICAO_PROCEDIMENTO',
         'ESPECIALIDADE', 'STATUS_PRELIMINAR', 'MEDICO_LAUDOO_PRELIMINAR',
         'STATUS_APROVADO', 'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE'
     ]
-    st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
+    st.dataframe(doctor_all_events[filtered_columns], width=1200, height=400)
 
-    # Merge with CSV for points calculation
+    # Merge with CSV for points calculation - only for aprovado events of selected doctor
     csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
-    filtered_df['DESCRICAO_PROCEDIMENTO'] = filtered_df['DESCRICAO_PROCEDIMENTO'].str.upper()
-    merged_df = pd.merge(filtered_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
+    aprovado_df['DESCRICAO_PROCEDIMENTO'] = aprovado_df['DESCRICAO_PROCEDIMENTO'].str.upper()
+    merged_df = pd.merge(aprovado_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
     merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
     merged_df['POINTS'] = (merged_df['STATUS_APROVADO'].notna().astype(int) * merged_df['MULTIPLIER']).round(1)
 
-    # Group by UNIDADE, GRUPO, DESCRICAO_PROCEDIMENTO
+    # Group by UNIDADE, GRUPO, DESCRICAO_PROCEDIMENTO for the selected doctor
     doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({
         'MULTIPLIER': 'first',
         'STATUS_APROVADO': 'count'
@@ -165,20 +167,17 @@ try:
         hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
         st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
         for grupo in hospital_df['GRUPO'].unique():
-            grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
+            grupo_df = hospital_df[hospital_df['GRUPO'] == grupo].copy()
             grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
             total_points = grupo_df['POINTS'].sum()
             total_points_sum += total_points
             st.dataframe(grupo_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']])
             st.write(f"**Total Points for {grupo}: {total_points:.1f}**")
 
-    st.markdown(f"### Total Points for All Modalities: {total_points_sum:.1f}")
+    st.markdown(f"### Total Points for All Modalities (Selected Doctor): {total_points_sum:.1f}")
 
 except Exception as e:
     st.error(f"An error occurred: {e}")
-
-
-
 
 
 # Export summary and doctors' dataframes as a combined PDF report
