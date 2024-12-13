@@ -232,22 +232,28 @@ try:
     days_merged = pd.merge(preliminar_days_grouped, aprovado_days_grouped,
                            on=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'], how='outer')
     days_merged = days_merged.fillna(0)
-
+    
     # Convert to integers to avoid decimals
     days_merged['PRELIMINAR_COUNT'] = days_merged['PRELIMINAR_COUNT'].astype(int)
     days_merged['APROVADO_COUNT'] = days_merged['APROVADO_COUNT'].astype(int)
-
+    
+    # Enforce the desired order of periods
+    period_order = ['Manhã', 'Tarde', 'Noite', 'Madrugada']
+    days_merged['PERIOD'] = pd.Categorical(days_merged['PERIOD'], categories=period_order, ordered=True)
+    days_merged = days_merged.sort_values('PERIOD')
+    
     # Styling for the DataFrame
     def color_rows(row):
         return [
             f'background-color: {period_colors.get(row["PERIOD"], "white")}; color: white'
             for _ in row.index
         ]
-
+    
     styled_df = days_merged.style.apply(color_rows, axis=1)
-
+    
     st.markdown("### LAUDO PRELIMINAR and LAUDO APROVADO Counts by Period (Tomografia and Ressonancia)")
     st.dataframe(styled_df, width=1200, height=400)
+
 
 
 except Exception as e:
