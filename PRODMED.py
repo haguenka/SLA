@@ -4,7 +4,7 @@ from PIL import Image
 import requests
 from io import BytesIO
 import matplotlib.pyplot as plt
-import datetime
+from datetime import datetime
 from fpdf import FPDF
 
 # Caching for performance improvement
@@ -53,7 +53,18 @@ day_translations = {
     'Sunday': 'Domingo'
 }
 
-# Load and display logo from GitHub
+# Mapping of abbreviations to full hospital names
+hospital_name_mapping = {
+    "HSC": "Hospital Santa Catarina",
+    "CSSJ": "Casa de Saúde São José",
+    "HNSC": "Hospital Nossa Senhora da Conceição"
+}
+
+# Function to replace hospital names
+def merge_hospital_names(df, column_name):
+    return df.replace({column_name: hospital_name_mapping})
+
+# Load and display logo
 logo_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
 logo = load_image(logo_url)
 st.sidebar.image(logo, use_column_width=True)
@@ -61,7 +72,7 @@ st.sidebar.image(logo, use_column_width=True)
 # Streamlit app
 st.title('Medical Production Report')
 
-# Load Excel and CSV files from GitHub
+# Load Excel and CSV files
 xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/baseslaM.xlsx'
 csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
 
@@ -71,91 +82,51 @@ csv_df = load_csv_data(csv_url)
 # Strip any leading/trailing whitespace from CSV column names
 csv_df.columns = csv_df.columns.str.strip()
 
+# Replace abbreviations in 'UNIDADE' with full hospital names
+excel_df = merge_hospital_names(excel_df, "UNIDADE")
+
 # Sidebar filters
 st.sidebar.header('Filter Options')
 
 # Date range filter
 date_column = 'STATUS_APROVADO'
 try:
-    # Convert 'STATUS_APROVADO' to datetime format
+    # Convert 'STATUS_APROVADO' to datetime
     excel_df[date_column] = pd.to_datetime(
-        excel_df[date_column], 
-        format='%d-%m-%Y %H:%M',
-        errors='coerce'
+        excel_df[date_column], format='%d-%m-%Y %H:%M', errors='coerce'
     )
     excel_df = excel_df[excel_df[date_column].notna()]
 
-    # Determine the minimum and maximum dates
+    # Date range for filtering
     min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
-
-    # Sidebar date input
     start_date, end_date = st.sidebar.date_input(
-        'Select Date Range',
-        value=[min_date, max_date],
-        min_value=min_date.date(),
-        max_value=max_date.date()
+        'Select Date Range', value=[min_date, max_date],
+        min_value=min_date.date(), max_value=max_date.date()
     )
     start_date = pd.Timestamp(start_date)
     end_date = pd.Timestamp(end_date)
 
-    # Filter based on date range
+    # Apply date filter
     filtered_df = excel_df[
         (excel_df[date_column] >= start_date) & (excel_df[date_column] <= end_date)
     ]
 
-    # Mapping of abbreviations to full hospital names
-    hospital_name_mapping = {
-        "HSC": "Hospital Santa Catarina",
-        "CSSJ": "Casa de Saúde São José",
-        "HNSC": "Hospital Nossa Senhora da Conceição"
-    }
-    
-    # Replace abbreviations in the 'UNIDADE' column with full names
-    excel_df['UNIDADE'] = excel_df['UNIDADE'].replace(hospital_name_mapping)
-    
-    # Sidebar filter for hospitals
-    hospital_list = excel_df['UNIDADE'].unique()
-    selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
+    # Sidebar hospital selection with unique key
+    hospital_list = filtered_df['UNIDADE'].unique()
+    selected_hospital = st.sidebar.selectbox(
+        'Select Hospital', hospital_list, key='hospital_selectbox'
+    )
 
-    # Mapping of abbreviations to full hospital names
-    hospital_name_mapping = {
-        "HSC": "Hospital Santa Catarina",
-        "CSSJ": "Casa de Saúde São José",
-        "HNSC": "Hospital Nossa Senhora da Conceição"
-    }
-    
-    # Function to replace hospital names
-    def merge_hospital_names(df, column_name):
-        """
-        Replace abbreviated hospital names with full names in the specified column.
-        """
-        return df.replace({column_name: hospital_name_mapping})
-    
-    # Apply the mapping to the UNIDADE column
-    excel_df = merge_hospital_names(excel_df, "UNIDADE")
-    
-    # Sidebar filter for hospitals
-    st.sidebar.header("Filter Options")
-    hospital_list = excel_df['UNIDADE'].unique()
-    selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
-    
-    # Apply hospital filter
-    filtered_df = excel_df[excel_df['UNIDADE'] == selected_hospital]
-    
-    # Doctor name filter for the selected hospital
+    # Filter data based on selected hospital
+    filtered_df = filtered_df[filtered_df['UNIDADE'] == selected_hospital]
+
+    # Sidebar doctor selection with unique key
     doctor_list = filtered_df['MEDICO_LAUDO_DEFINITIVO'].unique()
-    selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
-    
-    # Filter DataFrame further based on doctor
-    filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor]
+    selected_doctor = st.sidebar.selectbox(
+        'Select Doctor', doctor_list, key='doctor_selectbox'
+    )
 
-
-    # Filter doctor names based on selected hospital
-    doctor_list = filtered_df[filtered_df['UNIDADE'] == selected_hospital]['MEDICO_LAUDO_DEFINITIVO'].unique()
-    selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
-    st.markdown(f"<h3 style='color:red;'>{selected_doctor}</h3>", unsafe_allow_html=True)
-
-    # Apply filters to the dataframe for selected doctor
+    # Apply doctor filter
     filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor]
 
     # Format 'STATUS_APROVADO' for display
@@ -163,13 +134,13 @@ try:
 
     # Display filtered data
     filtered_columns = [
-        'SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 
-        'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_APROVADO', 
+        'SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO',
+        'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_APROVADO',
         'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE'
     ]
     st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
 
-    # Merge filtered data with CSV to calculate points
+    # Merge with CSV to calculate points
     csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
     filtered_df['DESCRICAO_PROCEDIMENTO'] = filtered_df['DESCRICAO_PROCEDIMENTO'].str.upper()
     merged_df = pd.merge(filtered_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
@@ -178,7 +149,7 @@ try:
 
     # Group by UNIDADE, GRUPO, and DESCRICAO_PROCEDIMENTO
     doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({
-        'MULTIPLIER': 'first', 
+        'MULTIPLIER': 'first',
         'STATUS_APROVADO': 'count'
     }).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
 
@@ -192,79 +163,15 @@ try:
             grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
             total_points = round(grupo_df['POINTS'].sum(), 1)
             total_points_sum += total_points
-            total_exams = grupo_df['COUNT'].sum()
             st.markdown(f"<h3 style='color:#0a84ff;'>Modality: {grupo}</h3>", unsafe_allow_html=True)
             st.dataframe(grupo_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']], width=1000, height=300)
             st.write(f'Total Points for {grupo}: {total_points:.1f}')
-            st.write(f'Total Number of Exams for {grupo}: {total_exams}')
 
     st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
 
-    # Event Timeline: Count for STATUS_PRELIMINAR and STATUS_APROVADO
-    try:
-        # Ensure both STATUS_APROVADO and STATUS_PRELIMINAR are datetime
-        merged_df['STATUS_PRELIMINAR'] = pd.to_datetime(
-            merged_df['STATUS_PRELIMINAR'], format='%d-%m-%Y %H:%M', errors='coerce'
-        )
-        merged_df['STATUS_APROVADO'] = pd.to_datetime(
-            merged_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M', errors='coerce'
-        )
-    
-        # Filter rows with valid STATUS_PRELIMINAR and STATUS_APROVADO
-        preliminar_df = merged_df.dropna(subset=['STATUS_PRELIMINAR']).copy()
-        aprovado_df = merged_df.dropna(subset=['STATUS_APROVADO']).copy()
-    
-        # Add 'DATE', 'DAY_OF_WEEK', and 'PERIOD' columns
-        preliminar_df['DATE'] = preliminar_df['STATUS_PRELIMINAR'].dt.date
-        preliminar_df['DAY_OF_WEEK'] = preliminar_df['STATUS_PRELIMINAR'].dt.day_name().map(day_translations)
-        preliminar_df['PERIOD'] = preliminar_df['STATUS_PRELIMINAR'].dt.hour.apply(assign_period)
-    
-        aprovado_df['DATE'] = aprovado_df['STATUS_APROVADO'].dt.date
-        aprovado_df['DAY_OF_WEEK'] = aprovado_df['STATUS_APROVADO'].dt.day_name().map(day_translations)
-        aprovado_df['PERIOD'] = aprovado_df['STATUS_APROVADO'].dt.hour.apply(assign_period)
-    
-        # Group counts for STATUS_PRELIMINAR
-        preliminar_grouped = preliminar_df.groupby(
-            ['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']
-        ).size().reset_index(name='PRELIMINAR_COUNT')
-    
-        # Group counts for STATUS_APROVADO
-        aprovado_grouped = aprovado_df.groupby(
-            ['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']
-        ).size().reset_index(name='APROVADO_COUNT')
-    
-        # Merge both counts into one table
-        timeline_combined = pd.merge(
-            aprovado_grouped, preliminar_grouped, 
-            on=['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'],
-            how='outer'
-        ).fillna(0)  # Fill NaN with 0 where counts are missing
-    
-        # Display combined Event Timeline
-        st.write("### Event Timeline with STATUS_APROVADO and STATUS_PRELIMINAR Counts")
-        st.dataframe(timeline_combined)
-    
-        # Visualization: Stacked Bar Plot for Events
-        for date in timeline_combined['DATE'].unique():
-            st.write(f'### Event Counts for {date}')
-            date_df = timeline_combined[timeline_combined['DATE'] == date]
-    
-            fig, ax = plt.subplots(figsize=(10, 6))
-            ax.bar(date_df['PERIOD'], date_df['APROVADO_COUNT'], label='STATUS_APROVADO', color='#4682b4')
-            ax.bar(date_df['PERIOD'], date_df['PRELIMINAR_COUNT'], bottom=date_df['APROVADO_COUNT'], label='STATUS_PRELIMINAR', color='#f0ad4e')
-    
-            ax.set_xlabel('Period')
-            ax.set_ylabel('Event Counts')
-            ax.set_title(f'Event Counts for {date}')
-            ax.legend()
-            st.pyplot(fig)
-    
-    except Exception as e:
-        st.error(f"Error in processing Event Timeline: {e}")
-
-
 except Exception as e:
     st.error(f"An error occurred while processing the data: {e}")
+
 
 
 
