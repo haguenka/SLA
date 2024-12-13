@@ -155,6 +155,9 @@ try:
 
     # Display results for each group
     total_points_sum = 0
+    total_aprovado_events = merged_df['STATUS_APROVADO'].notna().sum()
+    total_preliminar_events = merged_df['STATUS_PRELIMINAR'].notna().sum()
+    
     for hospital in doctor_grouped['UNIDADE'].unique():
         hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
         st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
@@ -163,11 +166,15 @@ try:
             grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
             total_points = round(grupo_df['POINTS'].sum(), 1)
             total_points_sum += total_points
-            st.markdown(f"<h3 style='color:#0a84ff;'>Modality: {grupo}</h3>", unsafe_allow_html=True)
-            st.dataframe(grupo_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']], width=1000, height=300)
-            st.write(f'Total Points for {grupo}: {total_points:.1f}')
+    st.markdown(f"<h3 style='color:#0a84ff;'>Modality: {grupo}</h3>", unsafe_allow_html=True)
+    st.dataframe(grupo_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']], width=1000, height=300)
+    st.write(f'Total Points for {grupo}: {total_points:.1f}')
 
-    st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
+# Display total points and event counts
+st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
+st.markdown(f"<h3 style='color:#4682b4;'>Total Events for LAUDO APROVADO: {total_aprovado_events}</h3>", unsafe_allow_html=True)
+st.markdown(f"<h3 style='color:#f0ad4e;'>Total Events for LAUDO PRELIMINAR: {total_preliminar_events}</h3>", unsafe_allow_html=True)
+
 
     # Event Timeline: Count for STATUS_PRELIMINAR and STATUS_APROVADO
     try:
