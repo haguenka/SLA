@@ -220,21 +220,6 @@ try:
         st.write("### Event Timeline with STATUS_APROVADO and STATUS_PRELIMINAR Counts")
         st.dataframe(timeline_combined)
     
-        # Visualization: Stacked Bar Plot for Events
-        for date in timeline_combined['DATE'].unique():
-            st.write(f'### Event Counts for {date}')
-            date_df = timeline_combined[timeline_combined['DATE'] == date]
-    
-            fig, ax = plt.subplots(figsize=(10, 6))
-            ax.bar(date_df['PERIOD'], date_df['APROVADO_COUNT'], label='STATUS_APROVADO', color='#4682b4')
-            ax.bar(date_df['PERIOD'], date_df['PRELIMINAR_COUNT'], bottom=date_df['APROVADO_COUNT'], label='STATUS_PRELIMINAR', color='#f0ad4e')
-    
-            ax.set_xlabel('Period')
-            ax.set_ylabel('Event Counts')
-            ax.set_title(f'Event Counts for {date}')
-            ax.legend()
-            st.pyplot(fig)
-    
     except Exception as e:
         st.error(f"Error in processing Event Timeline: {e}")
 
