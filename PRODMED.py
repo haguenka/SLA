@@ -135,7 +135,7 @@ try:
     # Display filtered data
     filtered_columns = [
         'SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO',
-        'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_APROVADO',
+        'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_PRELIMINAR', 'MEDICO_LAUDOO_PRELIMINAR', 'STATUS_APROVADO',
         'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE'
     ]
     st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
