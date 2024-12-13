@@ -103,9 +103,20 @@ try:
         (excel_df[date_column] >= start_date) & (excel_df[date_column] <= end_date)
     ]
 
-    # Unidade filter
-    hospital_list = filtered_df['UNIDADE'].unique()
+    # Mapping of abbreviations to full hospital names
+    hospital_name_mapping = {
+        "HSC": "Hospital Santa Catarina",
+        "CSSJ": "Casa de Saúde São José",
+        "HNSC": "Hospital Nossa Senhora da Conceição"
+    }
+    
+    # Replace abbreviations in the 'UNIDADE' column with full names
+    excel_df['UNIDADE'] = excel_df['UNIDADE'].replace(hospital_name_mapping)
+    
+    # Sidebar filter for hospitals
+    hospital_list = excel_df['UNIDADE'].unique()
     selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
+
 
     # Filter doctor names based on selected hospital
     doctor_list = filtered_df[filtered_df['UNIDADE'] == selected_hospital]['MEDICO_LAUDO_DEFINITIVO'].unique()
