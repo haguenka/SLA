@@ -5,6 +5,7 @@ import requests
 from io import BytesIO
 import matplotlib.pyplot as plt
 from datetime import datetime
+from fpdf import FPDF
 
 # Caching for performance improvement
 @st.cache_data
