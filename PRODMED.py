@@ -191,7 +191,7 @@ try:
     # We'll compute a merged DataFrame that contains both PRELIMINAR_COUNT and APROVADO_COUNT.
 
     # Filter preliminar_df and aprovado_df for only the "TOMOGRAFIA" and "RESSONANCIA" modalities
-    valid_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÄNCIA MAGNÉTICA']
+    valid_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA']
     
     preliminar_filtered = preliminar_df[preliminar_df['GRUPO'].isin(valid_groups)]
     aprovado_filtered = aprovado_df[aprovado_df['GRUPO'].isin(valid_groups)]
