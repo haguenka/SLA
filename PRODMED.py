@@ -3,9 +3,7 @@ import pandas as pd
 from PIL import Image
 import requests
 from io import BytesIO
-import matplotlib.pyplot as plt
 import datetime
-from fpdf import FPDF
 
 # Caching for performance improvement
 @st.cache_data
@@ -23,7 +21,7 @@ def load_csv_data(csv_url):
     response = requests.get(csv_url)
     return pd.read_csv(BytesIO(response.content))
 
-# Define periods with more explicit hour ranges
+# Assign time periods
 def assign_period(hour):
     if 0 <= hour < 6:
         return 'Madrugada'
@@ -34,61 +32,46 @@ def assign_period(hour):
     else:
         return 'Noite'
 
-# Color mapping for periods
-period_colors = {
-    'Madrugada': '#555555',
-    'Manhã': '#4682b4',
-    'Tarde': '#f0ad4e',
-    'Noite': '#c0392b'
-}
-
-# Day translations
-day_translations = {
-    'Monday': 'Segunda-feira', 
-    'Tuesday': 'Terça-feira', 
-    'Wednesday': 'Quarta-feira',
-    'Thursday': 'Quinta-feira', 
-    'Friday': 'Sexta-feira', 
-    'Saturday': 'Sábado', 
-    'Sunday': 'Domingo'
-}
-
-# Load and display logo from GitHub
+# Load and display logo
 logo_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
 logo = load_image(logo_url)
 st.sidebar.image(logo, use_column_width=True)
 
-# Streamlit app
+# App title
 st.title('Medical Production Report')
 
-# Load Excel and CSV files from GitHub
+# Load data
 xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/baseslaM.xlsx'
 csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
 
 excel_df = load_excel_data(xlsx_url)
 csv_df = load_csv_data(csv_url)
 
-# Strip any leading/trailing whitespace from CSV column names
+# Clean CSV column names
 csv_df.columns = csv_df.columns.str.strip()
+
+# Date filter function
+def filter_by_date_and_status(df, date_column, start_date, end_date):
+    df[date_column] = pd.to_datetime(df[date_column], format='%d-%m-%Y %H:%M', errors='coerce')
+    df = df[df[date_column].notna()]
+    return df[(df[date_column] >= start_date) & (df[date_column] <= end_date)]
 
 # Sidebar filters
 st.sidebar.header('Filter Options')
 
-# Date range filter
-date_column = 'STATUS_APROVADO'
 try:
-    # Convert 'STATUS_APROVADO' to datetime format
-    excel_df[date_column] = pd.to_datetime(
-        excel_df[date_column], 
-        format='%d-%m-%Y %H:%M',
-        errors='coerce'
-    )
-    excel_df = excel_df[excel_df[date_column].notna()]
+    # Define columns
+    date_column_aprovado = 'STATUS_APROVADO'
+    date_column_preliminar = 'STATUS_PRELIMINAR'
 
-    # Determine the minimum and maximum dates
-    min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
+    # Convert dates
+    excel_df[date_column_aprovado] = pd.to_datetime(excel_df[date_column_aprovado], format='%d-%m-%Y %H:%M', errors='coerce')
+    excel_df[date_column_preliminar] = pd.to_datetime(excel_df[date_column_preliminar], format='%d-%m-%Y %H:%M', errors='coerce')
 
-    # Sidebar date input
+    # Date range
+    min_date = min(excel_df[date_column_aprovado].min(), excel_df[date_column_preliminar].min())
+    max_date = max(excel_df[date_column_aprovado].max(), excel_df[date_column_preliminar].max())
+
     start_date, end_date = st.sidebar.date_input(
         'Select Date Range',
         value=[min_date, max_date],
@@ -98,106 +81,51 @@ try:
     start_date = pd.Timestamp(start_date)
     end_date = pd.Timestamp(end_date)
 
-    # Filter based on date range
-    filtered_df = excel_df[
-        (excel_df[date_column] >= start_date) & (excel_df[date_column] <= end_date)
-    ]
+    # Filtered data
+    filtered_df_definitivo = filter_by_date_and_status(excel_df, date_column_aprovado, start_date, end_date)
+    filtered_df_preliminar = filter_by_date_and_status(excel_df, date_column_preliminar, start_date, end_date)
 
     # Unidade filter
-    hospital_list = filtered_df['UNIDADE'].unique()
+    hospital_list = filtered_df_definitivo['UNIDADE'].unique()
     selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
 
-    # Filter doctor names based on selected hospital
-    doctor_list = filtered_df[filtered_df['UNIDADE'] == selected_hospital]['MEDICO_LAUDO_DEFINITIVO'].unique()
-    selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
+    # Doctor filter
+    doctor_list_definitivo = filtered_df_definitivo[filtered_df_definitivo['UNIDADE'] == selected_hospital]['MEDICO_LAUDO_DEFINITIVO'].unique()
+    selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list_definitivo)
     st.markdown(f"<h3 style='color:red;'>{selected_doctor}</h3>", unsafe_allow_html=True)
 
-    # Apply filters to the dataframe for selected doctor
-    filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor]
+    # Apply doctor filter
+    filtered_df_definitivo = filtered_df_definitivo[filtered_df_definitivo['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor]
+    filtered_df_preliminar = filtered_df_preliminar[filtered_df_preliminar['MEDICO_LAUDOO_PRELIMINAR'] == selected_doctor]
 
-    # Format 'STATUS_APROVADO' for display
-    filtered_df[date_column] = filtered_df[date_column].dt.strftime('%d-%m-%Y %H:%M')
+    # Display reports
+    st.markdown("### Definitive Reports")
+    st.dataframe(filtered_df_definitivo)
 
-    # Display filtered data
-    filtered_columns = [
-        'SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 
-        'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_APROVADO', 
-        'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE'
-    ]
-    st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
+    st.markdown("### Preliminar Reports")
+    st.dataframe(filtered_df_preliminar)
 
-    # Merge filtered data with CSV to calculate points
+    # Merge data with multipliers
     csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
-    filtered_df['DESCRICAO_PROCEDIMENTO'] = filtered_df['DESCRICAO_PROCEDIMENTO'].str.upper()
-    merged_df = pd.merge(filtered_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
-    merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
-    merged_df['POINTS'] = (merged_df['STATUS_APROVADO'].notna().astype(int) * merged_df['MULTIPLIER']).round(1)
+    filtered_df_definitivo['DESCRICAO_PROCEDIMENTO'] = filtered_df_definitivo['DESCRICAO_PROCEDIMENTO'].str.upper()
+    filtered_df_preliminar['DESCRICAO_PROCEDIMENTO'] = filtered_df_preliminar['DESCRICAO_PROCEDIMENTO'].str.upper()
 
-    # Group by UNIDADE, GRUPO, and DESCRICAO_PROCEDIMENTO
-    doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({
-        'MULTIPLIER': 'first', 
-        'STATUS_APROVADO': 'count'
-    }).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
+    merged_definitivo = pd.merge(filtered_df_definitivo, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
+    merged_preliminar = pd.merge(filtered_df_preliminar, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
 
-    # Display results for each group
-    total_points_sum = 0
-    for hospital in doctor_grouped['UNIDADE'].unique():
-        hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
-        st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
-        for grupo in hospital_df['GRUPO'].unique():
-            grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
-            grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
-            total_points = round(grupo_df['POINTS'].sum(), 1)
-            total_points_sum += total_points
-            total_exams = grupo_df['COUNT'].sum()
-            st.markdown(f"<h3 style='color:#0a84ff;'>Modality: {grupo}</h3>", unsafe_allow_html=True)
-            st.dataframe(grupo_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']], width=1000, height=300)
-            st.write(f'Total Points for {grupo}: {total_points:.1f}')
-            st.write(f'Total Number of Exams for {grupo}: {total_exams}')
+    # Calculate points
+    merged_definitivo['POINTS'] = (merged_definitivo['STATUS_APROVADO'].notna().astype(int) * merged_definitivo['MULTIPLIER']).round(1)
+    merged_preliminar['POINTS'] = (merged_preliminar['STATUS_PRELIMINAR'].notna().astype(int) * merged_preliminar['MULTIPLIER']).round(1)
 
-    st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
+    # Display points
+    st.markdown("### Definitive Report Points")
+    st.write(merged_definitivo[['DESCRICAO_PROCEDIMENTO', 'MULTIPLIER', 'POINTS']])
 
-    # Event timeline
-    try:
-        days_df = filtered_df.copy()
-        days_df['STATUS_APROVADO'] = pd.to_datetime(days_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M')
-        days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.day_name().map(day_translations)
-        days_df['DATE'] = days_df['STATUS_APROVADO'].dt.date.astype(str)
-        days_df['PERIOD'] = days_df['STATUS_APROVADO'].dt.hour.apply(assign_period)
-
-        days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'], dropna=False).size().reset_index(name='EVENT_COUNT')
-
-        # Styling for the DataFrame
-        def color_rows(row):
-            return [
-                f'background-color: {period_colors.get(row["PERIOD"], "white")}; color: white'
-                for _ in row.index
-            ]
-
-        styled_df = days_grouped.style.apply(color_rows, axis=1)
-        st.dataframe(styled_df, width=1200, height=400)
-
-        # Plot events per hour
-        for day in days_df['DATE'].unique():
-            st.write(f'Events Timeline for {day}:')
-            day_df = days_df[days_df['DATE'] == day]
-            if not day_df.empty:
-                fig, ax = plt.subplots(figsize=(10, 6))
-                day_df['HOUR'] = day_df['STATUS_APROVADO'].dt.hour
-                hourly_events = day_df.groupby('HOUR').size().reset_index(name='EVENT_COUNT')
-                ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', label=str(day))
-                ax.set_xlabel('Hour of the Day')
-                ax.set_ylabel('Events Count')
-                ax.set_title(f'Events Timeline for {day}')
-                plt.xticks(range(0, 24))
-                st.pyplot(fig)
-
-    except Exception as e:
-        st.error(f"Error processing event timeline: {e}")
+    st.markdown("### Preliminar Report Points")
+    st.write(merged_preliminar[['DESCRICAO_PROCEDIMENTO', 'MULTIPLIER', 'POINTS']])
 
 except Exception as e:
-    st.error(f"An error occurred while processing the data: {e}")
-
+    st.error(f"Error: {e}")
 
 
 # Export summary and doctors' dataframes as a combined PDF report
