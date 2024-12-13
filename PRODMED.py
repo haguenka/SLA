@@ -24,11 +24,11 @@ def load_csv_data(csv_url):
 
 # Define periods with explicit hour ranges
 def assign_period(hour):
-    if 0 <= hour < 6:
+    if 0 <= hour < 7:
         return 'Madrugada'
-    elif 6 <= hour < 12:
+    elif 7 <= hour < 13:
         return 'Manhã'
-    elif 12 <= hour < 18:
+    elif 13 <= hour < 19:
         return 'Tarde'
     else:
         return 'Noite'
