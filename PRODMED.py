@@ -89,22 +89,26 @@ st.sidebar.header('Filter Options')
 
 # Date range filter
 try:
+    # Convert 'STATUS_APROVADO' and 'STATUS_PRELIMINAR' to datetime
     excel_df['STATUS_APROVADO'] = pd.to_datetime(excel_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M', errors='coerce')
     excel_df['STATUS_PRELIMINAR'] = pd.to_datetime(excel_df['STATUS_PRELIMINAR'], format='%d-%m-%Y %H:%M', errors='coerce')
 
+    # Calculate min and max date from 'STATUS_APROVADO' column
+    min_date = excel_df['STATUS_APROVADO'].min()
+    max_date = excel_df['STATUS_APROVADO'].max()
 
-# Sidebar date input
+    # Sidebar date input
     start_date, end_date = st.sidebar.date_input(
         'Select Date Range',
-        value=[min_date, max_date],
+        value=[min_date.date(), max_date.date()],
         min_value=min_date.date(),
         max_value=max_date.date()
     )
-    
+
     # Convert start_date and end_date to datetime64[ns] for comparison
     start_date = pd.Timestamp(start_date)
     end_date = pd.Timestamp(end_date)
-    
+
     # Filter data based on date range
     filtered_df = excel_df[
         (excel_df['STATUS_APROVADO'] >= start_date) & (excel_df['STATUS_APROVADO'] <= end_date)
@@ -126,6 +130,7 @@ try:
     aprovado_df = filtered_df[
         (filtered_df['STATUS_APROVADO'].notna()) & (filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
     ]
+
 
     # Display total event counts
     total_preliminar_events = len(preliminar_df)
