@@ -177,6 +177,7 @@ try:
             total_count = grupo_df['COUNT'].sum()
             total_points_sum += total_points
             total_count_sum += total_count
+            st.markdown(f"<h3 style='color:#0a84ff;'>Modality: {grupo}</h3>", unsafe_allow_html=True)
             st.dataframe(grupo_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']])
             st.write(f"**Total Points for {grupo}: {total_points:.1f}**")
             st.write(f"**Total Count for {grupo}: {total_count}**")
