@@ -190,32 +190,38 @@ try:
     # We now want to show LAUDO APROVADO and LAUDO PRELIMINAR counts for each period
     # We'll compute a merged DataFrame that contains both PRELIMINAR_COUNT and APROVADO_COUNT.
 
+    # Filter preliminar_df and aprovado_df for only the "TOMOGRAFIA" and "RESSONANCIA" modalities
+    valid_groups = ['TOMOGRAFIA', 'RESSONANCIA']
+    
+    preliminar_filtered = preliminar_df[preliminar_df['GRUPO'].isin(valid_groups)]
+    aprovado_filtered = aprovado_df[aprovado_df['GRUPO'].isin(valid_groups)]
+    
     # For preliminar_df
-    if not preliminar_df.empty:
-        preliminar_df['DAY_OF_WEEK'] = preliminar_df['STATUS_PRELIMINAR'].dt.day_name().map(day_translations)
-        preliminar_df['DATE'] = preliminar_df['STATUS_PRELIMINAR'].dt.date.astype(str)
-        preliminar_df['PERIOD'] = preliminar_df['STATUS_PRELIMINAR'].dt.hour.apply(assign_period)
-        preliminar_days_grouped = preliminar_df.groupby(
+    if not preliminar_filtered.empty:
+        preliminar_filtered['DAY_OF_WEEK'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.day_name().map(day_translations)
+        preliminar_filtered['DATE'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.date.astype(str)
+        preliminar_filtered['PERIOD'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.hour.apply(assign_period)
+        preliminar_days_grouped = preliminar_filtered.groupby(
             ['MEDICO_LAUDOO_PRELIMINAR', 'DATE', 'DAY_OF_WEEK', 'PERIOD'],
             dropna=False
         ).size().reset_index(name='PRELIMINAR_COUNT')
         preliminar_days_grouped = preliminar_days_grouped.rename(columns={'MEDICO_LAUDOO_PRELIMINAR': 'MEDICO'})
     else:
         preliminar_days_grouped = pd.DataFrame(columns=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD', 'PRELIMINAR_COUNT'])
-
+    
     # For aprovado_df
-    if not aprovado_df.empty:
-        aprovado_df['DAY_OF_WEEK'] = aprovado_df['STATUS_APROVADO'].dt.day_name().map(day_translations)
-        aprovado_df['DATE'] = aprovado_df['STATUS_APROVADO'].dt.date.astype(str)
-        aprovado_df['PERIOD'] = aprovado_df['STATUS_APROVADO'].dt.hour.apply(assign_period)
-        aprovado_days_grouped = aprovado_df.groupby(
+    if not aprovado_filtered.empty:
+        aprovado_filtered['DAY_OF_WEEK'] = aprovado_filtered['STATUS_APROVADO'].dt.day_name().map(day_translations)
+        aprovado_filtered['DATE'] = aprovado_filtered['STATUS_APROVADO'].dt.date.astype(str)
+        aprovado_filtered['PERIOD'] = aprovado_filtered['STATUS_APROVADO'].dt.hour.apply(assign_period)
+        aprovado_days_grouped = aprovado_filtered.groupby(
             ['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'],
             dropna=False
         ).size().reset_index(name='APROVADO_COUNT')
         aprovado_days_grouped = aprovado_days_grouped.rename(columns={'MEDICO_LAUDO_DEFINITIVO': 'MEDICO'})
     else:
         aprovado_days_grouped = pd.DataFrame(columns=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD', 'APROVADO_COUNT'])
-
+    
     # Merge both
     days_merged = pd.merge(preliminar_days_grouped, aprovado_days_grouped,
                            on=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'], how='outer')
@@ -234,7 +240,7 @@ try:
     
     styled_df = days_merged.style.apply(color_rows, axis=1)
     
-    st.markdown("### LAUDO PRELIMINAR and LAUDO APROVADO Counts by Period")
+    st.markdown("### LAUDO PRELIMINAR and LAUDO APROVADO Counts by Period (Tomografia and Ressonancia)")
     st.dataframe(styled_df, width=1200, height=400)
 
 
