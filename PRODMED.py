@@ -168,18 +168,25 @@ try:
         )
     
         # Filter rows with valid STATUS_PRELIMINAR and STATUS_APROVADO
-        preliminar_df = merged_df.dropna(subset=['STATUS_PRELIMINAR'])
-        aprovado_df = merged_df.dropna(subset=['STATUS_APROVADO'])
+        preliminar_df = merged_df.dropna(subset=['STATUS_PRELIMINAR']).copy()
+        aprovado_df = merged_df.dropna(subset=['STATUS_APROVADO']).copy()
     
-        # Add 'PERIOD' columns
+        # Add 'DATE' and 'PERIOD' columns
+        preliminar_df['DATE'] = preliminar_df['STATUS_PRELIMINAR'].dt.date
+        aprovado_df['DATE'] = aprovado_df['STATUS_APROVADO'].dt.date
+    
         preliminar_df['PERIOD'] = preliminar_df['STATUS_PRELIMINAR'].dt.hour.apply(assign_period)
         aprovado_df['PERIOD'] = aprovado_df['STATUS_APROVADO'].dt.hour.apply(assign_period)
     
         # Group counts for STATUS_PRELIMINAR
-        preliminar_grouped = preliminar_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='PRELIMINAR_COUNT')
+        preliminar_grouped = preliminar_df.groupby(
+            ['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']
+        ).size().reset_index(name='PRELIMINAR_COUNT')
     
         # Group counts for STATUS_APROVADO
-        aprovado_grouped = aprovado_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='APROVADO_COUNT')
+        aprovado_grouped = aprovado_df.groupby(
+            ['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']
+        ).size().reset_index(name='APROVADO_COUNT')
     
         # Merge both counts into one table
         timeline_combined = pd.merge(
@@ -209,6 +216,7 @@ try:
     
     except Exception as e:
         st.error(f"Error in processing Event Timeline: {e}")
+
 
 
 except Exception as e:
