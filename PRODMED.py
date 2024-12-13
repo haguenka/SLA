@@ -142,7 +142,6 @@ try:
     st.markdown(f"<h3 style='color:#4682b4;'>Total Events for LAUDO APROVADO: {total_aprovado_events}</h3>", unsafe_allow_html=True)
 
     # Display filtered data for selected doctor (both preliminar and aprovado)
-    # Combine both sets if you want to show all events by doctor
     doctor_all_events = pd.concat([preliminar_df, aprovado_df], ignore_index=True)
     filtered_columns = [
         'SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 'DESCRICAO_PROCEDIMENTO',
@@ -185,8 +184,58 @@ try:
     st.markdown(f"### Total Points for All Modalities: {total_points_sum:.1f}")
     st.markdown(f"### Total Count for All Modalities: {total_count_sum}")
 
+    # ---------------------------------------------
+    # ADDING THE REQUESTED FUNCTION BLOCK HERE
+    # ---------------------------------------------
+    # We now want to show LAUDO APROVADO and LAUDO PRELIMINAR counts for each period
+    # We'll compute a merged DataFrame that contains both PRELIMINAR_COUNT and APROVADO_COUNT.
+
+    # For preliminar_df
+    if not preliminar_df.empty:
+        preliminar_df['DAY_OF_WEEK'] = preliminar_df['STATUS_PRELIMINAR'].dt.day_name().map(day_translations)
+        preliminar_df['DATE'] = preliminar_df['STATUS_PRELIMINAR'].dt.date.astype(str)
+        preliminar_df['PERIOD'] = preliminar_df['STATUS_PRELIMINAR'].dt.hour.apply(assign_period)
+        preliminar_days_grouped = preliminar_df.groupby(
+            ['MEDICO_LAUDOO_PRELIMINAR', 'DATE', 'DAY_OF_WEEK', 'PERIOD'],
+            dropna=False
+        ).size().reset_index(name='PRELIMINAR_COUNT')
+        preliminar_days_grouped = preliminar_days_grouped.rename(columns={'MEDICO_LAUDOO_PRELIMINAR': 'MEDICO'})
+    else:
+        preliminar_days_grouped = pd.DataFrame(columns=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD', 'PRELIMINAR_COUNT'])
+
+    # For aprovado_df
+    if not aprovado_df.empty:
+        aprovado_df['DAY_OF_WEEK'] = aprovado_df['STATUS_APROVADO'].dt.day_name().map(day_translations)
+        aprovado_df['DATE'] = aprovado_df['STATUS_APROVADO'].dt.date.astype(str)
+        aprovado_df['PERIOD'] = aprovado_df['STATUS_APROVADO'].dt.hour.apply(assign_period)
+        aprovado_days_grouped = aprovado_df.groupby(
+            ['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'],
+            dropna=False
+        ).size().reset_index(name='APROVADO_COUNT')
+        aprovado_days_grouped = aprovado_days_grouped.rename(columns={'MEDICO_LAUDO_DEFINITIVO': 'MEDICO'})
+    else:
+        aprovado_days_grouped = pd.DataFrame(columns=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD', 'APROVADO_COUNT'])
+
+    # Merge both
+    days_merged = pd.merge(preliminar_days_grouped, aprovado_days_grouped,
+                           on=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'], how='outer')
+    days_merged = days_merged.fillna(0)
+
+    # Styling for the DataFrame
+    def color_rows(row):
+        return [
+            f'background-color: {period_colors.get(row["PERIOD"], "white")}; color: white'
+            for _ in row.index
+        ]
+
+    styled_df = days_merged.style.apply(color_rows, axis=1)
+
+    st.markdown("### LAUDO PRELIMINAR and LAUDO APROVADO Counts by Period")
+    st.dataframe(styled_df, width=1200, height=400)
+
 except Exception as e:
     st.error(f"An error occurred: {e}")
+
 
 
 # Export summary and doctors' dataframes as a combined PDF report
