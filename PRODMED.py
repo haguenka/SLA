@@ -158,57 +158,57 @@ try:
     st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
 
     # Event Timeline: Count for STATUS_PRELIMINAR and STATUS_APROVADO
-try:
-    # Ensure both STATUS_APROVADO and STATUS_PRELIMINAR are datetime
-    merged_df['STATUS_PRELIMINAR'] = pd.to_datetime(
-        merged_df['STATUS_PRELIMINAR'], format='%d-%m-%Y %H:%M', errors='coerce'
-    )
-    merged_df['STATUS_APROVADO'] = pd.to_datetime(
-        merged_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M', errors='coerce'
-    )
-
-    # Filter rows with valid STATUS_PRELIMINAR and STATUS_APROVADO
-    preliminar_df = merged_df.dropna(subset=['STATUS_PRELIMINAR'])
-    aprovado_df = merged_df.dropna(subset=['STATUS_APROVADO'])
-
-    # Add 'PERIOD' columns
-    preliminar_df['PERIOD'] = preliminar_df['STATUS_PRELIMINAR'].dt.hour.apply(assign_period)
-    aprovado_df['PERIOD'] = aprovado_df['STATUS_APROVADO'].dt.hour.apply(assign_period)
-
-    # Group counts for STATUS_PRELIMINAR
-    preliminar_grouped = preliminar_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='PRELIMINAR_COUNT')
-
-    # Group counts for STATUS_APROVADO
-    aprovado_grouped = aprovado_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='APROVADO_COUNT')
-
-    # Merge both counts into one table
-    timeline_combined = pd.merge(
-        aprovado_grouped, preliminar_grouped, 
-        on=['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'],
-        how='outer'
-    ).fillna(0)  # Fill NaN with 0 where counts are missing
-
-    # Display combined Event Timeline
-    st.write("### Event Timeline with STATUS_APROVADO and STATUS_PRELIMINAR Counts")
-    st.dataframe(timeline_combined)
-
-    # Visualization: Stacked Bar Plot for Events
-    for date in timeline_combined['DATE'].unique():
-        st.write(f'### Event Counts for {date}')
-        date_df = timeline_combined[timeline_combined['DATE'] == date]
-
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.bar(date_df['PERIOD'], date_df['APROVADO_COUNT'], label='STATUS_APROVADO', color='#4682b4')
-        ax.bar(date_df['PERIOD'], date_df['PRELIMINAR_COUNT'], bottom=date_df['APROVADO_COUNT'], label='STATUS_PRELIMINAR', color='#f0ad4e')
-
-        ax.set_xlabel('Period')
-        ax.set_ylabel('Event Counts')
-        ax.set_title(f'Event Counts for {date}')
-        ax.legend()
-        st.pyplot(fig)
-
-except Exception as e:
-    st.error(f"Error in processing Event Timeline: {e}")
+    try:
+        # Ensure both STATUS_APROVADO and STATUS_PRELIMINAR are datetime
+        merged_df['STATUS_PRELIMINAR'] = pd.to_datetime(
+            merged_df['STATUS_PRELIMINAR'], format='%d-%m-%Y %H:%M', errors='coerce'
+        )
+        merged_df['STATUS_APROVADO'] = pd.to_datetime(
+            merged_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M', errors='coerce'
+        )
+    
+        # Filter rows with valid STATUS_PRELIMINAR and STATUS_APROVADO
+        preliminar_df = merged_df.dropna(subset=['STATUS_PRELIMINAR'])
+        aprovado_df = merged_df.dropna(subset=['STATUS_APROVADO'])
+    
+        # Add 'PERIOD' columns
+        preliminar_df['PERIOD'] = preliminar_df['STATUS_PRELIMINAR'].dt.hour.apply(assign_period)
+        aprovado_df['PERIOD'] = aprovado_df['STATUS_APROVADO'].dt.hour.apply(assign_period)
+    
+        # Group counts for STATUS_PRELIMINAR
+        preliminar_grouped = preliminar_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='PRELIMINAR_COUNT')
+    
+        # Group counts for STATUS_APROVADO
+        aprovado_grouped = aprovado_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']).size().reset_index(name='APROVADO_COUNT')
+    
+        # Merge both counts into one table
+        timeline_combined = pd.merge(
+            aprovado_grouped, preliminar_grouped, 
+            on=['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'],
+            how='outer'
+        ).fillna(0)  # Fill NaN with 0 where counts are missing
+    
+        # Display combined Event Timeline
+        st.write("### Event Timeline with STATUS_APROVADO and STATUS_PRELIMINAR Counts")
+        st.dataframe(timeline_combined)
+    
+        # Visualization: Stacked Bar Plot for Events
+        for date in timeline_combined['DATE'].unique():
+            st.write(f'### Event Counts for {date}')
+            date_df = timeline_combined[timeline_combined['DATE'] == date]
+    
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.bar(date_df['PERIOD'], date_df['APROVADO_COUNT'], label='STATUS_APROVADO', color='#4682b4')
+            ax.bar(date_df['PERIOD'], date_df['PRELIMINAR_COUNT'], bottom=date_df['APROVADO_COUNT'], label='STATUS_PRELIMINAR', color='#f0ad4e')
+    
+            ax.set_xlabel('Period')
+            ax.set_ylabel('Event Counts')
+            ax.set_title(f'Event Counts for {date}')
+            ax.legend()
+            st.pyplot(fig)
+    
+    except Exception as e:
+        st.error(f"Error in processing Event Timeline: {e}")
 
 
 except Exception as e:
