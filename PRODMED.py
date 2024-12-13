@@ -157,46 +157,65 @@ try:
 
     st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
 
-    # Event timeline
-    try:
-        days_df = filtered_df.copy()
-        days_df['STATUS_APROVADO'] = pd.to_datetime(days_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M')
-        days_df['DAY_OF_WEEK'] = days_df['STATUS_APROVADO'].dt.day_name().map(day_translations)
-        days_df['DATE'] = days_df['STATUS_APROVADO'].dt.date.astype(str)
-        days_df['PERIOD'] = days_df['STATUS_APROVADO'].dt.hour.apply(assign_period)
+  # Event Timeline with STATUS_PRELIMINAR
+try:
+    # Add 'PERIOD' for STATUS_PRELIMINAR
+    merged_df['STATUS_PRELIMINAR'] = pd.to_datetime(
+        merged_df['STATUS_PRELIMINAR'], format='%d-%m-%Y %H:%M', errors='coerce'
+    )
+    merged_df['PERIOD_PRELIMINAR'] = merged_df['STATUS_PRELIMINAR'].dt.hour.apply(assign_period)
 
-        days_grouped = days_df.groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'], dropna=False).size().reset_index(name='EVENT_COUNT')
+    # Filter for valid STATUS_APROVADO and STATUS_PRELIMINAR
+    preliminar_df = merged_df.dropna(subset=['STATUS_PRELIMINAR'])
+    aprovado_df = merged_df.dropna(subset=['STATUS_APROVADO'])
 
-        # Styling for the DataFrame
-        def color_rows(row):
-            return [
-                f'background-color: {period_colors.get(row["PERIOD"], "white")}; color: white'
-                for _ in row.index
-            ]
+    # Group STATUS_APROVADO counts
+    aprovado_grouped = aprovado_df.groupby(
+        ['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO', 'PERIOD']
+    ).size().reset_index(name='STATUS_APROVADO_COUNT')
 
-        styled_df = days_grouped.style.apply(color_rows, axis=1)
-        st.dataframe(styled_df, width=1200, height=400)
+    # Group STATUS_PRELIMINAR counts
+    preliminar_grouped = preliminar_df.groupby(
+        ['MEDICO_LAUDO_DEFINITIVO', 'STATUS_PRELIMINAR', 'PERIOD_PRELIMINAR']
+    ).size().reset_index(name='STATUS_PRELIMINAR_COUNT')
 
-        # Plot events per hour
-        for day in days_df['DATE'].unique():
-            st.write(f'Events Timeline for {day}:')
-            day_df = days_df[days_df['DATE'] == day]
-            if not day_df.empty:
-                fig, ax = plt.subplots(figsize=(10, 6))
-                day_df['HOUR'] = day_df['STATUS_APROVADO'].dt.hour
-                hourly_events = day_df.groupby('HOUR').size().reset_index(name='EVENT_COUNT')
-                ax.plot(hourly_events['HOUR'], hourly_events['EVENT_COUNT'], marker='o', linestyle='-', label=str(day))
-                ax.set_xlabel('Hour of the Day')
-                ax.set_ylabel('Events Count')
-                ax.set_title(f'Events Timeline for {day}')
-                plt.xticks(range(0, 24))
-                st.pyplot(fig)
+    # Combine both into a single timeline DataFrame
+    timeline_combined = pd.merge(
+        aprovado_grouped, preliminar_grouped, 
+        left_on=['MEDICO_LAUDO_DEFINITIVO', 'STATUS_APROVADO', 'PERIOD'],
+        right_on=['MEDICO_LAUDO_DEFINITIVO', 'STATUS_PRELIMINAR', 'PERIOD_PRELIMINAR'],
+        how='outer'
+    ).fillna(0)
 
-    except Exception as e:
-        st.error(f"Error processing event timeline: {e}")
+    # Cleanup redundant columns
+    timeline_combined = timeline_combined.rename(
+        columns={'STATUS_APROVADO': 'DATE', 'PERIOD': 'PERIOD'}
+    )[[
+        'MEDICO_LAUDO_DEFINITIVO', 'DATE', 'PERIOD', 
+        'STATUS_APROVADO_COUNT', 'STATUS_PRELIMINAR_COUNT'
+    ]]
+
+    # Display the event timeline summary
+    st.write("### Event Timeline with Status Counts")
+    st.dataframe(timeline_combined)
+
+    # Plot STATUS_APROVADO and STATUS_PRELIMINAR counts per period
+    for date in timeline_combined['DATE'].unique():
+        st.write(f'### Event Timeline for {date}')
+        date_df = timeline_combined[timeline_combined['DATE'] == date]
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.bar(date_df['PERIOD'], date_df['STATUS_APROVADO_COUNT'], label='STATUS_APROVADO')
+        ax.bar(date_df['PERIOD'], date_df['STATUS_PRELIMINAR_COUNT'], bottom=date_df['STATUS_APROVADO_COUNT'], label='STATUS_PRELIMINAR')
+
+        ax.set_xlabel('Period of the Day')
+        ax.set_ylabel('Event Counts')
+        ax.set_title(f"Event Timeline for {date}")
+        ax.legend()
+        st.pyplot(fig)
 
 except Exception as e:
-    st.error(f"An error occurred while processing the data: {e}")
+    st.error(f"Error processing event timeline: {e}")
 
 
 
