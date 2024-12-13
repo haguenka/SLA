@@ -157,7 +157,7 @@ try:
 
     st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
 
-  # Event Timeline: Count for STATUS_PRELIMINAR and STATUS_APROVADO
+    # Event Timeline: Count for STATUS_PRELIMINAR and STATUS_APROVADO
 try:
     # Ensure both STATUS_APROVADO and STATUS_PRELIMINAR are datetime
     merged_df['STATUS_PRELIMINAR'] = pd.to_datetime(
@@ -209,6 +209,7 @@ try:
 
 except Exception as e:
     st.error(f"Error in processing Event Timeline: {e}")
+
 
 
 
