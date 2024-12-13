@@ -171,11 +171,13 @@ try:
         preliminar_df = merged_df.dropna(subset=['STATUS_PRELIMINAR']).copy()
         aprovado_df = merged_df.dropna(subset=['STATUS_APROVADO']).copy()
     
-        # Add 'DATE' and 'PERIOD' columns
+        # Add 'DATE', 'DAY_OF_WEEK', and 'PERIOD' columns
         preliminar_df['DATE'] = preliminar_df['STATUS_PRELIMINAR'].dt.date
-        aprovado_df['DATE'] = aprovado_df['STATUS_APROVADO'].dt.date
-    
+        preliminar_df['DAY_OF_WEEK'] = preliminar_df['STATUS_PRELIMINAR'].dt.day_name().map(day_translations)
         preliminar_df['PERIOD'] = preliminar_df['STATUS_PRELIMINAR'].dt.hour.apply(assign_period)
+    
+        aprovado_df['DATE'] = aprovado_df['STATUS_APROVADO'].dt.date
+        aprovado_df['DAY_OF_WEEK'] = aprovado_df['STATUS_APROVADO'].dt.day_name().map(day_translations)
         aprovado_df['PERIOD'] = aprovado_df['STATUS_APROVADO'].dt.hour.apply(assign_period)
     
         # Group counts for STATUS_PRELIMINAR
@@ -216,7 +218,6 @@ try:
     
     except Exception as e:
         st.error(f"Error in processing Event Timeline: {e}")
-
 
 
 except Exception as e:
