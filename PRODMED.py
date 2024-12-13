@@ -5,7 +5,6 @@ import requests
 from io import BytesIO
 import matplotlib.pyplot as plt
 from datetime import datetime
-from fpdf import FPDF
 
 # Caching for performance improvement
 @st.cache_data
@@ -44,12 +43,12 @@ period_colors = {
 
 # Day translations
 day_translations = {
-    'Monday': 'Segunda-feira', 
-    'Tuesday': 'Terça-feira', 
+    'Monday': 'Segunda-feira',
+    'Tuesday': 'Terça-feira',
     'Wednesday': 'Quarta-feira',
-    'Thursday': 'Quinta-feira', 
-    'Friday': 'Sexta-feira', 
-    'Saturday': 'Sábado', 
+    'Thursday': 'Quinta-feira',
+    'Friday': 'Sexta-feira',
+    'Saturday': 'Sábado',
     'Sunday': 'Domingo'
 }
 
@@ -79,7 +78,7 @@ csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
 excel_df = load_excel_data(xlsx_url)
 csv_df = load_csv_data(csv_url)
 
-# Strip any leading/trailing whitespace from CSV column names
+# Strip whitespace from CSV column names
 csv_df.columns = csv_df.columns.str.strip()
 
 # Replace abbreviations in 'UNIDADE' with full hospital names
@@ -89,143 +88,81 @@ excel_df = merge_hospital_names(excel_df, "UNIDADE")
 st.sidebar.header('Filter Options')
 
 # Date range filter
-date_column = 'STATUS_APROVADO'
 try:
-    # Convert 'STATUS_APROVADO' to datetime
-    excel_df[date_column] = pd.to_datetime(
-        excel_df[date_column], format='%d-%m-%Y %H:%M', errors='coerce'
-    )
-    excel_df = excel_df[excel_df[date_column].notna()]
+    excel_df['STATUS_APROVADO'] = pd.to_datetime(excel_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M', errors='coerce')
+    excel_df['STATUS_PRELIMINAR'] = pd.to_datetime(excel_df['STATUS_PRELIMINAR'], format='%d-%m-%Y %H:%M', errors='coerce')
 
-    # Date range for filtering
-    min_date, max_date = excel_df[date_column].min(), excel_df[date_column].max()
-    start_date, end_date = st.sidebar.date_input(
-        'Select Date Range', value=[min_date, max_date],
-        min_value=min_date.date(), max_value=max_date.date()
-    )
-    start_date = pd.Timestamp(start_date)
-    end_date = pd.Timestamp(end_date)
+    # Sidebar date input
+    min_date, max_date = excel_df['STATUS_APROVADO'].min(), excel_df['STATUS_APROVADO'].max()
+    start_date, end_date = st.sidebar.date_input('Select Date Range', value=[min_date, max_date],
+                                                 min_value=min_date.date(), max_value=max_date.date())
 
-    # Apply date filter
     filtered_df = excel_df[
-        (excel_df[date_column] >= start_date) & (excel_df[date_column] <= end_date)
+        (excel_df['STATUS_APROVADO'] >= start_date) & (excel_df['STATUS_APROVADO'] <= end_date)
     ]
 
-    # Sidebar hospital selection with unique key
+    # Hospital selection
     hospital_list = filtered_df['UNIDADE'].unique()
-    selected_hospital = st.sidebar.selectbox(
-        'Select Hospital', hospital_list, key='hospital_selectbox'
-    )
-
-    # Filter data based on selected hospital
+    selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list, key='hospital_selectbox')
     filtered_df = filtered_df[filtered_df['UNIDADE'] == selected_hospital]
 
-    # Sidebar doctor selection with unique key
+    # Doctor selection
     doctor_list = filtered_df['MEDICO_LAUDO_DEFINITIVO'].unique()
-    selected_doctor = st.sidebar.selectbox(
-        'Select Doctor', doctor_list, key='doctor_selectbox'
-    )
+    selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list, key='doctor_selectbox')
 
-    # Apply doctor filter
-    filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor]
+    # Filter by doctor for both statuses
+    preliminar_df = filtered_df[
+        (filtered_df['STATUS_PRELIMINAR'].notna()) & (filtered_df['MEDICO_LAUDOO_PRELIMINAR'] == selected_doctor)
+    ]
+    aprovado_df = filtered_df[
+        (filtered_df['STATUS_APROVADO'].notna()) & (filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
+    ]
 
-    # Format 'STATUS_APROVADO' for display
-    filtered_df[date_column] = filtered_df[date_column].dt.strftime('%d-%m-%Y %H:%M')
+    # Display total event counts
+    total_preliminar_events = len(preliminar_df)
+    total_aprovado_events = len(aprovado_df)
+    st.markdown(f"<h3 style='color:#f0ad4e;'>Total Events for LAUDO PRELIMINAR: {total_preliminar_events}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:#4682b4;'>Total Events for LAUDO APROVADO: {total_aprovado_events}</h3>", unsafe_allow_html=True)
 
     # Display filtered data
     filtered_columns = [
-        'SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO',
-        'DESCRICAO_PROCEDIMENTO', 'ESPECIALIDADE', 'STATUS_PRELIMINAR', 'MEDICO_LAUDOO_PRELIMINAR', 'STATUS_APROVADO',
-        'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE'
+        'SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 'DESCRICAO_PROCEDIMENTO',
+        'ESPECIALIDADE', 'STATUS_PRELIMINAR', 'MEDICO_LAUDOO_PRELIMINAR',
+        'STATUS_APROVADO', 'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE'
     ]
     st.dataframe(filtered_df[filtered_columns], width=1200, height=400)
 
-    # Merge with CSV to calculate points
+    # Merge with CSV for points calculation
     csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
     filtered_df['DESCRICAO_PROCEDIMENTO'] = filtered_df['DESCRICAO_PROCEDIMENTO'].str.upper()
     merged_df = pd.merge(filtered_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
     merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
     merged_df['POINTS'] = (merged_df['STATUS_APROVADO'].notna().astype(int) * merged_df['MULTIPLIER']).round(1)
 
-    # Group by UNIDADE, GRUPO, and DESCRICAO_PROCEDIMENTO
+    # Group by UNIDADE, GRUPO, DESCRICAO_PROCEDIMENTO
     doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({
         'MULTIPLIER': 'first',
         'STATUS_APROVADO': 'count'
     }).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
 
-    # Display results for each group
+    # Display grouped results
     total_points_sum = 0
-    total_aprovado_events = merged_df['STATUS_APROVADO'].notna().sum()
-    total_preliminar_events = merged_df['STATUS_PRELIMINAR'].notna().sum()
-    
     for hospital in doctor_grouped['UNIDADE'].unique():
         hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
         st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
         for grupo in hospital_df['GRUPO'].unique():
             grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
             grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
-            total_points = round(grupo_df['POINTS'].sum(), 1)
+            total_points = grupo_df['POINTS'].sum()
             total_points_sum += total_points
-            st.markdown(f"<h3 style='color:#0a84ff;'>Modality: {grupo}</h3>", unsafe_allow_html=True)
-            st.dataframe(grupo_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']], width=1000, height=300)
-            st.write(f'Total Points for {grupo}: {total_points:.1f}')
+            st.dataframe(grupo_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']])
+            st.write(f"**Total Points for {grupo}: {total_points:.1f}**")
 
-    # Display total points and event counts
-    st.markdown(f"<h2 style='color:#10fa07;'>Total Points for All Modalities: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<h3 style='color:#4682b4;'>Total Events for LAUDO APROVADO: {total_aprovado_events}</h3>", unsafe_allow_html=True)
-    st.markdown(f"<h3 style='color:#f0ad4e;'>Total Events for LAUDO PRELIMINAR: {total_preliminar_events}</h3>", unsafe_allow_html=True)
-
-
-    # Event Timeline: Count for STATUS_PRELIMINAR and STATUS_APROVADO
-    try:
-        # Ensure both STATUS_APROVADO and STATUS_PRELIMINAR are datetime
-        merged_df['STATUS_PRELIMINAR'] = pd.to_datetime(
-            merged_df['STATUS_PRELIMINAR'], format='%d-%m-%Y %H:%M', errors='coerce'
-        )
-        merged_df['STATUS_APROVADO'] = pd.to_datetime(
-            merged_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M', errors='coerce'
-        )
-    
-        # Filter rows with valid STATUS_PRELIMINAR and STATUS_APROVADO
-        preliminar_df = merged_df.dropna(subset=['STATUS_PRELIMINAR']).copy()
-        aprovado_df = merged_df.dropna(subset=['STATUS_APROVADO']).copy()
-    
-        # Add 'DATE', 'DAY_OF_WEEK', and 'PERIOD' columns
-        preliminar_df['DATE'] = preliminar_df['STATUS_PRELIMINAR'].dt.date
-        preliminar_df['DAY_OF_WEEK'] = preliminar_df['STATUS_PRELIMINAR'].dt.day_name().map(day_translations)
-        preliminar_df['PERIOD'] = preliminar_df['STATUS_PRELIMINAR'].dt.hour.apply(assign_period)
-    
-        aprovado_df['DATE'] = aprovado_df['STATUS_APROVADO'].dt.date
-        aprovado_df['DAY_OF_WEEK'] = aprovado_df['STATUS_APROVADO'].dt.day_name().map(day_translations)
-        aprovado_df['PERIOD'] = aprovado_df['STATUS_APROVADO'].dt.hour.apply(assign_period)
-    
-        # Group counts for STATUS_PRELIMINAR
-        preliminar_grouped = preliminar_df.groupby(
-            ['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']
-        ).size().reset_index(name='PRELIMINAR_COUNT')
-    
-        # Group counts for STATUS_APROVADO
-        aprovado_grouped = aprovado_df.groupby(
-            ['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD']
-        ).size().reset_index(name='APROVADO_COUNT')
-    
-        # Merge both counts into one table
-        timeline_combined = pd.merge(
-            aprovado_grouped, preliminar_grouped, 
-            on=['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'],
-            how='outer'
-        ).fillna(0)  # Fill NaN with 0 where counts are missing
-    
-        # Display combined Event Timeline
-        st.write("### Event Timeline with STATUS_APROVADO and STATUS_PRELIMINAR Counts")
-        st.dataframe(timeline_combined)
-    
-    except Exception as e:
-        st.error(f"Error in processing Event Timeline: {e}")
-
+    st.markdown(f"### Total Points for All Modalities: {total_points_sum:.1f}")
 
 except Exception as e:
-    st.error(f"An error occurred while processing the data: {e}")
+    st.error(f"An error occurred: {e}")
+
 
 
 
