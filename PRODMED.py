@@ -66,7 +66,7 @@ def merge_hospital_names(df, column_name):
 # Load and display logo
 logo_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
 logo = load_image(logo_url)
-st.sidebar.image(logo, use_column_width=True)
+st.sidebar.image(logo, use_container_width=True)
 
 # Streamlit app
 st.title('Medical Production Report')
