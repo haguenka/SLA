@@ -122,6 +122,9 @@ try:
     doctor_list = filtered_df['MEDICO_LAUDO_DEFINITIVO'].unique()
     selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list, key='doctor_selectbox')
 
+    # Show the selected doctor's name on top in red and big letters
+    st.markdown(f"<h1 style='color:red;'>{selected_doctor}</h1>", unsafe_allow_html=True)
+
     # Filter dataframes by selected doctor
     preliminar_df = filtered_df[
         (filtered_df['STATUS_PRELIMINAR'].notna()) &
@@ -135,8 +138,8 @@ try:
     # Display total event counts for the selected doctor
     total_preliminar_events = len(preliminar_df)
     total_aprovado_events = len(aprovado_df)
-    st.markdown(f"<h3 style='color:#f0ad4e;'>Total Events for LAUDO PRELIMINAR (Selected Doctor): {total_preliminar_events}</h3>", unsafe_allow_html=True)
-    st.markdown(f"<h3 style='color:#4682b4;'>Total Events for LAUDO APROVADO (Selected Doctor): {total_aprovado_events}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:#f0ad4e;'>Total Events for LAUDO PRELIMINAR: {total_preliminar_events}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:#4682b4;'>Total Events for LAUDO APROVADO: {total_aprovado_events}</h3>", unsafe_allow_html=True)
 
     # Display filtered data for selected doctor (both preliminar and aprovado)
     # Combine both sets if you want to show all events by doctor
@@ -163,6 +166,8 @@ try:
 
     # Display grouped results
     total_points_sum = 0
+    total_count_sum = 0  # total count for all modalities
+
     for hospital in doctor_grouped['UNIDADE'].unique():
         hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
         st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
@@ -170,11 +175,15 @@ try:
             grupo_df = hospital_df[hospital_df['GRUPO'] == grupo].copy()
             grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
             total_points = grupo_df['POINTS'].sum()
+            total_count = grupo_df['COUNT'].sum()
             total_points_sum += total_points
+            total_count_sum += total_count
             st.dataframe(grupo_df[['DESCRICAO_PROCEDIMENTO', 'COUNT', 'MULTIPLIER', 'POINTS']])
             st.write(f"**Total Points for {grupo}: {total_points:.1f}**")
+            st.write(f"**Total Count for {grupo}: {total_count}**")
 
-    st.markdown(f"### Total Points for All Modalities (Selected Doctor): {total_points_sum:.1f}")
+    st.markdown(f"### Total Points for All Modalities: {total_points_sum:.1f}")
+    st.markdown(f"### Total Count for All Modalities: {total_count_sum}")
 
 except Exception as e:
     st.error(f"An error occurred: {e}")
