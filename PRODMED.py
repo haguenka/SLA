@@ -117,6 +117,38 @@ try:
     hospital_list = excel_df['UNIDADE'].unique()
     selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
 
+    # Mapping of abbreviations to full hospital names
+    hospital_name_mapping = {
+        "HSC": "Hospital Santa Catarina",
+        "CSSJ": "Casa de Saúde São José",
+        "HNSC": "Hospital Nossa Senhora da Conceição"
+    }
+    
+    # Function to replace hospital names
+    def merge_hospital_names(df, column_name):
+        """
+        Replace abbreviated hospital names with full names in the specified column.
+        """
+        return df.replace({column_name: hospital_name_mapping})
+    
+    # Apply the mapping to the UNIDADE column
+    excel_df = merge_hospital_names(excel_df, "UNIDADE")
+    
+    # Sidebar filter for hospitals
+    st.sidebar.header("Filter Options")
+    hospital_list = excel_df['UNIDADE'].unique()
+    selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
+    
+    # Apply hospital filter
+    filtered_df = excel_df[excel_df['UNIDADE'] == selected_hospital]
+    
+    # Doctor name filter for the selected hospital
+    doctor_list = filtered_df['MEDICO_LAUDO_DEFINITIVO'].unique()
+    selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
+    
+    # Filter DataFrame further based on doctor
+    filtered_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor]
+
 
     # Filter doctor names based on selected hospital
     doctor_list = filtered_df[filtered_df['UNIDADE'] == selected_hospital]['MEDICO_LAUDO_DEFINITIVO'].unique()
