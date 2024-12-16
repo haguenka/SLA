@@ -28,7 +28,7 @@ st.title("SLA Dashboard for CT Exams")
 url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
 response = requests.get(url)
 logo = Image.open(BytesIO(response.content))
-st.sidebar.image(logo, use_column_width=True)
+st.sidebar.image(logo, use_container_width=True)
 
 df = load_excel_from_github()
 
