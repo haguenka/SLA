@@ -187,7 +187,7 @@ try:
             st.write(f"**Total Points for {grupo}: {total_points:.1f}**")
             st.write(f"**Total Count for {grupo}: {total_count}**")
 
-    st.markdown(f"### Total Points for All Modalities: {total_points_sum:.1f}")
+    st.markdown(f"<h3 style='color=red;'>Total Points for All Modalities: {total_points_sum:.1f}")
     st.markdown(f"### Total Count for All Modalities: {total_count_sum}")
 
     # ---------------------------------------------
