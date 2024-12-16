@@ -187,8 +187,9 @@ try:
             st.write(f"**Total Points for {grupo}: {total_points:.1f}**")
             st.write(f"**Total Count for {grupo}: {total_count}**")
 
-    st.markdown(f"<h3 style='color=red;'>Total Points for All Modalities: {total_points_sum:.1f}")
-    st.markdown(f"### Total Count for All Modalities: {total_count_sum}")
+    st.markdown(f"<h1 style='color:red;'>Total Points for All Modalities: {total_points_sum:.1f}</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h1 style='color:red;'>Total Count for All Modalities: {total_count_sum}</h1>", unsafe_allow_html=True)
+
 
     # ---------------------------------------------
     # ADDING THE REQUESTED FUNCTION BLOCK HERE
