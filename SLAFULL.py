@@ -37,7 +37,7 @@ def main():
     # Load and display logo from GitHub
     url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
     logo = load_logo(url)
-    st.sidebar.image(logo, use_column_width=True)
+    st.sidebar.image(logo, use_container_width=True)
 
     # Load Excel file from GitHub if available
     df = load_excel_from_github()
