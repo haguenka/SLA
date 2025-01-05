@@ -195,7 +195,7 @@ def main():
         # Ordena e exibe
         df_fora = df_fora.sort_values(by='PERIODO_ORDER', ascending=True)
 
-        st.subheader("Exames SLA FORA DO PERÍODO (ordenados por período do dia)")
+        st.subheader("Exames SLA FORA DO PRAZO (ordenados por período do dia)")
         st.dataframe(df_fora.drop(columns=['PERIODO_ORDER']))
 
         # 4.1) Contagem total de cada período
@@ -207,7 +207,7 @@ def main():
             'Contagem': contagem_periodo.values
         })
 
-        st.write("Contagem total de cada período (somente exames SLA FORA DO PERÍODO):")
+        st.subheader("Contagem total de cada período (somente exames SLA FORA DO PRAZO):")
         st.dataframe(contagem_periodo_df)
 
         # ----------------------------------------------------------- #
