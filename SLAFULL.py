@@ -58,14 +58,18 @@ def main():
             st.error("'MEDICO_SOLICITANTE' column not found in the data.")
             return
 
-        # Standardize 'MEDICO_SOLICITANTE' column to handle any inconsistencies in casing or extra spaces
+        # Standardize 'MEDICO_SOLICITANTE' column
         df['MEDICO_SOLICITANTE'] = df['MEDICO_SOLICITANTE'].astype(str).str.strip().str.lower()
 
         # Filter by GRUPO to include only specific groups
-        allowed_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO RAIO-X', 'GRUPO MAMOGRAFIA', 'GRUPO MEDICINA NUCLEAR', 'GRUPO ULTRASSOM']
+        allowed_groups = [
+            'GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA',
+            'GRUPO RAIO-X', 'GRUPO MAMOGRAFIA',
+            'GRUPO MEDICINA NUCLEAR', 'GRUPO ULTRASSOM'
+        ]
         df = df[df['GRUPO'].isin(allowed_groups)]
 
-        # Parse the relevant datetime columns explicitly with dayfirst=True
+        # Convert the relevant columns to datetime
         df['STATUS_ALAUDAR'] = pd.to_datetime(df['STATUS_ALAUDAR'], dayfirst=True, errors='coerce')
         df['STATUS_PRELIMINAR'] = pd.to_datetime(df['STATUS_PRELIMINAR'], dayfirst=True, errors='coerce')
         df['STATUS_APROVADO'] = pd.to_datetime(df['STATUS_APROVADO'], dayfirst=True, errors='coerce')
@@ -81,13 +85,17 @@ def main():
         # Calculate DELTA_TIME excluding weekends, except for 'Pronto Atendimento'
         df['END_DATE'] = df['STATUS_PRELIMINAR'].fillna(df['STATUS_APROVADO'])
         df['DELTA_TIME'] = df.apply(
-            lambda row: (np.busday_count(row['STATUS_ALAUDAR'].date(), row['END_DATE'].date()) * 24) + ((row['END_DATE'] - row['STATUS_ALAUDAR']).seconds // 3600)
-            if row['TIPO_ATENDIMENTO'] != 'Pronto Atendimento' and not pd.isna(row['STATUS_ALAUDAR']) and not pd.isna(row['END_DATE'])
+            lambda row: (
+                np.busday_count(row['STATUS_ALAUDAR'].date(), row['END_DATE'].date()) * 24
+            ) + ((row['END_DATE'] - row['STATUS_ALAUDAR']).seconds // 3600)
+            if row['TIPO_ATENDIMENTO'] != 'Pronto Atendimento'
+               and not pd.isna(row['STATUS_ALAUDAR'])
+               and not pd.isna(row['END_DATE'])
             else (row['END_DATE'] - row['STATUS_ALAUDAR']).total_seconds() / 3600,
             axis=1
         )
 
-        # Define the conditions for SLA violations
+        # Define conditions for SLA violations
         doctors_of_interest = ['henrique arume guenka', 'marcelo jacobina de abreu']
         condition_1 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (df['MEDICO_SOLICITANTE'].isin(doctors_of_interest)) & (df['DELTA_TIME'] > (10 * 24))
         condition_2 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (~df['MEDICO_SOLICITANTE'].isin(doctors_of_interest)) & (df['DELTA_TIME'] > 120)
@@ -97,7 +105,6 @@ def main():
         condition_6 = (df['TIPO_ATENDIMENTO'] == 'Internado') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 24)
         condition_7 = (df['TIPO_ATENDIMENTO'] == 'Externo') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 96)
 
-        # Set the default SLA status and apply conditions
         df['SLA_STATUS'] = 'SLA DENTRO DO PERÍODO'
         df.loc[condition_1 | condition_2 | condition_3 | condition_4 | condition_5 | condition_6 | condition_7, 'SLA_STATUS'] = 'SLA FORA DO PERÍODO'
 
@@ -105,15 +112,40 @@ def main():
         if 'OBSERVACAO' not in df.columns:
             df['OBSERVACAO'] = ''
 
-        # Select only relevant columns
+        # ---------------------------------------------------------------------------- #
+        # ADIÇÃO: Criar a coluna PERIODO_DIA de acordo com o horário de STATUS_ALAUDAR
+        # ---------------------------------------------------------------------------- #
+
+        def calcular_periodo_dia(dt):
+            """Retorna 'Manhã', 'Tarde', 'Noite' ou 'Madrugada' de acordo com a hora."""
+            if pd.isna(dt):
+                return None
+            hora = dt.hour
+            if 0 <= hora < 7:
+                return "Madrugada"
+            elif 7 <= hora < 13:
+                return "Manhã"
+            elif 13 <= hora < 19:
+                return "Tarde"
+            else:
+                return "Noite"
+
+        df['PERIODO_DIA'] = df['STATUS_ALAUDAR'].apply(calcular_periodo_dia)
+
+        # ---------------------------------------------------------------------------- #
+        # Selecionar colunas relevantes (adicionando 'PERIODO_DIA')
+        # ---------------------------------------------------------------------------- #
         selected_columns = [
-            'SAME', 'NOME_PACIENTE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO', 'MEDICO_LAUDO_DEFINITIVO',
-            'UNIDADE', 'TIPO_ATENDIMENTO', 'STATUS_ALAUDAR', 'STATUS_PRELIMINAR', 'STATUS_APROVADO', 'MEDICO_SOLICITANTE', 'DELTA_TIME', 'SLA_STATUS', 'OBSERVACAO'
+            'SAME', 'NOME_PACIENTE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO',
+            'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE', 'TIPO_ATENDIMENTO',
+            'STATUS_ALAUDAR', 'STATUS_PRELIMINAR', 'STATUS_APROVADO',
+            'MEDICO_SOLICITANTE', 'DELTA_TIME', 'SLA_STATUS', 'OBSERVACAO',
+            'PERIODO_DIA'  # ADIÇÃO
         ]
 
         df_selected = df[selected_columns]
 
-        # Sidebar dropdown for selecting UNIDADE, GRUPO, and TIPO_ATENDIMENTO
+        # Sidebar filters
         unidade_options = df['UNIDADE'].unique()
         selected_unidade = st.sidebar.selectbox("Selecione a UNIDADE", sorted(unidade_options))
 
@@ -123,39 +155,77 @@ def main():
         tipo_atendimento_options = df['TIPO_ATENDIMENTO'].unique()
         selected_tipo_atendimento = st.sidebar.selectbox("Selecione o Tipo de Atendimento", sorted(tipo_atendimento_options))
 
-        # Date range selection
+        # Date range
         min_date = df['STATUS_ALAUDAR'].min()
         max_date = df['STATUS_ALAUDAR'].max()
         start_date, end_date = st.sidebar.date_input("Selecione o periodo", [min_date, max_date])
 
-        # Filter dataframe based on selected UNIDADE, GRUPO, TIPO_ATENDIMENTO, and date range
-        df_filtered = df_selected[(df_selected['UNIDADE'] == selected_unidade) &
-                                  (df_selected['GRUPO'] == selected_grupo) &
-                                  (df_selected['TIPO_ATENDIMENTO'] == selected_tipo_atendimento) &
-                                  (df_selected['STATUS_ALAUDAR'] >= pd.Timestamp(start_date)) &
-                                  (df_selected['STATUS_ALAUDAR'] <= pd.Timestamp(end_date))]
+        # Filter the dataframe
+        df_filtered = df_selected[
+            (df_selected['UNIDADE'] == selected_unidade) &
+            (df_selected['GRUPO'] == selected_grupo) &
+            (df_selected['TIPO_ATENDIMENTO'] == selected_tipo_atendimento) &
+            (df_selected['STATUS_ALAUDAR'] >= pd.Timestamp(start_date)) &
+            (df_selected['STATUS_ALAUDAR'] <= pd.Timestamp(end_date))
+        ]
 
-        # Display the filtered dataframe
+        # Exibe o primeiro DataFrame (todos registros do filtro)
         st.dataframe(df_filtered)
 
-        # Display total number of exams
+        # Exibição do total de exames
         total_exams = len(df_filtered)
         st.write(f"Total number of exams: {total_exams}")
 
-        # Generate SLA_STATUS pie chart
-        sla_status_counts = df_filtered['SLA_STATUS'].value_counts()
-        colors = ['lightcoral' if status == 'SLA FORA DO PERÍODO' else 'lightgreen' for status in sla_status_counts.index]
-        fig, ax = plt.subplots()
-        ax.pie(sla_status_counts, labels=sla_status_counts.index, autopct='%1.1f%%', colors=colors)
-        ax.set_title(f'SLA Status - {selected_unidade} - {selected_grupo} - {selected_tipo_atendimento}')
+        # ---------------------------------------------------------------------------- #
+        # ADIÇÃO: DataFrame SOMENTE "SLA FORA DO PERÍODO", ordenado por PERIODO_DIA
+        # ---------------------------------------------------------------------------- #
 
-        # Add logo to bottom left corner of the pie chart
-        logo = Image.open(BytesIO(requests.get(url).content))
-        logo.thumbnail((400, 400))
-        fig.figimage(logo, 10, 10, zorder=1, alpha=0.7)
+        # Filtra os registros SLA FORA DO PERÍODO
+        df_fora = df_filtered[df_filtered['SLA_STATUS'] == 'SLA FORA DO PERÍODO'].copy()
 
-        # Display the pie chart
-        st.pyplot(fig)
+        # Para ordenar de forma customizada, criamos um dicionário de pesos
+        periodo_order = {
+            "Madrugada": 1,
+            "Manhã": 2,
+            "Tarde": 3,
+            "Noite": 4
+        }
+        df_fora['PERIODO_ORDER'] = df_fora['PERIODO_DIA'].map(periodo_order)
+
+        # Ordenar pelo período do dia
+        df_fora = df_fora.sort_values(by='PERIODO_ORDER', ascending=True)
+
+        # Exibir o segundo DataFrame
+        st.subheader("Exames SLA FORA DO PERÍODO (ordenados por período do dia)")
+        st.dataframe(df_fora.drop(columns=['PERIODO_ORDER']))
+
+        # ---------------------------------------------------------------------------- #
+        # Pie chart do status de SLA
+        # ---------------------------------------------------------------------------- #
+
+        if not df_filtered.empty:
+            sla_status_counts = df_filtered['SLA_STATUS'].value_counts()
+            colors = [
+                'lightcoral' if status == 'SLA FORA DO PERÍODO' else 'lightgreen'
+                for status in sla_status_counts.index
+            ]
+            fig, ax = plt.subplots()
+            ax.pie(
+                sla_status_counts,
+                labels=sla_status_counts.index,
+                autopct='%1.1f%%',
+                colors=colors
+            )
+            ax.set_title(f'SLA Status - {selected_unidade} - {selected_grupo} - {selected_tipo_atendimento}')
+
+            # Add logo to bottom left corner of the pie chart
+            logo = Image.open(BytesIO(requests.get(url).content))
+            logo.thumbnail((400, 400))
+            fig.figimage(logo, 10, 10, zorder=1, alpha=0.7)
+
+            st.pyplot(fig)
+        else:
+            st.warning("Nenhum registro encontrado para este filtro.")
 
     except Exception as e:
         st.error(f"Erro ao processar o arquivo: {e}")
