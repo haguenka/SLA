@@ -142,8 +142,7 @@ try:
     st.markdown(f"<h3 style='color:#f0ad4e;'>Total Events for LAUDO PRELIMINAR: {total_preliminar_events}</h3>", unsafe_allow_html=True)
     st.markdown(f"<h3 style='color:#4682b4;'>Total Events for LAUDO APROVADO: {total_aprovado_events}</h3>", unsafe_allow_html=True)
 
-    # Before displaying, remove seconds from STATUS_APROVADO by formatting
-    # We'll do this on the combined doctor_all_events DataFrame
+    # Combine both preliminar and aprovado data for display (removing seconds from STATUS_APROVADO)
     doctor_all_events = pd.concat([preliminar_df, aprovado_df], ignore_index=True)
     if not doctor_all_events.empty:
         doctor_all_events['STATUS_APROVADO'] = doctor_all_events['STATUS_APROVADO'].dt.strftime('%Y-%m-%d %H:%M')
@@ -190,20 +189,15 @@ try:
     st.markdown(f"<h2 style='color:red;'>Total Points for All Modalities: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<h2 style='color:red;'>Total Count for All Modalities: {total_count_sum}</h2>", unsafe_allow_html=True)
 
-
-    # ---------------------------------------------
-    # ADDING THE REQUESTED FUNCTION BLOCK HERE
-    # ---------------------------------------------
-    # We now want to show LAUDO APROVADO and LAUDO PRELIMINAR counts for each period
-    # We'll compute a merged DataFrame that contains both PRELIMINAR_COUNT and APROVADO_COUNT.
-
-    # Filter preliminar_df and aprovado_df for only the "TOMOGRAFIA" and "RESSONANCIA" modalities
+    # ------------------------------------------------------------------------------------
+    # SHOWING LAUDO PRELIMINAR AND LAUDO APROVADO COUNTS FOR TOMOGRAFIA E RESSONANCIA
+    # ------------------------------------------------------------------------------------
     valid_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA']
 
     preliminar_filtered = preliminar_df[preliminar_df['GRUPO'].isin(valid_groups)]
     aprovado_filtered = aprovado_df[aprovado_df['GRUPO'].isin(valid_groups)]
 
-    # For preliminar_df
+    # For PRELIMINAR
     if not preliminar_filtered.empty:
         preliminar_filtered['DAY_OF_WEEK'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.day_name().map(day_translations)
         preliminar_filtered['DATE'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.date.astype(str)
@@ -216,7 +210,7 @@ try:
     else:
         preliminar_days_grouped = pd.DataFrame(columns=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD', 'PRELIMINAR_COUNT'])
 
-    # For aprovado_df
+    # For APROVADO
     if not aprovado_filtered.empty:
         aprovado_filtered['DAY_OF_WEEK'] = aprovado_filtered['STATUS_APROVADO'].dt.day_name().map(day_translations)
         aprovado_filtered['DATE'] = aprovado_filtered['STATUS_APROVADO'].dt.date.astype(str)
@@ -230,38 +224,40 @@ try:
         aprovado_days_grouped = pd.DataFrame(columns=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD', 'APROVADO_COUNT'])
 
     # Merge both
-    days_merged = pd.merge(preliminar_days_grouped, aprovado_days_grouped,
-                           on=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'], how='outer')
-    days_merged = days_merged.fillna(0)
-    
+    days_merged = pd.merge(
+        preliminar_days_grouped, 
+        aprovado_days_grouped,
+        on=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'], 
+        how='outer'
+    ).fillna(0)
+
     # Convert to integers to avoid decimals
     days_merged['PRELIMINAR_COUNT'] = days_merged['PRELIMINAR_COUNT'].astype(int)
     days_merged['APROVADO_COUNT'] = days_merged['APROVADO_COUNT'].astype(int)
-    
+
     # Enforce the desired order of periods
     period_order = ['Manhã', 'Tarde', 'Noite', 'Madrugada']
     days_merged['PERIOD'] = pd.Categorical(days_merged['PERIOD'], categories=period_order, ordered=True)
     days_merged = days_merged.sort_values('PERIOD')
-    
+
     # Styling for the DataFrame
     def color_rows(row):
         return [
             f'background-color: {period_colors.get(row["PERIOD"], "white")}; color: white'
             for _ in row.index
         ]
-    
+
     styled_df = days_merged.style.apply(color_rows, axis=1)
-    
+
     st.markdown("### LAUDO PRELIMINAR and LAUDO APROVADO Counts by Period (Tomografia and Ressonancia)")
     st.dataframe(styled_df, width=1200, height=400)
-
-
 
 except Exception as e:
     st.error(f"An error occurred: {e}")
 
-
-# Export summary and doctors' dataframes as a combined PDF report
+# -----------------------------------------------------------------------------
+# EXPORT SUMMARY AND DOCTORS DATAFRAMES AS A COMBINED PDF REPORT
+# -----------------------------------------------------------------------------
 if st.button('Export Summary and Doctors Dataframes as PDF'):
     try:
         pdf = FPDF(orientation='L', unit='mm', format='A4')
@@ -278,7 +274,7 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
         pdf.set_font('Arial', '', 18)
         pdf.cell(0, 10, f'Mês de {start_date.strftime("%B de %Y").capitalize()}', ln=True, align='C')
         pdf.ln(20)
-        # Add doctors name in uppercase, big and blue
+        # Add doctor's name in uppercase, big and blue
         pdf.set_font('Arial', 'B', 24)
         pdf.set_text_color(0, 0, 255)
         pdf.cell(0, 10, selected_doctor.upper(), ln=True, align='C')
@@ -294,27 +290,52 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
         pdf.cell(0, 10, f'Total Points for All Modalities: {total_points_sum}', ln=True)
         pdf.ln(10)
         
-        # Add days each doctor has events in table format
+        # -----------------------------------------------------------------------------
+        # Add "Days Each Doctor Has Events" in table format (using days_merged)
+        # -----------------------------------------------------------------------------
         pdf.add_page()
         pdf.set_font('Arial', 'B', 16)
         pdf.cell(0, 10, 'Days Each Doctor Has Events', ln=True, align='C')
         pdf.ln(10)
-        pdf.set_font('Arial', 'B', 10)
-        pdf.cell(50, 10, 'Doctor', 1, 0, 'C')
-        pdf.cell(30, 10, 'Date', 1, 0, 'C')
-        pdf.cell(30, 10, 'Day of Week', 1, 0, 'C')
-        pdf.cell(30, 10, 'Period', 1, 0, 'C')
-        pdf.cell(30, 10, 'Event Count', 1, 1, 'C')
-        pdf.set_font('Arial', '', 10)
-        for _, row in days_grouped.iterrows():
-            pdf.cell(50, 10, row['MEDICO_LAUDO_DEFINITIVO'], 1, 0, 'L')
-            pdf.cell(30, 10, row['DATE'], 1, 0, 'C')
-            pdf.cell(30, 10, row['DAY_OF_WEEK'], 1, 0, 'C')
-            pdf.cell(30, 10, row['PERIOD'], 1, 0, 'C')
-            pdf.cell(30, 10, str(row['EVENT_COUNT']), 1, 1, 'C')
+
+        if not days_merged.empty:
+            # Table header
+            pdf.set_font('Arial', 'B', 10)
+            pdf.cell(50, 10, 'Doctor', 1, 0, 'C')
+            pdf.cell(30, 10, 'Date', 1, 0, 'C')
+            pdf.cell(30, 10, 'Day of Week', 1, 0, 'C')
+            pdf.cell(30, 10, 'Period', 1, 0, 'C')
+            pdf.cell(30, 10, 'Preliminar', 1, 0, 'C')
+            pdf.cell(30, 10, 'Aprovado', 1, 1, 'C')
+
+            pdf.set_font('Arial', '', 10)
+            for _, row in days_merged.iterrows():
+                pdf.cell(50, 10, str(row['MEDICO']), 1, 0, 'L')
+                pdf.cell(30, 10, str(row['DATE']), 1, 0, 'C')
+                pdf.cell(30, 10, str(row['DAY_OF_WEEK']), 1, 0, 'C')
+                pdf.cell(30, 10, str(row['PERIOD']), 1, 0, 'C')
+                pdf.cell(30, 10, str(row['PRELIMINAR_COUNT']), 1, 0, 'C')
+                pdf.cell(30, 10, str(row['APROVADO_COUNT']), 1, 1, 'C')
+
+                # Page break if we exceed the height
+                if pdf.get_y() > 180:
+                    pdf.add_page()
+                    pdf.set_font('Arial', 'B', 10)
+                    pdf.cell(50, 10, 'Doctor', 1, 0, 'C')
+                    pdf.cell(30, 10, 'Date', 1, 0, 'C')
+                    pdf.cell(30, 10, 'Day of Week', 1, 0, 'C')
+                    pdf.cell(30, 10, 'Period', 1, 0, 'C')
+                    pdf.cell(30, 10, 'Preliminar', 1, 0, 'C')
+                    pdf.cell(30, 10, 'Aprovado', 1, 1, 'C')
+        else:
+            pdf.set_font('Arial', 'I', 12)
+            pdf.cell(0, 10, 'No events found in the selected date range/modality.', ln=True, align='C')
+
         pdf.ln(10)
         
+        # -----------------------------------------------------------------------------
         # Add hospital and modality dataframes to subsequent pages in table format
+        # -----------------------------------------------------------------------------
         for hospital in doctor_grouped['UNIDADE'].unique():
             pdf.add_page()
             pdf.set_font('Arial', 'B', 24)
@@ -327,7 +348,7 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
                 pdf.set_font('Arial', 'B', 12)
                 pdf.cell(0, 10, f'Modality: {grupo}', ln=True)
                 pdf.ln(10)
-                grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
+                grupo_df = hospital_df[hospital_df['GRUPO'] == grupo].copy()
                 grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
 
                 # Create table header
@@ -340,11 +361,17 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
                 # Add rows to the table
                 pdf.set_font('Arial', '', 10)
                 for _, row in grupo_df.iterrows():
-                    pdf.cell(80, 10, row['DESCRICAO_PROCEDIMENTO'][:30] + '...' if len(row['DESCRICAO_PROCEDIMENTO']) > 30 else row['DESCRICAO_PROCEDIMENTO'], 1, 0, 'L')
+                    procedure_text = row['DESCRICAO_PROCEDIMENTO']
+                    # Truncate if too long
+                    if len(procedure_text) > 30:
+                        procedure_text = procedure_text[:30] + '...'
+                    pdf.cell(80, 10, procedure_text, 1, 0, 'L')
                     pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
                     pdf.cell(30, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
                     pdf.cell(30, 10, f"{row['POINTS']:.1f}", 1, 1, 'C')
-                    if pdf.get_y() > 190:  # Add a new page if the current page is about to overflow
+
+                    # Check if we need a page break
+                    if pdf.get_y() > 180:  
                         pdf.add_page()
                         pdf.set_font('Arial', 'B', 10)
                         pdf.cell(80, 10, 'Procedure', 1, 0, 'C')
@@ -365,7 +392,7 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
         pdf.output(pdf_file_path)
         st.success('Combined report exported successfully! You can download the file from the link below:')
         with open(pdf_file_path, 'rb') as file:
-            btn = st.download_button(
+            st.download_button(
                 label='Download Combined PDF',
                 data=file,
                 file_name='Medical_Analysis_Combined_Report.pdf'
