@@ -301,7 +301,7 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
         if not days_merged.empty:
             # Table header
             pdf.set_font('Arial', 'B', 10)
-            pdf.cell(50, 10, 'MÉDICO', 1, 0, 'C')
+            pdf.cell(80, 10, 'MÉDICO', 1, 0, 'C')
             pdf.cell(30, 10, 'DATA', 1, 0, 'C')
             pdf.cell(30, 10, 'DIA DA SEMANA', 1, 0, 'C')
             pdf.cell(30, 10, 'PERÍODO', 1, 0, 'C')
@@ -310,7 +310,7 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
 
             pdf.set_font('Arial', '', 10)
             for _, row in days_merged.iterrows():
-                pdf.cell(50, 10, str(row['MEDICO']), 1, 0, 'L')
+                pdf.cell(80, 10, str(row['MEDICO']), 1, 0, 'L')
                 pdf.cell(30, 10, str(row['DATE']), 1, 0, 'C')
                 pdf.cell(30, 10, str(row['DAY_OF_WEEK']), 1, 0, 'C')
                 pdf.cell(30, 10, str(row['PERIOD']), 1, 0, 'C')
@@ -321,7 +321,7 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
                 if pdf.get_y() > 180:
                     pdf.add_page()
                     pdf.set_font('Arial', 'B', 10)
-                    pdf.cell(50, 10, 'MÉDICO', 1, 0, 'C')
+                    pdf.cell(80, 10, 'MÉDICO', 1, 0, 'C')
                     pdf.cell(30, 10, 'DATA', 1, 0, 'C')
                     pdf.cell(30, 10, 'DIA DA SEMANA', 1, 0, 'C')
                     pdf.cell(30, 10, 'PERÍODO', 1, 0, 'C')
@@ -359,7 +359,7 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
                 pdf.cell(30, 10, 'Points', 1, 1, 'C')
 
                 # Add rows to the table
-                pdf.set_font('Arial', '', 10)
+                pdf.set_font('Arial', 'B', 10)
                 for _, row in grupo_df.iterrows():
                     procedure_text = row['DESCRICAO_PROCEDIMENTO']
                     # Truncate if too long
