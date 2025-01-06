@@ -301,12 +301,12 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
         if not days_merged.empty:
             # Table header
             pdf.set_font('Arial', 'B', 10)
-            pdf.cell(50, 10, 'Doctor', 1, 0, 'C')
-            pdf.cell(30, 10, 'Date', 1, 0, 'C')
-            pdf.cell(30, 10, 'Day of Week', 1, 0, 'C')
-            pdf.cell(30, 10, 'Period', 1, 0, 'C')
-            pdf.cell(30, 10, 'Preliminar', 1, 0, 'C')
-            pdf.cell(30, 10, 'Aprovado', 1, 1, 'C')
+            pdf.cell(50, 10, 'MÉDICO', 1, 0, 'C')
+            pdf.cell(30, 10, 'DATA', 1, 0, 'C')
+            pdf.cell(30, 10, 'DIA DA SEMANA', 1, 0, 'C')
+            pdf.cell(30, 10, 'PERÍODO', 1, 0, 'C')
+            pdf.cell(30, 10, 'PRELIMINAR', 1, 0, 'C')
+            pdf.cell(30, 10, 'APROVADO', 1, 1, 'C')
 
             pdf.set_font('Arial', '', 10)
             for _, row in days_merged.iterrows():
@@ -321,12 +321,12 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
                 if pdf.get_y() > 180:
                     pdf.add_page()
                     pdf.set_font('Arial', 'B', 10)
-                    pdf.cell(50, 10, 'Doctor', 1, 0, 'C')
-                    pdf.cell(30, 10, 'Date', 1, 0, 'C')
-                    pdf.cell(30, 10, 'Day of Week', 1, 0, 'C')
-                    pdf.cell(30, 10, 'Period', 1, 0, 'C')
-                    pdf.cell(30, 10, 'Preliminar', 1, 0, 'C')
-                    pdf.cell(30, 10, 'Aprovado', 1, 1, 'C')
+                    pdf.cell(50, 10, 'MÉDICO', 1, 0, 'C')
+                    pdf.cell(30, 10, 'DATA', 1, 0, 'C')
+                    pdf.cell(30, 10, 'DIA DA SEMANA', 1, 0, 'C')
+                    pdf.cell(30, 10, 'PERÍODO', 1, 0, 'C')
+                    pdf.cell(30, 10, 'PRELIMINAR', 1, 0, 'C')
+                    pdf.cell(30, 10, 'APROVADO', 1, 1, 'C')
         else:
             pdf.set_font('Arial', 'I', 12)
             pdf.cell(0, 10, 'No events found in the selected date range/modality.', ln=True, align='C')
