@@ -284,10 +284,10 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
         # Add summary sheet
         pdf.add_page()
         pdf.set_font('Arial', 'B', 16)
-        pdf.cell(0, 10, 'Medical Analysis Summary Report', ln=True, align='C')
+        pdf.cell(0, 10, 'RELATÓRIO DE PRODUÇÃO MÉDICA', ln=True, align='C')
         pdf.ln(10)
         pdf.set_font('Arial', '', 16)
-        pdf.cell(0, 10, f'Total Points for All Modalities: {total_points_sum}', ln=True)
+        pdf.cell(0, 10, f'Total de Pontos por Exames Aprovados: {total_points_sum}', ln=True)
         pdf.ln(10)
         
         # -----------------------------------------------------------------------------
@@ -295,7 +295,7 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
         # -----------------------------------------------------------------------------
         pdf.add_page()
         pdf.set_font('Arial', 'B', 16)
-        pdf.cell(0, 10, 'Days Each Doctor Has Events', ln=True, align='C')
+        pdf.cell(0, 10, 'PERÍODOS/PLANTÃO COM EVENTOS REALIZADOS', ln=True, align='C')
         pdf.ln(10)
 
         if not days_merged.empty:
