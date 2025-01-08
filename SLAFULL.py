@@ -210,6 +210,18 @@ def main():
         st.subheader("Contagem total de cada período (somente exames SLA FORA DO PRAZO):")
         st.dataframe(contagem_periodo_df)
 
+        # 4.2) Contagem total de cada período (total)
+        # value_counts() retorna um Series com PERIODO_DIA -> contagem
+        contagem_periodo_total = df_filtered['PERIODO_DIA'].value_counts()
+        # Transformar em DataFrame para exibir
+        contagem_periodo_total_df = pd.DataFrame({
+            'PERIODO_DIA': contagem_periodo_total.index,
+            'Contagem': contagem_periodo_total.values
+        })
+
+        st.subheader("Contagem total de cada período (todos os exames):")
+        st.dataframe(contagem_periodo_total_df)
+
         # ----------------------------------------------------------- #
         # 5) Gráfico de Pizza (SLA Status)                           #
         # ----------------------------------------------------------- #
