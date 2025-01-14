@@ -29,7 +29,7 @@ def load_excel_from_github():
         return None
 
 def main():
-    st.title("Análise de SLA Dashboard")
+    st.title("Análise IBAM")
 
     # Load and display logo from GitHub
     url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
@@ -61,6 +61,9 @@ def main():
 
         # Padroniza 'MEDICO_SOLICITANTE'
         df['MEDICO_SOLICITANTE'] = df['MEDICO_SOLICITANTE'].astype(str).str.strip().str.lower()
+
+        # Exclude rows with NaN in 'MEDICO_SOLICITANTE'
+        df = df[~df['MEDICO_SOLICITANTE'].isna()]
 
         # Filtro de grupos
         allowed_groups = [
@@ -101,6 +104,11 @@ def main():
             ax.set_title("Top 10 Médicos Solicitantes")
             ax.set_ylabel("Quantidade de Solicitações")
             ax.set_xlabel("Médicos")
+
+            # Annotate with total counts
+            for i, v in enumerate(top_doctors):
+                ax.text(i, v + 0.5, str(v), ha='center', va='bottom', fontsize=10)
+
             st.pyplot(fig)
         else:
             st.write("Nenhum dado disponível para o filtro selecionado.")
