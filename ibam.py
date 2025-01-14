@@ -62,8 +62,8 @@ def main():
         # Padroniza 'MEDICO_SOLICITANTE'
         df['MEDICO_SOLICITANTE'] = df['MEDICO_SOLICITANTE'].astype(str).str.strip().str.lower()
 
-        # Exclude rows with NaN in 'MEDICO_SOLICITANTE'
-        df = df[~df['MEDICO_SOLICITANTE'].isna()]
+        # Exclude rows with NaN in 'MEDICO_SOLICITANTE', 'UNIDADE', or 'TIPO_ATENDIMENTO'
+        df = df.dropna(subset=['MEDICO_SOLICITANTE', 'UNIDADE', 'TIPO_ATENDIMENTO'])
 
         # Filtro de grupos
         allowed_groups = [
@@ -82,9 +82,9 @@ def main():
         df = df.dropna(subset=['STATUS_PRELIMINAR', 'STATUS_APROVADO'], how='all')
 
         # Selections
-        unidade = st.sidebar.selectbox("Selecione a Unidade", options=df['UNIDADE'].unique())
+        unidade = st.sidebar.selectbox("Selecione a Unidade", options=df['UNIDADE'].dropna().unique())
         date_range = st.sidebar.date_input("Selecione o Período", [])
-        tipo_atendimento = st.sidebar.selectbox("Selecione o Tipo de Atendimento", options=df['TIPO_ATENDIMENTO'].unique())
+        tipo_atendimento = st.sidebar.selectbox("Selecione o Tipo de Atendimento", options=df['TIPO_ATENDIMENTO'].dropna().unique())
 
         # Filtrar com base nas seleções
         filtered_df = df[(df['UNIDADE'] == unidade) & (df['TIPO_ATENDIMENTO'] == tipo_atendimento)]
