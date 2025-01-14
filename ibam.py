@@ -107,9 +107,9 @@ def main():
             .unstack(fill_value=0)
         )
 
-        # Add total count per group
+        # Add total count per group using pd.concat
         group_totals = top_doctor_exam_counts.sum().rename('Total')
-        top_doctor_exam_counts = top_doctor_exam_counts.append(group_totals)
+        top_doctor_exam_counts = pd.concat([top_doctor_exam_counts, group_totals.to_frame().T])
 
         st.subheader("Contagem de Exames por Médico (Top 10)")
         st.dataframe(top_doctor_exam_counts)
