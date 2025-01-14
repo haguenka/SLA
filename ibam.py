@@ -87,7 +87,7 @@ def main():
         filtered_df = df[(df['UNIDADE'] == unidade) & (df['TIPO_ATENDIMENTO'] == tipo_atendimento)]
         if date_range:
             if len(date_range) == 2:
-                start_date, end_date = date_range
+                start_date, end_date = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])
                 filtered_df = filtered_df[(filtered_df['STATUS_ALAUDAR'] >= start_date) & (filtered_df['STATUS_ALAUDAR'] <= end_date)]
 
         # Calcular os top 10 médicos solicitantes
