@@ -93,8 +93,22 @@ def main():
                 start_date, end_date = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])
                 filtered_df = filtered_df[(filtered_df['STATUS_ALAUDAR'] >= start_date) & (filtered_df['STATUS_ALAUDAR'] <= end_date)]
 
+        # Display filtered data
+        st.subheader("Dados Filtrados")
+        st.dataframe(filtered_df)
+
         # Calcular os top 10 médicos solicitantes
         top_doctors = filtered_df['MEDICO_SOLICITANTE'].value_counts().head(10)
+
+        # Contar exames por médico (apenas para os top 10)
+        top_doctor_exam_counts = (
+            filtered_df[filtered_df['MEDICO_SOLICITANTE'].isin(top_doctors.index)]
+            .groupby(['MEDICO_SOLICITANTE', 'GRUPO']).size()
+            .unstack(fill_value=0)
+        )
+
+        st.subheader("Contagem de Exames por Médico (Top 10)")
+        st.dataframe(top_doctor_exam_counts)
 
         # Gerar gráfico
         st.subheader("Top 10 Médicos Solicitantes")
