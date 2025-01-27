@@ -123,6 +123,9 @@ try:
     doctor_list = filtered_df['MEDICO_LAUDO_DEFINITIVO'].unique()
     selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list, key='doctor_selectbox')
 
+    # Payment input for the selected doctor and period
+    payment = st.sidebar.number_input('Payment Received (BRL)', min_value=0.0, format='%.2f', key='payment_input')
+
     # Show the selected doctor's name on top in red and big letters
     st.markdown(f"<h1 style='color:red;'>{selected_doctor}</h1>", unsafe_allow_html=True)
 
@@ -141,6 +144,14 @@ try:
     total_aprovado_events = len(aprovado_df)
     st.markdown(f"<h3 style='color:#f0ad4e;'>Total Events for LAUDO PRELIMINAR: {total_preliminar_events}</h3>", unsafe_allow_html=True)
     st.markdown(f"<h3 style='color:#4682b4;'>Total Events for LAUDO APROVADO: {total_aprovado_events}</h3>", unsafe_allow_html=True)
+
+    # Calculate and display payment details
+    if total_aprovado_events > 0:
+        unitary_value = payment / total_aprovado_events
+    else:
+        unitary_value = 0.0
+    st.markdown(f"<h3 style='color:green;'>Payment Received: R$ {payment:,.2f}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:green;'>Unitary Value per Event: R$ {unitary_value:,.2f}</h3>", unsafe_allow_html=True)
 
     # Combine both preliminar and aprovado data for display (removing seconds from STATUS_APROVADO)
     doctor_all_events = pd.concat([preliminar_df, aprovado_df], ignore_index=True)
@@ -287,7 +298,14 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
         pdf.cell(0, 10, 'RELATÓRIO DE PRODUÇÃO MÉDICA', ln=True, align='C')
         pdf.ln(10)
         pdf.set_font('Arial', '', 16)
-        pdf.cell(0, 10, f'Total de Pontos por Exames Aprovados: {total_points_sum}', ln=True)
+        pdf.cell(0, 10, f'Total de Pontos por Exames Aprovados: {total_points_sum:.1f}', ln=True)
+        pdf.cell(0, 10, f'Total de Exames Aprovados: {total_aprovado_events}', ln=True)
+        pdf.cell(0, 10, f'Pagamento Recebido: R$ {payment:,.2f}', ln=True)
+        if total_aprovado_events > 0:
+            unitary_value_pdf = payment / total_aprovado_events
+        else:
+            unitary_value_pdf = 0.0
+        pdf.cell(0, 10, f'Valor Unitário por Evento: R$ {unitary_value_pdf:,.2f}', ln=True)
         pdf.ln(10)
         
         # -----------------------------------------------------------------------------
