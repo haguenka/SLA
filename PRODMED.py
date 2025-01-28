@@ -194,7 +194,7 @@ try:
     st.markdown(f"<h2 style='color:red;'>Total Points: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<h2 style='color:red;'>Total Value: R$ {total_point_value_sum:.2f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<h2 style='color:red;'>Total Exams: {total_count_sum}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.4f}/point</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.2f}/point</h2>", unsafe_allow_html=True)
 
 
     # ------------------------------------------------------------------------------------
