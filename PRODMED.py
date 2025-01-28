@@ -66,11 +66,6 @@ def load_payment_data(payment_url):
         # Standardize column names
         all_payments.rename(columns={'medico': 'DOCTOR', 'total': 'PAYMENT'}, inplace=True)
 
-        # Ensure MONTH_YEAR column exists
-        if 'MONTH_YEAR' not in all_payments.columns:
-            st.error("Error: MONTH_YEAR column is missing from the processed payment data.")
-            return pd.DataFrame()  # Return empty DataFrame to prevent further errors
-
         return all_payments
 
     except Exception as e:
