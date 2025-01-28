@@ -258,83 +258,156 @@ try:
 except Exception as e:
     st.error(f"An error occurred: {e}")
 
-    # PDF Generation
-    if st.button('Generate PDF Report'):
+# -----------------------------------------------------------------------------
+# EXPORT SUMMARY AND DOCTORS DATAFRAMES AS A COMBINED PDF REPORT
+# -----------------------------------------------------------------------------
+if st.button('Export Summary and Doctors Dataframes as PDF'):
+    try:
         pdf = FPDF(orientation='L', unit='mm', format='A4')
         pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.set_margins(10, 10, 10)
+        pdf.set_margins(left=5, top=5, right=5)
 
-        # Cover Page
+        # Create title sheet
         pdf.add_page()
         pdf.image(logo_url, x=80, y=30, w=120)
         pdf.set_font('Arial', 'B', 24)
         pdf.ln(100)
-        pdf.cell(0, 10, 'Medical Production Report', 0, 1, 'C')
+        pdf.cell(0, 10, 'Relatório de produção', ln=True, align='C')
+        pdf.ln(10)
         pdf.set_font('Arial', '', 18)
-        pdf.cell(0, 10, f'Period: {start_date.date()} to {end_date.date()}', 0, 1, 'C')
+        pdf.cell(0, 10, f'Mês de {start_date.strftime("%B de %Y").capitalize()}', ln=True, align='C')
         pdf.ln(20)
+        # Add doctor's name in uppercase, big and blue
         pdf.set_font('Arial', 'B', 24)
         pdf.set_text_color(0, 0, 255)
-        pdf.cell(0, 10, selected_doctor.upper(), 0, 1, 'C')
+        pdf.cell(0, 10, selected_doctor.upper(), ln=True, align='C')
         pdf.set_text_color(0, 0, 0)
-
-        # Summary Page
+        pdf.ln(20)
+        
+        # Add summary sheet
         pdf.add_page()
         pdf.set_font('Arial', 'B', 16)
-        pdf.cell(0, 10, 'Financial Summary', 0, 1)
-        pdf.set_font('Arial', '', 12)
-        pdf.cell(0, 10, f'Total Payment: R$ {payment:,.2f}', 0, 1)
-        pdf.cell(0, 10, f'Total Points: {total_points_sum:.1f}', 0, 1)
-        pdf.cell(0, 10, f'Point Value: R$ {unitary_point_value:.4f}/point', 0, 1)
-        pdf.cell(0, 10, f'Total Calculated Value: R$ {total_point_value_sum:.2f}', 0, 1)
+        pdf.cell(0, 10, 'RELATÓRIO DE PRODUÇÃO MÉDICA', ln=True, align='C')
+        pdf.ln(10)
+        pdf.set_font('Arial', '', 16)
+        pdf.cell(0, 10, f'Total de Pontos por Exames Aprovados: {total_points_sum:.1f}', ln=True)
+        pdf.cell(0, 10, f'Total de Exames Aprovados: {total_aprovado_events}', ln=True)
+        pdf.cell(0, 10, f'Pagamento Recebido: R$ {payment:,.2f}', ln=True)
+        if total_aprovado_events > 0:
+            unitary_value_pdf = payment / total_aprovado_events
+        else:
+            unitary_value_pdf = 0.0
+        pdf.cell(0, 10, f'Valor Unitário por Evento: R$ {unitary_value_pdf:,.2f}', ln=True)
+        pdf.ln(10)
+        
+        # -----------------------------------------------------------------------------
+        # Add "Days Each Doctor Has Events" in table format (using days_merged)
+        # -----------------------------------------------------------------------------
+        pdf.add_page()
+        pdf.set_font('Arial', 'B', 16)
+        pdf.cell(0, 10, 'PERÍODOS/PLANTÃO COM EVENTOS REALIZADOS', ln=True, align='C')
+        pdf.ln(10)
 
-        # Detailed Report
+        if not days_merged.empty:
+            # Table header
+            pdf.set_font('Arial', 'B', 10)
+            pdf.cell(80, 10, 'MÉDICO', 1, 0, 'C')
+            pdf.cell(30, 10, 'DATA', 1, 0, 'C')
+            pdf.cell(30, 10, 'DIA DA SEMANA', 1, 0, 'C')
+            pdf.cell(30, 10, 'PERÍODO', 1, 0, 'C')
+            pdf.cell(30, 10, 'PRELIMINAR', 1, 0, 'C')
+            pdf.cell(30, 10, 'APROVADO', 1, 1, 'C')
+
+            pdf.set_font('Arial', '', 10)
+            for _, row in days_merged.iterrows():
+                pdf.cell(80, 10, str(row['MEDICO']), 1, 0, 'L')
+                pdf.cell(30, 10, str(row['DATE']), 1, 0, 'C')
+                pdf.cell(30, 10, str(row['DAY_OF_WEEK']), 1, 0, 'C')
+                pdf.cell(30, 10, str(row['PERIOD']), 1, 0, 'C')
+                pdf.cell(30, 10, str(row['PRELIMINAR_COUNT']), 1, 0, 'C')
+                pdf.cell(30, 10, str(row['APROVADO_COUNT']), 1, 1, 'C')
+
+                # Page break if we exceed the height
+                if pdf.get_y() > 180:
+                    pdf.add_page()
+                    pdf.set_font('Arial', 'B', 10)
+                    pdf.cell(80, 10, 'MÉDICO', 1, 0, 'C')
+                    pdf.cell(30, 10, 'DATA', 1, 0, 'C')
+                    pdf.cell(30, 10, 'DIA DA SEMANA', 1, 0, 'C')
+                    pdf.cell(30, 10, 'PERÍODO', 1, 0, 'C')
+                    pdf.cell(30, 10, 'PRELIMINAR', 1, 0, 'C')
+                    pdf.cell(30, 10, 'APROVADO', 1, 1, 'C')
+        else:
+            pdf.set_font('Arial', 'I', 12)
+            pdf.cell(0, 10, 'No events found in the selected date range/modality.', ln=True, align='C')
+
+        pdf.ln(10)
+        
+        # -----------------------------------------------------------------------------
+        # Add hospital and modality dataframes to subsequent pages in table format
+        # -----------------------------------------------------------------------------
         for hospital in doctor_grouped['UNIDADE'].unique():
             pdf.add_page()
-            pdf.set_font('Arial', 'B', 20)
-            pdf.cell(0, 10, hospital, 0, 1)
+            pdf.set_font('Arial', 'B', 24)
+            pdf.set_text_color(0, 0, 255)
+            pdf.cell(0, 10, f'Hospital: {hospital}', ln=True, align='C')
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(10)
             hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
-            
             for grupo in hospital_df['GRUPO'].unique():
-                pdf.set_font('Arial', 'B', 14)
-                pdf.cell(0, 10, f'Modality: {grupo}', 0, 1)
-                grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
-                
-                # Table Header
+                pdf.set_font('Arial', 'B', 12)
+                pdf.cell(0, 10, f'Modality: {grupo}', ln=True)
+                pdf.ln(10)
+                grupo_df = hospital_df[hospital_df['GRUPO'] == grupo].copy()
+                grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
+
+                # Create table header
                 pdf.set_font('Arial', 'B', 10)
-                pdf.cell(80, 10, 'Procedure', 1, 0)
-                pdf.cell(20, 10, 'Count', 1, 0, 'C')
-                pdf.cell(20, 10, 'Multiplier', 1, 0, 'C')
-                pdf.cell(20, 10, 'Points', 1, 0, 'C')
-                pdf.cell(30, 10, 'Value', 1, 1, 'C')
-                
-                # Table Rows
-                pdf.set_font('Arial', '', 8)
+                pdf.cell(80, 10, 'Procedure', 1, 0, 'C')
+                pdf.cell(30, 10, 'Count', 1, 0, 'C')
+                pdf.cell(30, 10, 'Multiplier', 1, 0, 'C')
+                pdf.cell(30, 10, 'Points', 1, 1, 'C')
+
+                # Add rows to the table
+                pdf.set_font('Arial', 'B', 10)
                 for _, row in grupo_df.iterrows():
-                    procedure = row['DESCRICAO_PROCEDIMENTO'][:50] + '...' if len(row['DESCRICAO_PROCEDIMENTO']) > 50 else row['DESCRICAO_PROCEDIMENTO']
-                    pdf.cell(80, 10, procedure, 1, 0)
-                    pdf.cell(20, 10, str(row['COUNT']), 1, 0, 'C')
-                    pdf.cell(20, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
-                    pdf.cell(20, 10, f"{row['POINTS']:.1f}", 1, 0, 'C')
-                    pdf.cell(30, 10, f"R$ {row['POINT_VALUE']:.2f}", 1, 1, 'R')
+                    procedure_text = row['DESCRICAO_PROCEDIMENTO']
+                    # Truncate if too long
+                    if len(procedure_text) > 30:
+                        procedure_text = procedure_text[:30] + '...'
+                    pdf.cell(80, 10, procedure_text, 1, 0, 'L')
+                    pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
+                    pdf.cell(30, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
+                    pdf.cell(30, 10, f"{row['POINTS']:.1f}", 1, 1, 'C')
+
+                    # Check if we need a page break
+                    if pdf.get_y() > 180:  
+                        pdf.add_page()
+                        pdf.set_font('Arial', 'B', 10)
+                        pdf.cell(80, 10, 'Procedure', 1, 0, 'C')
+                        pdf.cell(30, 10, 'Count', 1, 0, 'C')
+                        pdf.cell(30, 10, 'Multiplier', 1, 0, 'C')
+                        pdf.cell(30, 10, 'Points', 1, 1, 'C')
                 
-                # Group Summary
+                # Summary for the modality
+                total_points = grupo_df['POINTS'].sum()
+                total_exams = grupo_df['COUNT'].sum()
+                pdf.ln(5)
                 pdf.set_font('Arial', 'B', 10)
-                pdf.cell(140, 10, f'Total {grupo}', 1, 0, 'R')
-                pdf.cell(20, 10, f"{grupo_df['POINTS'].sum():.1f}", 1, 0, 'C')
-                pdf.cell(30, 10, f"R$ {grupo_df['POINT_VALUE'].sum():.2f}", 1, 1, 'R')
-
-        # Save and offer download
-        pdf_file = "medical_report.pdf"
-        pdf.output(pdf_file)
+                pdf.cell(0, 10, f'Total Points for {grupo}: {total_points}', ln=True)
+                pdf.cell(0, 10, f'Total Number of Exams for {grupo}: {total_exams}', ln=True)
+                pdf.ln(10)
         
-        with open(pdf_file, "rb") as f:
+        pdf_file_path = 'Medical_Analysis_Combined_Report.pdf'
+        pdf.output(pdf_file_path)
+        st.success('Combined report exported successfully! You can download the file from the link below:')
+        with open(pdf_file_path, 'rb') as file:
             st.download_button(
-                label="Download Full Report",
-                data=f,
-                file_name=pdf_file,
-                mime="application/pdf"
+                label='Download Combined PDF',
+                data=file,
+                file_name='Medical_Analysis_Combined_Report.pdf'
             )
+    except Exception as e:
+        st.error(f'An error occurred while exporting the PDF: {e}')
 
-except Exception as e:
-    st.error(f"An error occurred: {str(e)}")
+
