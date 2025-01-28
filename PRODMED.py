@@ -61,16 +61,19 @@ def merge_hospital_names(df, column_name):
 # Load and display logo
 logo_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
 logo = load_image(logo_url)
-st.sidebar.image(logo, use_container_width=True)
+st.sidebar.image(logo, use_column_width=True)
 
 st.title('Medical Production Report')
 
 # Load data
 xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/baseslaM.xlsx'
 csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
+payment_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/pagamento.xlsx'  # Add the URL to your payment spreadsheet
 
 excel_df = load_excel_data(xlsx_url)
 csv_df = load_csv_data(csv_url)
+payment_df = load_excel_data(payment_url)  # Load the payment data
+
 csv_df.columns = csv_df.columns.str.strip()
 excel_df = merge_hospital_names(excel_df, "UNIDADE")
 
@@ -114,7 +117,15 @@ try:
 
     doctor_list = filtered_df['MEDICO_LAUDO_DEFINITIVO'].unique()
     selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
-    payment = st.sidebar.number_input('Payment Received (BRL)', min_value=0.0, format='%.2f')
+
+    # Automatically fill payment based on the selected month/year and doctor
+    payment_df['MONTH_YEAR'] = pd.to_datetime(payment_df['MONTH_YEAR']).dt.to_period('M')
+    doctor_payment = payment_df[
+        (payment_df['MONTH_YEAR'] == selected_month) &
+        (payment_df['DOCTOR'] == selected_doctor)
+    ]['PAYMENT'].sum()
+
+    payment = st.sidebar.number_input('Payment Received (BRL)', min_value=0.0, value=float(doctor_payment), format='%.2f')
 
     st.markdown(f"<h1 style='color:red;'>{selected_doctor}</h1>", unsafe_allow_html=True)
 
