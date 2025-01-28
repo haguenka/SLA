@@ -116,9 +116,20 @@ try:
 
     # Payment data loading and processing
     payment_file_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/pagamento.xlsx'
-    payment_data = pd.read_excel(payment_file_url, sheet_name=f"{month_names[selected_month - 1]} {selected_year}")
-    payment_data['DATE'] = pd.to_datetime(payment_data['DATE'], errors='coerce')
-    payment_data = payment_data[payment_data['DATE'].dt.month == selected_month]
+    payment_excel = pd.ExcelFile(payment_file_url)
+    available_sheets = payment_excel.sheet_names
+
+    # Attempt to match sheet name dynamically
+    formatted_sheet_name = f"{month_names[selected_month - 1].capitalize()} {selected_year}"
+    matched_sheet_name = next((sheet for sheet in available_sheets if formatted_sheet_name.lower() in sheet.lower()), None)
+
+    if matched_sheet_name:
+        # Read the matched sheet
+        payment_data = pd.read_excel(payment_excel, sheet_name=matched_sheet_name)
+        payment_data['DATE'] = pd.to_datetime(payment_data['DATE'], errors='coerce')
+        payment_data = payment_data[payment_data['DATE'].dt.month == selected_month]
+    else:
+        raise ValueError(f"Sheet matching '{formatted_sheet_name}' not found in {payment_file_url}")
 
     hospital_list = filtered_df['UNIDADE'].unique()
     selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
@@ -286,6 +297,7 @@ try:
 
 except Exception as e:
     st.error(f"An error occurred: {e}")
+
 
 
 # -----------------------------------------------------------------------------
