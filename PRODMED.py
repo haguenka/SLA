@@ -22,29 +22,52 @@ def load_csv_data(csv_url):
     response = requests.get(csv_url)
     return pd.read_csv(BytesIO(response.content))
 
-# Load and process payment data
 @st.cache_data
 def load_payment_data(payment_url):
-    # Load the Excel file
-    response = requests.get(payment_url)
-    xlsx_data = BytesIO(response.content)
-    excel_file = pd.ExcelFile(xlsx_data)
+    """
+    Loads payment data from an Excel file where each sheet represents a month/year,
+    with 'medico' and 'total' columns.
+    """
+    try:
+        # Load the Excel file
+        response = requests.get(payment_url)
+        xlsx_data = BytesIO(response.content)
+        excel_file = pd.ExcelFile(xlsx_data)
 
-    # Initialize an empty DataFrame to combine all sheets
-    all_payments = pd.DataFrame()
+        # Initialize an empty DataFrame to combine all sheets
+        all_payments = pd.DataFrame()
 
-    for sheet_name in excel_file.sheet_names:
-        # Load each sheet and extract the relevant columns
-        sheet_df = pd.read_excel(excel_file, sheet_name=sheet_name)
-        if 'medico' in sheet_df.columns and 'total' in sheet_df.columns:
-            # Add a column for month/year based on sheet name
-            sheet_df['MONTH_YEAR'] = pd.Period(sheet_name, freq='M')
-            all_payments = pd.concat([all_payments, sheet_df], ignore_index=True)
-    
-    # Standardize column names
-    all_payments.rename(columns={'medico': 'DOCTOR', 'total': 'PAYMENT'}, inplace=True)
-    
-    return all_payments
+        for sheet_name in excel_file.sheet_names:
+            try:
+                # Attempt to parse the sheet name as a valid period
+                month_year = pd.Period(sheet_name, freq='M')
+            except Exception as e:
+                # Skip sheets with invalid names
+                st.warning(f"Skipping invalid sheet name: {sheet_name} ({e})")
+                continue
+
+            # Load each sheet and extract the relevant columns
+            sheet_df = pd.read_excel(excel_file, sheet_name=sheet_name)
+            if 'medico' in sheet_df.columns and 'total' in sheet_df.columns:
+                # Add a column for month/year based on the sheet name
+                sheet_df['MONTH_YEAR'] = month_year
+                all_payments = pd.concat([all_payments, sheet_df], ignore_index=True)
+            else:
+                st.warning(f"Skipping sheet '{sheet_name}' due to missing columns ('medico', 'total').")
+
+        # Standardize column names
+        all_payments.rename(columns={'medico': 'DOCTOR', 'total': 'PAYMENT'}, inplace=True)
+
+        # Ensure MONTH_YEAR column exists
+        if 'MONTH_YEAR' not in all_payments.columns:
+            st.error("Error: MONTH_YEAR column is missing from the processed payment data.")
+            return pd.DataFrame()  # Return empty DataFrame to prevent further errors
+
+        return all_payments
+
+    except Exception as e:
+        st.error(f"Error loading payment data: {e}")
+        return pd.DataFrame()  # Return empty DataFrame in case of an error
 
 def assign_period(hour):
     if 0 <= hour < 7:
@@ -112,7 +135,7 @@ try:
     # Month/Year selection
     excel_df['MONTH_YEAR'] = excel_df['STATUS_APROVADO'].dt.to_period('M')
     available_months = sorted(excel_df['MONTH_YEAR'].dropna().unique())
-    
+
     if len(available_months) > 0:
         default_month = available_months[-1]
         month_options = [period.strftime("%B %Y") for period in available_months]
@@ -125,7 +148,7 @@ try:
         options=month_options, 
         index=len(month_options)-1
     )
-    
+
     selected_month = pd.Period(selected_month_str, freq='M')
     start_date = selected_month.start_time
     end_date = selected_month.end_time
@@ -143,17 +166,26 @@ try:
     selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
 
     # Automatically fill payment based on the selected month/year and doctor
-    doctor_payment = payment_df[
-        (payment_df['MONTH_YEAR'] == selected_month) &
-        (payment_df['DOCTOR'] == selected_doctor)
-    ]['PAYMENT'].sum()
+    if not payment_df.empty:
+        doctor_payment = payment_df[
+            (payment_df['MONTH_YEAR'] == selected_month) &
+            (payment_df['DOCTOR'] == selected_doctor)
+        ]['PAYMENT'].sum()
 
-    payment = st.sidebar.number_input(
-        'Payment Received (BRL)', 
-        min_value=0.0, 
-        value=float(doctor_payment), 
-        format='%.2f'
-    )
+        payment = st.sidebar.number_input(
+            'Payment Received (BRL)', 
+            min_value=0.0, 
+            value=float(doctor_payment), 
+            format='%.2f'
+        )
+    else:
+        st.error("Payment data could not be loaded. Please check the payment file.")
+        payment = st.sidebar.number_input(
+            'Payment Received (BRL)', 
+            min_value=0.0, 
+            value=0.0, 
+            format='%.2f'
+        )
 
     st.markdown(f"<h1 style='color:red;'>{selected_doctor}</h1>", unsafe_allow_html=True)
 
@@ -177,7 +209,7 @@ try:
         unitary_value = 0.0
     st.markdown(f"<h3 style='color:green;'>Payment: R$ {payment:,.2f}</h3>", unsafe_allow_html=True)
     st.markdown(f"<h3 style='color:green;'>Unitary Event Value: R$ {unitary_value:,.2f}</h3>", unsafe_allow_html=True)
-    
+
     doctor_all_events = pd.concat([preliminar_df, aprovado_df], ignore_index=True)
     if not doctor_all_events.empty:
         doctor_all_events['STATUS_APROVADO'] = doctor_all_events['STATUS_APROVADO'].dt.strftime('%Y-%m-%d %H:%M')
@@ -188,53 +220,6 @@ try:
         'STATUS_APROVADO', 'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE'
     ]
     st.dataframe(doctor_all_events[filtered_columns], width=1200, height=400)
-
-    # Points calculation
-    csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
-    aprovado_df['DESCRICAO_PROCEDIMENTO'] = aprovado_df['DESCRICAO_PROCEDIMENTO'].str.upper()
-    merged_df = pd.merge(aprovado_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
-    merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
-    merged_df['POINTS'] = (merged_df['STATUS_APROVADO'].notna().astype(int) * merged_df['MULTIPLIER']).round(1)
-
-    doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({
-        'MULTIPLIER': 'first',
-        'STATUS_APROVADO': 'count'
-    }).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
-    
-    doctor_grouped['POINTS'] = doctor_grouped['COUNT'] * doctor_grouped['MULTIPLIER']
-    total_points_sum = doctor_grouped['POINTS'].sum()
-    unitary_point_value = payment / total_points_sum if total_points_sum > 0 else 0.0
-    doctor_grouped['POINT_VALUE'] = doctor_grouped['POINTS'] * unitary_point_value
-
-    total_count_sum = doctor_grouped['COUNT'].sum()
-    total_point_value_sum = doctor_grouped['POINT_VALUE'].sum()
-
-    for hospital in doctor_grouped['UNIDADE'].unique():
-        hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
-        st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
-        for grupo in hospital_df['GRUPO'].unique():
-            grupo_df = hospital_df[hospital_df['GRUPO'] == grupo].copy()
-            total_points = grupo_df['POINTS'].sum()
-            total_point_value = grupo_df['POINT_VALUE'].sum()
-            total_count = grupo_df['COUNT'].sum()
-            
-            st.markdown(f"<h3 style='color:#0a84ff;'>{grupo}</h3>", unsafe_allow_html=True)
-            st.dataframe(grupo_df[[
-                'DESCRICAO_PROCEDIMENTO', 
-                'COUNT', 
-                'MULTIPLIER', 
-                'POINTS', 
-                'POINT_VALUE'
-            ]].style.format({'POINT_VALUE': "R$ {:.2f}"}))
-            
-            st.write(f"**Total Points: {total_points:.1f}**")
-            st.write(f"**Total Value: R$ {total_point_value:.2f}**")
-            st.write(f"**Total Exams: {total_count}**")
-
-    st.markdown(f"<h2 style='color:red;'>Total Points: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<h2 style='color:red;'>Total Value: R$ {total_point_value_sum:.2f}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<h2 style='color:red;'>Total Exams: {total_count_sum}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.4f}/point</h2>", unsafe_allow_html=True)
 
 except Exception as e:
     st.error(f"An error occurred: {e}")
