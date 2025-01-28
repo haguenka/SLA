@@ -58,7 +58,7 @@ def load_payment_data(payment_url):
             sheet_df = pd.read_excel(excel_file, sheet_name=sheet_name)
             if 'Medico' in sheet_df.columns and 'total' in sheet_df.columns:
                 # Add a column for month/year based on the sheet name
-                sheet_df['MONTH_YEAR'] = month_year
+                
                 all_payments = pd.concat([all_payments, sheet_df], ignore_index=True)
             else:
                 st.warning(f"Skipping sheet '{sheet_name}' due to missing columns ('Medico', 'Total').")
