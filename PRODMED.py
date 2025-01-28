@@ -61,10 +61,10 @@ def load_payment_data(payment_url):
                 sheet_df['MONTH_YEAR'] = month_year
                 all_payments = pd.concat([all_payments, sheet_df], ignore_index=True)
             else:
-                st.warning(f"Skipping sheet '{sheet_name}' due to missing columns ('Medico', 'Total').")
+                st.warning(f"Skipping sheet '{sheet_name}' due to missing columns ('medico', 'total').")
 
         # Standardize column names
-        all_payments.rename(columns={'Medico': 'DOCTOR', 'Total': 'PAYMENT'}, inplace=True)
+        all_payments.rename(columns={'medico': 'DOCTOR', 'total': 'PAYMENT'}, inplace=True)
 
         # Ensure MONTH_YEAR column exists
         if 'MONTH_YEAR' not in all_payments.columns:
@@ -231,6 +231,7 @@ try:
 
 except Exception as e:
     st.error(f"An error occurred: {e}")
+
 
 
 # -----------------------------------------------------------------------------
