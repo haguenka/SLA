@@ -85,21 +85,24 @@ try:
     excel_df['MONTH'] = excel_df['STATUS_APROVADO'].dt.month
     excel_df['YEAR'] = excel_df['STATUS_APROVADO'].dt.year
 
-    # Define month names
+    # Define month names in uppercase
     month_names = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
+        "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
+        "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"
     ]
-
+    
     # Get unique years and months from the data
     unique_years = sorted(excel_df['YEAR'].dropna().unique())
     unique_months = sorted(excel_df['MONTH'].dropna().unique())
-
-    # Dropdown for month and year selection
-    selected_month_name = st.sidebar.selectbox('Select Month', month_names)
-    selected_month = month_names.index(selected_month_name) + 1  # Convert month name to number
-    selected_year = st.sidebar.selectbox('Select Year', unique_years)
-
+    
+    # Dropdown for month and year selection in the format "MONTH/YEAR"
+    selected_month_name = st.sidebar.selectbox('Select Month/Year', [f"{month}/{year}" for year in unique_years for month in month_names])
+    
+    # Extract the selected month and year from the selected string
+    selected_month, selected_year = selected_month_name.split('/')
+    selected_month = month_names.index(selected_month) + 1  # Convert month name to number
+    selected_year = int(selected_year)
+    
     # Filter data based on selected month and year
     filtered_df = excel_df[
         (excel_df['MONTH'] == selected_month) & 
