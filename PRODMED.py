@@ -280,7 +280,7 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
         pdf.cell(0, 10, 'Relatório de produção', ln=True, align='C')
         pdf.ln(10)
         pdf.set_font('Arial', '', 18)
-        pdf.cell(0, 10, f'Mês de {selected_month.strftime("%B de %Y").capitalize()}', ln=True, align='C')
+        pdf.cell(0, 10, f'Mês de {selected_month_name} {selected_year}', 0, 1, 'C')
         pdf.ln(20)
         # Add doctor's name in uppercase, big and blue
         pdf.set_font('Arial', 'B', 24)
