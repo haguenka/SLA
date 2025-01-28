@@ -22,6 +22,30 @@ def load_csv_data(csv_url):
     response = requests.get(csv_url)
     return pd.read_csv(BytesIO(response.content))
 
+# Load and process payment data
+@st.cache_data
+def load_payment_data(payment_url):
+    # Load the Excel file
+    response = requests.get(payment_url)
+    xlsx_data = BytesIO(response.content)
+    excel_file = pd.ExcelFile(xlsx_data)
+
+    # Initialize an empty DataFrame to combine all sheets
+    all_payments = pd.DataFrame()
+
+    for sheet_name in excel_file.sheet_names:
+        # Load each sheet and extract the relevant columns
+        sheet_df = pd.read_excel(excel_file, sheet_name=sheet_name)
+        if 'medico' in sheet_df.columns and 'total' in sheet_df.columns:
+            # Add a column for month/year based on sheet name
+            sheet_df['MONTH_YEAR'] = pd.Period(sheet_name, freq='M')
+            all_payments = pd.concat([all_payments, sheet_df], ignore_index=True)
+    
+    # Standardize column names
+    all_payments.rename(columns={'medico': 'DOCTOR', 'total': 'PAYMENT'}, inplace=True)
+    
+    return all_payments
+
 def assign_period(hour):
     if 0 <= hour < 7:
         return 'Madrugada'
@@ -68,11 +92,11 @@ st.title('Medical Production Report')
 # Load data
 xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/baseslaM.xlsx'
 csv_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/multipliers.csv'
-payment_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/pagamento.xlsx'  # Add the URL to your payment spreadsheet
+payment_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/pagamento.xlsx'
 
 excel_df = load_excel_data(xlsx_url)
 csv_df = load_csv_data(csv_url)
-payment_df = load_excel_data(payment_url)  # Load the payment data
+payment_df = load_payment_data(payment_url)  # Load the payment data
 
 csv_df.columns = csv_df.columns.str.strip()
 excel_df = merge_hospital_names(excel_df, "UNIDADE")
@@ -119,13 +143,17 @@ try:
     selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
 
     # Automatically fill payment based on the selected month/year and doctor
-    payment_df['MONTH_YEAR'] = pd.to_datetime(payment_df['MONTH_YEAR']).dt.to_period('M')
     doctor_payment = payment_df[
         (payment_df['MONTH_YEAR'] == selected_month) &
         (payment_df['DOCTOR'] == selected_doctor)
     ]['PAYMENT'].sum()
 
-    payment = st.sidebar.number_input('Payment Received (BRL)', min_value=0.0, value=float(doctor_payment), format='%.2f')
+    payment = st.sidebar.number_input(
+        'Payment Received (BRL)', 
+        min_value=0.0, 
+        value=float(doctor_payment), 
+        format='%.2f'
+    )
 
     st.markdown(f"<h1 style='color:red;'>{selected_doctor}</h1>", unsafe_allow_html=True)
 
@@ -207,60 +235,6 @@ try:
     st.markdown(f"<h2 style='color:red;'>Total Value: R$ {total_point_value_sum:.2f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<h2 style='color:red;'>Total Exams: {total_count_sum}</h2>", unsafe_allow_html=True)
     st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.4f}/point</h2>", unsafe_allow_html=True)
-
-    # Period analysis
-    valid_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA']
-
-    preliminar_filtered = preliminar_df[preliminar_df['GRUPO'].isin(valid_groups)]
-    aprovado_filtered = aprovado_df[aprovado_df['GRUPO'].isin(valid_groups)]
-
-    if not preliminar_filtered.empty:
-        preliminar_filtered['DAY_OF_WEEK'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.day_name().map(day_translations)
-        preliminar_filtered['DATE'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.date.astype(str)
-        preliminar_filtered['PERIOD'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.hour.apply(assign_period)
-        preliminar_days_grouped = preliminar_filtered.groupby(
-            ['MEDICO_LAUDOO_PRELIMINAR', 'DATE', 'DAY_OF_WEEK', 'PERIOD'],
-            dropna=False
-        ).size().reset_index(name='PRELIMINAR_COUNT')
-        preliminar_days_grouped = preliminar_days_grouped.rename(columns={'MEDICO_LAUDOO_PRELIMINAR': 'MEDICO'})
-    else:
-        preliminar_days_grouped = pd.DataFrame(columns=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD', 'PRELIMINAR_COUNT'])
-
-    if not aprovado_filtered.empty:
-        aprovado_filtered['DAY_OF_WEEK'] = aprovado_filtered['STATUS_APROVADO'].dt.day_name().map(day_translations)
-        aprovado_filtered['DATE'] = aprovado_filtered['STATUS_APROVADO'].dt.date.astype(str)
-        aprovado_filtered['PERIOD'] = aprovado_filtered['STATUS_APROVADO'].dt.hour.apply(assign_period)
-        aprovado_days_grouped = aprovado_filtered.groupby(
-            ['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'],
-            dropna=False
-        ).size().reset_index(name='APROVADO_COUNT')
-        aprovado_days_grouped = aprovado_days_grouped.rename(columns={'MEDICO_LAUDO_DEFINITIVO': 'MEDICO'})
-    else:
-        aprovado_days_grouped = pd.DataFrame(columns=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD', 'APROVADO_COUNT'])
-
-    days_merged = pd.merge(
-        preliminar_days_grouped, 
-        aprovado_days_grouped,
-        on=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'], 
-        how='outer'
-    ).fillna(0)
-
-    days_merged['PRELIMINAR_COUNT'] = days_merged['PRELIMINAR_COUNT'].astype(int)
-    days_merged['APROVADO_COUNT'] = days_merged['APROVADO_COUNT'].astype(int)
-
-    period_order = ['Manhã', 'Tarde', 'Noite', 'Madrugada']
-    days_merged['PERIOD'] = pd.Categorical(days_merged['PERIOD'], categories=period_order, ordered=True)
-    days_merged = days_merged.sort_values('PERIOD')
-
-    def color_rows(row):
-        return [
-            f'background-color: {period_colors.get(row["PERIOD"], "white")}; color: white'
-            for _ in row.index
-        ]
-
-    styled_df = days_merged.style.apply(color_rows, axis=1)
-    st.markdown("### LAUDO PRELIMINAR and LAUDO APROVADO Counts by Period (Tomografia and Ressonancia)")
-    st.dataframe(styled_df, width=1200, height=400)
 
 except Exception as e:
     st.error(f"An error occurred: {e}")
