@@ -265,81 +265,81 @@ except Exception as e:
 
 # PDF Generation
 if st.button('Generate PDF Report'):
-        pdf = FPDF(orientation='L', unit='mm', format='A4')
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.set_margins(10, 10, 10)
+    pdf = FPDF(orientation='L', unit='mm', format='A4')
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_margins(10, 10, 10)
 
         # Cover Page
-        pdf.add_page()
-        pdf.image(logo_url, x=80, y=30, w=120)
-        pdf.set_font('Arial', 'B', 24)
-        pdf.ln(100)
-        pdf.cell(0, 10, 'Medical Production Report', 0, 1, 'C')
-        pdf.set_font('Arial', '', 18)
-        pdf.cell(0, 10, f'Period: {selected_month}/{selected_year}', 0, 1, 'C')
-        pdf.ln(20)
-        pdf.set_font('Arial', 'B', 24)
-        pdf.set_text_color(0, 0, 255)
-        pdf.cell(0, 10, selected_doctor.upper(), 0, 1, 'C')
-        pdf.set_text_color(0, 0, 0)
+    pdf.add_page()
+    pdf.image(logo_url, x=80, y=30, w=120)
+    pdf.set_font('Arial', 'B', 24)
+    pdf.ln(100)
+    pdf.cell(0, 10, 'Medical Production Report', 0, 1, 'C')
+    pdf.set_font('Arial', '', 18)
+    pdf.cell(0, 10, f'Period: {selected_month}/{selected_year}', 0, 1, 'C')
+    pdf.ln(20)
+    pdf.set_font('Arial', 'B', 24)
+    pdf.set_text_color(0, 0, 255)
+    pdf.cell(0, 10, selected_doctor.upper(), 0, 1, 'C')
+    pdf.set_text_color(0, 0, 0)
 
         # Summary Page
-        pdf.add_page()
-        pdf.set_font('Arial', 'B', 16)
-        pdf.cell(0, 10, 'Financial Summary', 0, 1)
-        pdf.set_font('Arial', '', 12)
-        pdf.cell(0, 10, f'Total Payment: R$ {payment:,.2f}', 0, 1)
-        pdf.cell(0, 10, f'Total Points: {total_points_sum:.1f}', 0, 1)
-        pdf.cell(0, 10, f'Point Value: R$ {unitary_point_value:.2f}/point', 0, 1)
-        pdf.cell(0, 10, f'Total Calculated Value: R$ {total_point_value_sum:.2f}', 0, 1)
+    pdf.add_page()
+    pdf.set_font('Arial', 'B', 16)
+    pdf.cell(0, 10, 'Financial Summary', 0, 1)
+    pdf.set_font('Arial', '', 12)
+    pdf.cell(0, 10, f'Total Payment: R$ {payment:,.2f}', 0, 1)
+    pdf.cell(0, 10, f'Total Points: {total_points_sum:.1f}', 0, 1)
+    pdf.cell(0, 10, f'Point Value: R$ {unitary_point_value:.2f}/point', 0, 1)
+    pdf.cell(0, 10, f'Total Calculated Value: R$ {total_point_value_sum:.2f}', 0, 1)
 
         # Detailed Report
-        for hospital in doctor_grouped['UNIDADE'].unique():
-            pdf.add_page()
-            pdf.set_font('Arial', 'B', 20)
-            pdf.cell(0, 10, hospital, 0, 1)
-            hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
+    for hospital in doctor_grouped['UNIDADE'].unique():
+        pdf.add_page()
+        pdf.set_font('Arial', 'B', 20)
+        pdf.cell(0, 10, hospital, 0, 1)
+        hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
 
-            for grupo in hospital_df['GRUPO'].unique():
-                pdf.set_font('Arial', 'B', 14)
-                pdf.cell(0, 10, f'Modality: {grupo}', 0, 1)
-                grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
+        for grupo in hospital_df['GRUPO'].unique():
+            pdf.set_font('Arial', 'B', 14)
+            pdf.cell(0, 10, f'Modality: {grupo}', 0, 1)
+            grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
 
                 # Table Header
-                pdf.set_font('Arial', 'B', 10)
-                pdf.cell(80, 10, 'Procedure', 1, 0)
-                pdf.cell(20, 10, 'Count', 1, 0, 'C')
-                pdf.cell(20, 10, 'Multiplier', 1, 0, 'C')
-                pdf.cell(20, 10, 'Points', 1, 0, 'C')
-                pdf.cell(30, 10, 'Value', 1, 1, 'C')
+            pdf.set_font('Arial', 'B', 10)
+            pdf.cell(80, 10, 'Procedure', 1, 0)
+            pdf.cell(20, 10, 'Count', 1, 0, 'C')
+            pdf.cell(20, 10, 'Multiplier', 1, 0, 'C')
+            pdf.cell(20, 10, 'Points', 1, 0, 'C')
+            pdf.cell(30, 10, 'Value', 1, 1, 'C')
 
                 # Table Rows
-                pdf.set_font('Arial', '', 8)
-                for _, row in grupo_df.iterrows():
-                    procedure = row['DESCRICAO_PROCEDIMENTO'][:50] + '...' if len(row['DESCRICAO_PROCEDIMENTO']) > 50 else row['DESCRICAO_PROCEDIMENTO']
-                    pdf.cell(80, 10, procedure, 1, 0)
-                    pdf.cell(20, 10, str(row['COUNT']), 1, 0, 'C')
-                    pdf.cell(20, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
-                    pdf.cell(20, 10, f"{row['POINTS']:.1f}", 1, 0, 'C')
-                    pdf.cell(30, 10, f"R$ {row['POINT_VALUE']:.2f}", 1, 1, 'R')
+            pdf.set_font('Arial', '', 8)
+            for _, row in grupo_df.iterrows():
+                procedure = row['DESCRICAO_PROCEDIMENTO'][:50] + '...' if len(row['DESCRICAO_PROCEDIMENTO']) > 50 else row['DESCRICAO_PROCEDIMENTO']
+                pdf.cell(80, 10, procedure, 1, 0)
+                pdf.cell(20, 10, str(row['COUNT']), 1, 0, 'C')
+                pdf.cell(20, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
+                pdf.cell(20, 10, f"{row['POINTS']:.1f}", 1, 0, 'C')
+                pdf.cell(30, 10, f"R$ {row['POINT_VALUE']:.2f}", 1, 1, 'R')
 
                 # Group Summary
-                pdf.set_font('Arial', 'B', 10)
-                pdf.cell(140, 10, f'Total {grupo}', 1, 0, 'R')
-                pdf.cell(20, 10, f"{grupo_df['POINTS'].sum():.1f}", 1, 0, 'C')
-                pdf.cell(30, 10, f"R$ {grupo_df['POINT_VALUE'].sum():.2f}", 1, 1, 'R')
+            pdf.set_font('Arial', 'B', 10)
+            pdf.cell(140, 10, f'Total {grupo}', 1, 0, 'R')
+            pdf.cell(20, 10, f"{grupo_df['POINTS'].sum():.1f}", 1, 0, 'C')
+            pdf.cell(30, 10, f"R$ {grupo_df['POINT_VALUE'].sum():.2f}", 1, 1, 'R')
 
         # Save and offer download
-        pdf_file = "medical_report.pdf"
-        pdf.output(pdf_file)
+    pdf_file = "medical_report.pdf"
+    pdf.output(pdf_file)
 
-        with open(pdf_file, "rb") as f:
-            st.download_button(
-                label="Download Full Report",
-                data=f,
-                file_name=pdf_file,
-                mime="application/pdf"
-            )
+    with open(pdf_file, "rb") as f:
+        st.download_button(
+            label="Download Full Report",
+            data=f,
+            file_name=pdf_file,
+            mime="application/pdf"
+        )
 
 except Exception as e:
     st.error(f"An error occurred: {str(e)}")
