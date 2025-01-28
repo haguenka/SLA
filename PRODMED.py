@@ -99,9 +99,11 @@ try:
     selected_month_name = st.sidebar.selectbox('Select Month/Year', [f"{month}/{year}" for year in unique_years for month in month_names])
     
     # Extract the selected month and year from the selected string
-    selected_month, selected_year = selected_month_name.split('/')
+    selected_month, selected_year_str = selected_month_name.split('/')
     selected_month = month_names.index(selected_month) + 1  # Convert month name to number
-    selected_year = int(selected_year)
+    
+    # Convert the year string to an integer
+    selected_year = int(float(selected_year_str))
     
     # Filter data based on selected month and year
     filtered_df = excel_df[
