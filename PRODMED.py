@@ -114,13 +114,33 @@ try:
         (excel_df['YEAR'] == selected_year)
     ]
 
+    # Payment data loading and processing
+    payment_file_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/PAGAMENTO.xlsx'
+    payment_data = pd.read_excel(payment_file_url, sheet_name=f"{month_names[selected_month - 1]} {selected_year}")
+    payment_data['DATE'] = pd.to_datetime(payment_data['DATE'], errors='coerce')
+    payment_data = payment_data[payment_data['DATE'].dt.month == selected_month]
+
     hospital_list = filtered_df['UNIDADE'].unique()
     selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
     filtered_df = filtered_df[filtered_df['UNIDADE'] == selected_hospital]
 
     doctor_list = filtered_df['MEDICO_LAUDO_DEFINITIVO'].unique()
     selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
-    payment = st.sidebar.number_input('Payment Received (BRL)', min_value=0.0, format='%.2f')
+
+    # Match and autofill payment for selected doctor
+    def normalize_name(name):
+        return name.replace("Dr. ", "").replace("Dra. ", "").strip().upper()
+
+    normalized_doctor_name = normalize_name(selected_doctor)
+    payment_data['NORMALIZED_MEDICO'] = payment_data['MEDICO'].apply(normalize_name)
+
+    doctor_payment = payment_data[payment_data['NORMALIZED_MEDICO'] == normalized_doctor_name]
+    if not doctor_payment.empty:
+        total_payment = doctor_payment['PAYMENT'].sum()
+    else:
+        total_payment = 0.0
+
+    st.sidebar.markdown(f"### Payment: R$ {total_payment:,.2f}")
 
     st.markdown(f"<h1 style='color:red;'>{selected_doctor}</h1>", unsafe_allow_html=True)
 
@@ -139,10 +159,10 @@ try:
     st.markdown(f"<h3 style='color:#4682b4;'>Total APROVADO Events: {total_aprovado_events}</h3>", unsafe_allow_html=True)
 
     if total_aprovado_events > 0:
-        unitary_value = payment / total_aprovado_events
+        unitary_value = total_payment / total_aprovado_events
     else:
         unitary_value = 0.0
-    st.markdown(f"<h3 style='color:green;'>Payment: R$ {payment:,.2f}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:green;'>Payment: R$ {total_payment:,.2f}</h3>", unsafe_allow_html=True)
     st.markdown(f"<h3 style='color:green;'>Unitary Event Value: R$ {unitary_value:,.2f}</h3>", unsafe_allow_html=True)
 
     # Combine both preliminar and aprovado data for display (removing seconds from STATUS_APROVADO)
@@ -155,6 +175,7 @@ try:
         'STATUS_APROVADO', 'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE'
     ]
     st.dataframe(doctor_all_events[filtered_columns], width=1200, height=400)
+
     # Points calculation
     csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
     aprovado_df['DESCRICAO_PROCEDIMENTO'] = aprovado_df['DESCRICAO_PROCEDIMENTO'].str.upper()
@@ -170,7 +191,7 @@ try:
 
     doctor_grouped['POINTS'] = doctor_grouped['COUNT'] * doctor_grouped['MULTIPLIER']
     total_points_sum = doctor_grouped['POINTS'].sum()
-    unitary_point_value = payment / total_points_sum if total_points_sum > 0 else 0.0
+    unitary_point_value = total_payment / total_points_sum if total_points_sum > 0 else 0.0
     doctor_grouped['POINT_VALUE'] = doctor_grouped['POINTS'] * unitary_point_value
 
     # Display results
@@ -199,7 +220,6 @@ try:
     st.markdown(f"<h2 style='color:red;'>Total Value: R$ {total_point_value_sum:.2f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<h2 style='color:red;'>Total Exams: {total_count_sum}</h2>", unsafe_allow_html=True)
     st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.2f}/point</h2>", unsafe_allow_html=True)
-
 
     # ------------------------------------------------------------------------------------
     # SHOWING LAUDO PRELIMINAR AND LAUDO APROVADO COUNTS FOR TOMOGRAFIA E RESSONANCIA
@@ -266,6 +286,7 @@ try:
 
 except Exception as e:
     st.error(f"An error occurred: {e}")
+
 
 # -----------------------------------------------------------------------------
 # EXPORT SUMMARY AND DOCTORS DATAFRAMES AS A COMBINED PDF REPORT
