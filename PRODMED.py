@@ -140,7 +140,7 @@ try:
 
     # Match and autofill payment for selected doctor
     def normalize_name(name):
-        return name.replace("Dr. ", "").replace("Dra. ", "").strip().upper()
+        return name.replace("Dr. ", "").replace("Dra. ", "").replace("Dra.","").strip().upper()
 
     normalized_doctor_name = normalize_name(selected_doctor)
     payment_data['NORMALIZED_MEDICO'] = payment_data['MEDICO'].apply(normalize_name)
