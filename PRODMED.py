@@ -61,7 +61,7 @@ def merge_hospital_names(df, column_name):
 # Load and display logo
 logo_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
 logo = load_image(logo_url)
-st.sidebar.image(logo, use_container_width=True)
+st.sidebar.image(logo, use_column_width=True)
 
 st.title('Medical Production Report')
 
@@ -78,21 +78,30 @@ excel_df = merge_hospital_names(excel_df, "UNIDADE")
 st.sidebar.header('Filter Options')
 
 try:
+    # Date processing
     excel_df['STATUS_APROVADO'] = pd.to_datetime(excel_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M', errors='coerce')
     excel_df['STATUS_PRELIMINAR'] = pd.to_datetime(excel_df['STATUS_PRELIMINAR'], format='%d-%m-%Y %H:%M', errors='coerce')
 
-    min_date = excel_df['STATUS_APROVADO'].min()
-    max_date = excel_df['STATUS_APROVADO'].max()
+    # Month/Year selection
+    excel_df['MONTH_YEAR'] = excel_df['STATUS_APROVADO'].dt.to_period('M')
+    available_months = sorted(excel_df['MONTH_YEAR'].dropna().unique())
+    
+    if len(available_months) > 0:
+        default_month = available_months[-1]
+        month_options = [period.strftime("%B %Y") for period in available_months]
+    else:
+        default_month = pd.Period(datetime.now(), freq='M')
+        month_options = [default_month.strftime("%B %Y")]
 
-    start_date, end_date = st.sidebar.date_input(
-        'Select Date Range',
-        value=[min_date.date(), max_date.date()],
-        min_value=min_date.date(),
-        max_value=max_date.date()
+    selected_month_str = st.sidebar.selectbox(
+        'Select Month/Year', 
+        options=month_options, 
+        index=len(month_options)-1
     )
-
-    start_date = pd.Timestamp(start_date)
-    end_date = pd.Timestamp(end_date)
+    
+    selected_month = pd.Period(selected_month_str, freq='M')
+    start_date = selected_month.start_time
+    end_date = selected_month.end_time
 
     filtered_df = excel_df[
         (excel_df['STATUS_APROVADO'] >= start_date) & 
@@ -130,8 +139,6 @@ try:
     st.markdown(f"<h3 style='color:green;'>Payment: R$ {payment:,.2f}</h3>", unsafe_allow_html=True)
     st.markdown(f"<h3 style='color:green;'>Unitary Event Value: R$ {unitary_value:,.2f}</h3>", unsafe_allow_html=True)
     
-
-    # Combine both preliminar and aprovado data for display (removing seconds from STATUS_APROVADO)
     doctor_all_events = pd.concat([preliminar_df, aprovado_df], ignore_index=True)
     if not doctor_all_events.empty:
         doctor_all_events['STATUS_APROVADO'] = doctor_all_events['STATUS_APROVADO'].dt.strftime('%Y-%m-%d %H:%M')
@@ -150,7 +157,6 @@ try:
     merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
     merged_df['POINTS'] = (merged_df['STATUS_APROVADO'].notna().astype(int) * merged_df['MULTIPLIER']).round(1)
 
-    # Group and calculate point values
     doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({
         'MULTIPLIER': 'first',
         'STATUS_APROVADO': 'count'
@@ -161,7 +167,6 @@ try:
     unitary_point_value = payment / total_points_sum if total_points_sum > 0 else 0.0
     doctor_grouped['POINT_VALUE'] = doctor_grouped['POINTS'] * unitary_point_value
 
-    # Display results
     total_count_sum = doctor_grouped['COUNT'].sum()
     total_point_value_sum = doctor_grouped['POINT_VALUE'].sum()
 
@@ -192,16 +197,12 @@ try:
     st.markdown(f"<h2 style='color:red;'>Total Exams: {total_count_sum}</h2>", unsafe_allow_html=True)
     st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.4f}/point</h2>", unsafe_allow_html=True)
 
-    
-    # ------------------------------------------------------------------------------------
-    # SHOWING LAUDO PRELIMINAR AND LAUDO APROVADO COUNTS FOR TOMOGRAFIA E RESSONANCIA
-    # ------------------------------------------------------------------------------------
+    # Period analysis
     valid_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA']
 
     preliminar_filtered = preliminar_df[preliminar_df['GRUPO'].isin(valid_groups)]
     aprovado_filtered = aprovado_df[aprovado_df['GRUPO'].isin(valid_groups)]
 
-    # For PRELIMINAR
     if not preliminar_filtered.empty:
         preliminar_filtered['DAY_OF_WEEK'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.day_name().map(day_translations)
         preliminar_filtered['DATE'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.date.astype(str)
@@ -214,7 +215,6 @@ try:
     else:
         preliminar_days_grouped = pd.DataFrame(columns=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD', 'PRELIMINAR_COUNT'])
 
-    # For APROVADO
     if not aprovado_filtered.empty:
         aprovado_filtered['DAY_OF_WEEK'] = aprovado_filtered['STATUS_APROVADO'].dt.day_name().map(day_translations)
         aprovado_filtered['DATE'] = aprovado_filtered['STATUS_APROVADO'].dt.date.astype(str)
@@ -227,7 +227,6 @@ try:
     else:
         aprovado_days_grouped = pd.DataFrame(columns=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD', 'APROVADO_COUNT'])
 
-    # Merge both
     days_merged = pd.merge(
         preliminar_days_grouped, 
         aprovado_days_grouped,
@@ -235,16 +234,13 @@ try:
         how='outer'
     ).fillna(0)
 
-    # Convert to integers to avoid decimals
     days_merged['PRELIMINAR_COUNT'] = days_merged['PRELIMINAR_COUNT'].astype(int)
     days_merged['APROVADO_COUNT'] = days_merged['APROVADO_COUNT'].astype(int)
 
-    # Enforce the desired order of periods
     period_order = ['Manhã', 'Tarde', 'Noite', 'Madrugada']
     days_merged['PERIOD'] = pd.Categorical(days_merged['PERIOD'], categories=period_order, ordered=True)
     days_merged = days_merged.sort_values('PERIOD')
 
-    # Styling for the DataFrame
     def color_rows(row):
         return [
             f'background-color: {period_colors.get(row["PERIOD"], "white")}; color: white'
@@ -252,12 +248,12 @@ try:
         ]
 
     styled_df = days_merged.style.apply(color_rows, axis=1)
-
     st.markdown("### LAUDO PRELIMINAR and LAUDO APROVADO Counts by Period (Tomografia and Ressonancia)")
     st.dataframe(styled_df, width=1200, height=400)
 
 except Exception as e:
     st.error(f"An error occurred: {e}")
+
 
 # -----------------------------------------------------------------------------
 # EXPORT SUMMARY AND DOCTORS DATAFRAMES AS A COMBINED PDF REPORT
