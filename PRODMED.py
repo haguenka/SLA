@@ -263,8 +263,8 @@ try:
 except Exception as e:
     st.error(f"An error occurred: {e}")
 
-    # PDF Generation
-    if st.button('Generate PDF Report'):
+# PDF Generation
+if st.button('Generate PDF Report'):
         pdf = FPDF(orientation='L', unit='mm', format='A4')
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.set_margins(10, 10, 10)
