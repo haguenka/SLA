@@ -187,267 +187,70 @@ try:
     ]
     st.dataframe(doctor_all_events[filtered_columns], width=1200, height=400)
 
-    # Points calculation
-    csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
-    aprovado_df['DESCRICAO_PROCEDIMENTO'] = aprovado_df['DESCRICAO_PROCEDIMENTO'].str.upper()
-    merged_df = pd.merge(aprovado_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
-    merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
-    merged_df['POINTS'] = (merged_df['STATUS_APROVADO'].notna().astype(int) * merged_df['MULTIPLIER']).round(1)
-
-    # Group and calculate point values
-    doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({
-        'MULTIPLIER': 'first',
-        'STATUS_APROVADO': 'count'
-    }).rename(columns={'STATUS_APROVADO': 'COUNT'}).reset_index()
-
-    doctor_grouped['POINTS'] = doctor_grouped['COUNT'] * doctor_grouped['MULTIPLIER']
-    total_points_sum = doctor_grouped['POINTS'].sum()
-    unitary_point_value = total_payment / total_points_sum if total_points_sum > 0 else 0.0
-    doctor_grouped['POINT_VALUE'] = doctor_grouped['POINTS'] * unitary_point_value
-
-    # Display results
-    total_count_sum = doctor_grouped['COUNT'].sum()
-    total_point_value_sum = doctor_grouped['POINT_VALUE'].sum()
-
-    for hospital in doctor_grouped['UNIDADE'].unique():
-        hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
-        st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
-        for grupo in hospital_df['GRUPO'].unique():
-            grupo_df = hospital_df[hospital_df['GRUPO'] == grupo].copy()
-            total_points = grupo_df['POINTS'].sum()
-            total_point_value = grupo_df['POINT_VALUE'].sum()
-            total_count = grupo_df['COUNT'].sum()
-
-            st.markdown(f"<h3 style='color:#0a84ff;'>{grupo}</h3>", unsafe_allow_html=True)
-            st.dataframe(grupo_df[[
-                'DESCRICAO_PROCEDIMENTO', 
-                'COUNT', 
-                'MULTIPLIER', 
-                'POINTS', 
-                'POINT_VALUE'
-            ]].style.format({'POINT_VALUE': "R$ {:.2f}"}))
-
-    st.markdown(f"<h2 style='color:red;'>Total Points: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<h2 style='color:red;'>Total Value: R$ {total_point_value_sum:.2f}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<h2 style='color:red;'>Total Exams: {total_count_sum}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.2f}/point</h2>", unsafe_allow_html=True)
-
     # ------------------------------------------------------------------------------------
-    # SHOWING LAUDO PRELIMINAR AND LAUDO APROVADO COUNTS FOR TOMOGRAFIA E RESSONANCIA
+    # EXPORT SUMMARY AND DOCTORS DATAFRAMES AS A COMBINED PDF REPORT
     # ------------------------------------------------------------------------------------
-    valid_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA']
+    if st.button('Export Summary and Doctors Dataframes as PDF'):
+        try:
+            if doctor_all_events.empty:
+                st.error("No data available to export in the PDF report.")
+            else:
+                pdf = FPDF(orientation='L', unit='mm', format='A4')
+                pdf.set_auto_page_break(auto=True, margin=15)
+                pdf.set_margins(left=5, top=5, right=5)
 
-    preliminar_filtered = preliminar_df[preliminar_df['GRUPO'].isin(valid_groups)]
-    aprovado_filtered = aprovado_df[aprovado_df['GRUPO'].isin(valid_groups)]
+                # Title Page
+                pdf.add_page()
+                pdf.image(logo_url, x=80, y=30, w=120)
+                pdf.set_font('Arial', 'B', 24)
+                pdf.ln(100)
+                pdf.cell(0, 10, 'Relatório de Produção Médica', ln=True, align='C')
+                pdf.ln(10)
+                pdf.set_font('Arial', '', 18)
+                pdf.cell(0, 10, f'Mês de {selected_month_name} {selected_year}', 0, 1, 'C')
+                pdf.ln(20)
 
-    # For PRELIMINAR
-    if not preliminar_filtered.empty:
-        preliminar_filtered['DAY_OF_WEEK'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.day_name().map(day_translations)
-        preliminar_filtered['DATE'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.date.astype(str)
-        preliminar_filtered['PERIOD'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.hour.apply(assign_period)
-        preliminar_days_grouped = preliminar_filtered.groupby(
-            ['MEDICO_LAUDOO_PRELIMINAR', 'DATE', 'DAY_OF_WEEK', 'PERIOD'],
-            dropna=False
-        ).size().reset_index(name='PRELIMINAR_COUNT')
-        preliminar_days_grouped = preliminar_days_grouped.rename(columns={'MEDICO_LAUDOO_PRELIMINAR': 'MEDICO'})
-    else:
-        preliminar_days_grouped = pd.DataFrame(columns=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD', 'PRELIMINAR_COUNT'])
+                # Summary Page
+                pdf.add_page()
+                pdf.set_font('Arial', 'B', 16)
+                pdf.cell(0, 10, 'Resumo da Produção Médica', ln=True, align='C')
+                pdf.ln(10)
+                pdf.set_font('Arial', '', 12)
+                pdf.cell(0, 10, f'Total de Exames Aprovados: {total_aprovado_events}', ln=True)
+                pdf.cell(0, 10, f'Total de Pagamento: R$ {total_payment:,.2f}', ln=True)
+                pdf.cell(0, 10, f'Valor por Exame: R$ {unitary_value:,.2f}', ln=True)
 
-    # For APROVADO
-    if not aprovado_filtered.empty:
-        aprovado_filtered['DAY_OF_WEEK'] = aprovado_filtered['STATUS_APROVADO'].dt.day_name().map(day_translations)
-        aprovado_filtered['DATE'] = aprovado_filtered['STATUS_APROVADO'].dt.date.astype(str)
-        aprovado_filtered['PERIOD'] = aprovado_filtered['STATUS_APROVADO'].dt.hour.apply(assign_period)
-        aprovado_days_grouped = aprovado_filtered.groupby(
-            ['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'],
-            dropna=False
-        ).size().reset_index(name='APROVADO_COUNT')
-        aprovado_days_grouped = aprovado_days_grouped.rename(columns={'MEDICO_LAUDO_DEFINITIVO': 'MEDICO'})
-    else:
-        aprovado_days_grouped = pd.DataFrame(columns=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD', 'APROVADO_COUNT'])
+                # Data Table Page
+                pdf.add_page()
+                pdf.set_font('Arial', 'B', 10)
+                pdf.cell(60, 10, 'Descrição do Procedimento', 1)
+                pdf.cell(30, 10, 'Quantidade', 1)
+                pdf.cell(30, 10, 'Multiplicador', 1)
+                pdf.cell(30, 10, 'Pontos', 1)
+                pdf.cell(40, 10, 'Valor', 1, ln=1)
 
-    # Merge both
-    days_merged = pd.merge(
-        preliminar_days_grouped, 
-        aprovado_days_grouped,
-        on=['MEDICO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'], 
-        how='outer'
-    ).fillna(0)
+                pdf.set_font('Arial', '', 10)
+                for index, row in doctor_all_events.iterrows():
+                    pdf.cell(60, 10, str(row['DESCRICAO_PROCEDIMENTO']), 1)
+                    pdf.cell(30, 10, str(row.get('COUNT', '')), 1)
+                    pdf.cell(30, 10, f"{row.get('MULTIPLIER', 0):.2f}", 1)
+                    pdf.cell(30, 10, f"{row.get('POINTS', 0):.2f}", 1)
+                    pdf.cell(40, 10, f"R$ {row.get('POINT_VALUE', 0):,.2f}", 1, ln=1)
 
-    # Convert to integers to avoid decimals
-    days_merged['PRELIMINAR_COUNT'] = days_merged['PRELIMINAR_COUNT'].astype(int)
-    days_merged['APROVADO_COUNT'] = days_merged['APROVADO_COUNT'].astype(int)
+                pdf_file_path = 'Medical_Production_Report.pdf'
+                pdf.output(pdf_file_path)
 
-    # Enforce the desired order of periods
-    period_order = ['Manhã', 'Tarde', 'Noite', 'Madrugada']
-    days_merged['PERIOD'] = pd.Categorical(days_merged['PERIOD'], categories=period_order, ordered=True)
-    days_merged = days_merged.sort_values('PERIOD')
+                # Streamlit download button
+                with open(pdf_file_path, 'rb') as file:
+                    st.download_button(
+                        label='Download PDF Report',
+                        data=file,
+                        file_name='Medical_Production_Report.pdf',
+                        mime='application/pdf'
+                    )
 
-    # Styling for the DataFrame
-    def color_rows(row):
-        return [
-            f'background-color: {period_colors.get(row["PERIOD"], "white")}; color: white'
-            for _ in row.index
-        ]
-
-    styled_df = days_merged.style.apply(color_rows, axis=1)
-
-    st.markdown("### LAUDO PRELIMINAR and LAUDO APROVADO Counts by Period (Tomografia and Ressonancia)")
-    st.dataframe(styled_df, width=1200, height=400)
+        except Exception as e:
+            st.error(f"An error occurred during PDF generation: {e}")
 
 except Exception as e:
-    st.error(f"An error occurred: {e}")
-
-
-
-# -----------------------------------------------------------------------------
-# EXPORT SUMMARY AND DOCTORS DATAFRAMES AS A COMBINED PDF REPORT
-# -----------------------------------------------------------------------------
-if st.button('Export Summary and Doctors Dataframes as PDF'):
-    try:
-        pdf = FPDF(orientation='L', unit='mm', format='A4')
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.set_margins(left=5, top=5, right=5)
-
-        # Create title sheet
-        pdf.add_page()
-        pdf.image(logo_url, x=80, y=30, w=120)
-        pdf.set_font('Arial', 'B', 24)
-        pdf.ln(100)
-        pdf.cell(0, 10, 'Relatório de produção', ln=True, align='C')
-        pdf.ln(10)
-        pdf.set_font('Arial', '', 18)
-        pdf.cell(0, 10, f'Mês de {selected_month_name} {selected_year}', 0, 1, 'C')
-        pdf.ln(20)
-        # Add doctor's name in uppercase, big and blue
-        pdf.set_font('Arial', 'B', 24)
-        pdf.set_text_color(0, 0, 255)
-        pdf.cell(0, 10, selected_doctor.upper(), ln=True, align='C')
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(20)
-        
-        # Add summary sheet
-        pdf.add_page()
-        pdf.set_font('Arial', 'B', 16)
-        pdf.cell(0, 10, 'RELATÓRIO DE PRODUÇÃO MÉDICA', ln=True, align='C')
-        pdf.ln(10)
-        pdf.set_font('Arial', '', 16)
-        pdf.cell(0, 10, f'Total de Pontos por Exames Aprovados: {total_points_sum:.1f}', ln=True)
-        pdf.cell(0, 10, f'Total de Exames Aprovados: {total_aprovado_events}', ln=True)
-        pdf.cell(0, 10, f'Pagamento Recebido: R$ {total_payment:,.2f}', ln=True)
-        if total_aprovado_events > 0:
-            unitary_value_pdf = total_payment / total_aprovado_events
-        else:
-            unitary_value_pdf = 0.0
-        pdf.cell(0, 10, f'Valor Unitário por Evento: R$ {unitary_value_pdf:,.2f}', ln=True)
-        pdf.ln(10)
-        
-        # -----------------------------------------------------------------------------
-        # Add "Days Each Doctor Has Events" in table format (using days_merged)
-        # -----------------------------------------------------------------------------
-        pdf.add_page()
-        pdf.set_font('Arial', 'B', 16)
-        pdf.cell(0, 10, 'PERÍODOS/PLANTÃO COM EVENTOS REALIZADOS', ln=True, align='C')
-        pdf.ln(10)
-
-        if not days_merged.empty:
-            # Table header
-            pdf.set_font('Arial', 'B', 10)
-            pdf.cell(80, 10, 'MÉDICO', 1, 0, 'C')
-            pdf.cell(30, 10, 'DATA', 1, 0, 'C')
-            pdf.cell(30, 10, 'DIA DA SEMANA', 1, 0, 'C')
-            pdf.cell(30, 10, 'PERÍODO', 1, 0, 'C')
-            pdf.cell(30, 10, 'PRELIMINAR', 1, 0, 'C')
-            pdf.cell(30, 10, 'APROVADO', 1, 1, 'C')
-
-            pdf.set_font('Arial', '', 10)
-            for _, row in days_merged.iterrows():
-                pdf.cell(80, 10, str(row['MEDICO']), 1, 0, 'L')
-                pdf.cell(30, 10, str(row['DATE']), 1, 0, 'C')
-                pdf.cell(30, 10, str(row['DAY_OF_WEEK']), 1, 0, 'C')
-                pdf.cell(30, 10, str(row['PERIOD']), 1, 0, 'C')
-                pdf.cell(30, 10, str(row['PRELIMINAR_COUNT']), 1, 0, 'C')
-                pdf.cell(30, 10, str(row['APROVADO_COUNT']), 1, 1, 'C')
-
-                # Page break if we exceed the height
-                if pdf.get_y() > 180:
-                    pdf.add_page()
-                    pdf.set_font('Arial', 'B', 10)
-                    pdf.cell(80, 10, 'MÉDICO', 1, 0, 'C')
-                    pdf.cell(30, 10, 'DATA', 1, 0, 'C')
-                    pdf.cell(30, 10, 'DIA DA SEMANA', 1, 0, 'C')
-                    pdf.cell(30, 10, 'PERÍODO', 1, 0, 'C')
-                    pdf.cell(30, 10, 'PRELIMINAR', 1, 0, 'C')
-                    pdf.cell(30, 10, 'APROVADO', 1, 1, 'C')
-        else:
-            pdf.set_font('Arial', 'I', 12)
-            pdf.cell(0, 10, 'No events found in the selected date range/modality.', ln=True, align='C')
-
-        pdf.ln(10)
-        
-        # -----------------------------------------------------------------------------
-        # Add hospital and modality dataframes to subsequent pages in table format
-        # -----------------------------------------------------------------------------
-        for hospital in doctor_grouped['UNIDADE'].unique():
-            pdf.add_page()
-            pdf.set_font('Arial', 'B', 24)
-            pdf.set_text_color(0, 0, 255)
-            pdf.cell(0, 10, f'Hospital: {hospital}', ln=True, align='C')
-            pdf.set_text_color(0, 0, 0)
-            pdf.ln(10)
-            hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
-            for grupo in hospital_df['GRUPO'].unique():
-                pdf.set_font('Arial', 'B', 12)
-                pdf.cell(0, 10, f'Modality: {grupo}', ln=True)
-                pdf.ln(10)
-                grupo_df = hospital_df[hospital_df['GRUPO'] == grupo].copy()
-                grupo_df['POINTS'] = grupo_df['COUNT'] * grupo_df['MULTIPLIER']
-
-                # Create table header
-                pdf.set_font('Arial', 'B', 10)
-                pdf.cell(80, 10, 'Procedure', 1, 0, 'C')
-                pdf.cell(30, 10, 'Count', 1, 0, 'C')
-                pdf.cell(30, 10, 'Multiplier', 1, 0, 'C')
-                pdf.cell(30, 10, 'Points', 1, 1, 'C')
-
-                # Add rows to the table
-                pdf.set_font('Arial', 'B', 10)
-                for _, row in grupo_df.iterrows():
-                    procedure_text = row['DESCRICAO_PROCEDIMENTO']
-                    # Truncate if too long
-                    if len(procedure_text) > 30:
-                        procedure_text = procedure_text[:30] + '...'
-                    pdf.cell(80, 10, procedure_text, 1, 0, 'L')
-                    pdf.cell(30, 10, str(row['COUNT']), 1, 0, 'C')
-                    pdf.cell(30, 10, f"{row['MULTIPLIER']:.1f}", 1, 0, 'C')
-                    pdf.cell(30, 10, f"{row['POINTS']:.1f}", 1, 1, 'C')
-
-                    # Check if we need a page break
-                    if pdf.get_y() > 180:  
-                        pdf.add_page()
-                        pdf.set_font('Arial', 'B', 10)
-                        pdf.cell(80, 10, 'Procedure', 1, 0, 'C')
-                        pdf.cell(30, 10, 'Count', 1, 0, 'C')
-                        pdf.cell(30, 10, 'Multiplier', 1, 0, 'C')
-                        pdf.cell(30, 10, 'Points', 1, 1, 'C')
-                
-                # Summary for the modality
-                total_points = grupo_df['POINTS'].sum()
-                total_exams = grupo_df['COUNT'].sum()
-                pdf.ln(5)
-                pdf.set_font('Arial', 'B', 10)
-                pdf.cell(0, 10, f'Total Points for {grupo}: {total_points}', ln=True)
-                pdf.cell(0, 10, f'Total Number of Exams for {grupo}: {total_exams}', ln=True)
-                pdf.ln(10)
-        
-        pdf_file_path = 'Medical_Analysis_Combined_Report.pdf'
-        pdf.output(pdf_file_path)
-        st.success('Combined report exported successfully! You can download the file from the link below:')
-        with open(pdf_file_path, 'rb') as file:
-            st.download_button(
-                label='Download Combined PDF',
-                data=file,
-                file_name='Medical_Analysis_Combined_Report.pdf'
-            )
-    except Exception as e:
-        st.error(f'An error occurred while exporting the PDF: {e}')
+    st.error(f"An unexpected error occurred: {e}")
