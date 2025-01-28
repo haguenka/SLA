@@ -81,22 +81,21 @@ try:
     excel_df['STATUS_APROVADO'] = pd.to_datetime(excel_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M', errors='coerce')
     excel_df['STATUS_PRELIMINAR'] = pd.to_datetime(excel_df['STATUS_PRELIMINAR'], format='%d-%m-%Y %H:%M', errors='coerce')
 
-    min_date = excel_df['STATUS_APROVADO'].min()
-    max_date = excel_df['STATUS_APROVADO'].max()
+    # Get unique months and years from the data
+    excel_df['MONTH'] = excel_df['STATUS_APROVADO'].dt.month
+    excel_df['YEAR'] = excel_df['STATUS_APROVADO'].dt.year
 
-    start_date, end_date = st.sidebar.date_input(
-        'Select Date Range',
-        value=[min_date.date(), max_date.date()],
-        min_value=min_date.date(),
-        max_value=max_date.date()
-    )
+    unique_months = excel_df['MONTH'].unique()
+    unique_years = excel_df['YEAR'].unique()
 
-    start_date = pd.Timestamp(start_date)
-    end_date = pd.Timestamp(end_date)
+    # Dropdown for month and year selection
+    selected_month = st.sidebar.selectbox('Select Month', unique_months)
+    selected_year = st.sidebar.selectbox('Select Year', unique_years)
 
+    # Filter data based on selected month and year
     filtered_df = excel_df[
-        (excel_df['STATUS_APROVADO'] >= start_date) & 
-        (excel_df['STATUS_APROVADO'] <= end_date)
+        (excel_df['MONTH'] == selected_month) & 
+        (excel_df['YEAR'] == selected_year)
     ]
 
     hospital_list = filtered_df['UNIDADE'].unique()
@@ -187,7 +186,7 @@ try:
     st.markdown(f"<h2 style='color:red;'>Total Points: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<h2 style='color:red;'>Total Value: R$ {total_point_value_sum:.2f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<h2 style='color:red;'>Total Exams: {total_count_sum}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.4f}/point</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.2f}/point</h2>", unsafe_allow_html=True)
 
 
     # ------------------------------------------------------------------------------------
@@ -269,7 +268,7 @@ except Exception as e:
         pdf.ln(100)
         pdf.cell(0, 10, 'Medical Production Report', 0, 1, 'C')
         pdf.set_font('Arial', '', 18)
-        pdf.cell(0, 10, f'Period: {start_date.date()} to {end_date.date()}', 0, 1, 'C')
+        pdf.cell(0, 10, f'Period: {selected_month}/{selected_year}', 0, 1, 'C')
         pdf.ln(20)
         pdf.set_font('Arial', 'B', 24)
         pdf.set_text_color(0, 0, 255)
@@ -283,7 +282,7 @@ except Exception as e:
         pdf.set_font('Arial', '', 12)
         pdf.cell(0, 10, f'Total Payment: R$ {payment:,.2f}', 0, 1)
         pdf.cell(0, 10, f'Total Points: {total_points_sum:.1f}', 0, 1)
-        pdf.cell(0, 10, f'Point Value: R$ {unitary_point_value:.4f}/point', 0, 1)
+        pdf.cell(0, 10, f'Point Value: R$ {unitary_point_value:.2f}/point', 0, 1)
         pdf.cell(0, 10, f'Total Calculated Value: R$ {total_point_value_sum:.2f}', 0, 1)
 
         # Detailed Report
