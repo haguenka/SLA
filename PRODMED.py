@@ -187,10 +187,6 @@ try:
                 'POINT_VALUE'
             ]].style.format({'POINT_VALUE': "R$ {:.2f}"}))
 
-            st.write(f"**Total Points: {total_points:.1f}**")
-            st.write(f"**Total Value: R$ {total_point_value:.2f}**")
-            st.write(f"**Total Exams: {total_count}**")
-
     st.markdown(f"<h2 style='color:red;'>Total Points: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<h2 style='color:red;'>Total Value: R$ {total_point_value_sum:.2f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<h2 style='color:red;'>Total Exams: {total_count_sum}</h2>", unsafe_allow_html=True)
