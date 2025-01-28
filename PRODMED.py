@@ -102,8 +102,11 @@ try:
     selected_month, selected_year_str = selected_month_name.split('/')
     selected_month = month_names.index(selected_month) + 1  # Convert month name to number
     
-    # Convert the year string to an integer
-    selected_year = int(float(selected_year_str))
+    # Remove decimals from the year string (e.g., "2024.0" -> "2024")
+    selected_year_str = selected_year_str.split('.')[0]
+    
+    # Convert the cleaned year string to an integer
+    selected_year = int(selected_year_str)
     
     # Filter data based on selected month and year
     filtered_df = excel_df[
