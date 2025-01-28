@@ -5,6 +5,7 @@ import requests
 from io import BytesIO
 from datetime import datetime
 from fpdf import FPDF
+import re
 
 # Caching for performance improvement
 @st.cache_data
@@ -39,8 +40,15 @@ def load_payment_data(payment_url):
 
         for sheet_name in excel_file.sheet_names:
             try:
-                # Attempt to parse the sheet name as a valid period
-                month_year = pd.Period(sheet_name, freq='M')
+                # Extract month/year from the sheet name using regex
+                match = re.search(r"([a-zA-Z]+)\s(\d{2})", sheet_name)
+                if match:
+                    month_name = match.group(1)
+                    year_suffix = match.group(2)
+                    # Convert to full year and parse into pd.Period
+                    month_year = pd.Period(f"{month_name} 20{year_suffix}", freq='M')
+                else:
+                    raise ValueError("Sheet name does not match the expected format (e.g., 'December 24').")
             except Exception as e:
                 # Skip sheets with invalid names
                 st.warning(f"Skipping invalid sheet name: {sheet_name} ({e})")
