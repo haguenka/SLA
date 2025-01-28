@@ -334,9 +334,9 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
         pdf.set_font('Arial', '', 16)
         pdf.cell(0, 10, f'Total de Pontos por Exames Aprovados: {total_points_sum:.1f}', ln=True)
         pdf.cell(0, 10, f'Total de Exames Aprovados: {total_aprovado_events}', ln=True)
-        pdf.cell(0, 10, f'Pagamento Recebido: R$ {payment:,.2f}', ln=True)
+        pdf.cell(0, 10, f'Pagamento Recebido: R$ {total_payment:,.2f}', ln=True)
         if total_aprovado_events > 0:
-            unitary_value_pdf = payment / total_aprovado_events
+            unitary_value_pdf = total_payment / total_aprovado_events
         else:
             unitary_value_pdf = 0.0
         pdf.cell(0, 10, f'Valor Unitário por Evento: R$ {unitary_value_pdf:,.2f}', ln=True)
