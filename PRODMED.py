@@ -129,6 +129,7 @@ try:
         unitary_value = 0.0
     st.markdown(f"<h3 style='color:green;'>Payment: R$ {payment:,.2f}</h3>", unsafe_allow_html=True)
     st.markdown(f"<h3 style='color:green;'>Unitary Event Value: R$ {unitary_value:,.2f}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.4f}/point</h2>", unsafe_allow_html=True)
 
     # Combine both preliminar and aprovado data for display (removing seconds from STATUS_APROVADO)
     doctor_all_events = pd.concat([preliminar_df, aprovado_df], ignore_index=True)
