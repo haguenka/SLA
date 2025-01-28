@@ -56,15 +56,17 @@ def load_payment_data(payment_url):
 
             # Load each sheet and extract the relevant columns
             sheet_df = pd.read_excel(excel_file, sheet_name=sheet_name)
-            if 'Medico' in sheet_df.columns and 'total' in sheet_df.columns:
+            sheet_df.columns = sheet_df.columns.str.strip().str.lower()  # Normalize column names to lowercase
+
+            if 'medico' in sheet_df.columns and 'total' in sheet_df.columns:
                 # Add a column for month/year based on the sheet name
-                
+                sheet_df['MONTH_YEAR'] = month_year
                 all_payments = pd.concat([all_payments, sheet_df], ignore_index=True)
             else:
-                st.warning(f"Skipping sheet '{sheet_name}' due to missing columns ('Medico', 'Total').")
+                st.warning(f"Skipping sheet '{sheet_name}' due to missing columns ('medico', 'total').")
 
         # Standardize column names
-        all_payments.rename(columns={'Medico': 'DOCTOR', 'Total': 'PAYMENT'}, inplace=True)
+        all_payments.rename(columns={'medico': 'DOCTOR', 'total': 'PAYMENT'}, inplace=True)
 
         return all_payments
 
@@ -226,7 +228,6 @@ try:
 
 except Exception as e:
     st.error(f"An error occurred: {e}")
-
 
 
 # -----------------------------------------------------------------------------
