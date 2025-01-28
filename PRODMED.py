@@ -81,15 +81,23 @@ try:
     excel_df['STATUS_APROVADO'] = pd.to_datetime(excel_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M', errors='coerce')
     excel_df['STATUS_PRELIMINAR'] = pd.to_datetime(excel_df['STATUS_PRELIMINAR'], format='%d-%m-%Y %H:%M', errors='coerce')
 
-    # Get unique months and years from the data
+    # Extract month and year from the data
     excel_df['MONTH'] = excel_df['STATUS_APROVADO'].dt.month
     excel_df['YEAR'] = excel_df['STATUS_APROVADO'].dt.year
 
-    unique_months = excel_df['MONTH'].unique()
-    unique_years = excel_df['YEAR'].unique()
+    # Define month names
+    month_names = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ]
+
+    # Get unique years and months from the data
+    unique_years = sorted(excel_df['YEAR'].dropna().unique())
+    unique_months = sorted(excel_df['MONTH'].dropna().unique())
 
     # Dropdown for month and year selection
-    selected_month = st.sidebar.selectbox('Select Month', unique_months)
+    selected_month_name = st.sidebar.selectbox('Select Month', month_names)
+    selected_month = month_names.index(selected_month_name) + 1  # Convert month name to number
     selected_year = st.sidebar.selectbox('Select Year', unique_years)
 
     # Filter data based on selected month and year
@@ -186,7 +194,7 @@ try:
     st.markdown(f"<h2 style='color:red;'>Total Points: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<h2 style='color:red;'>Total Value: R$ {total_point_value_sum:.2f}</h2>", unsafe_allow_html=True)
     st.markdown(f"<h2 style='color:red;'>Total Exams: {total_count_sum}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.2f}/point</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.4f}/point</h2>", unsafe_allow_html=True)
 
 
     # ------------------------------------------------------------------------------------
