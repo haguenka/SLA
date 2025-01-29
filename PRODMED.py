@@ -165,22 +165,34 @@ except Exception as e:
 tab1, tab2 = st.tabs(["Individual Doctor View", "Worst/Best Doctors"])
 
 # ------------------------------------------------------------------------------
-# TAB 1: Original Single-Doctor Analysis
+# TAB 1: Single-Doctor Analysis, but aggregated across all hospitals
 # ------------------------------------------------------------------------------
 with tab1:
     try:
-        # HOSPITAL FILTER
+        # 1. HOSPITAL FILTER for selecting doctors (but not filtering final data)
+        #    We add an 'All Hospitals' option if you prefer. Otherwise, keep it as-is.
         hospital_list = sorted(filtered_df['UNIDADE'].dropna().unique())
-        selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
+        selected_hospital = st.sidebar.selectbox(
+            'Filter Hospital for Doctor List',
+            ['All Hospitals'] + hospital_list
+        )
 
-        # Filter by selected hospital
-        hospital_df = filtered_df[filtered_df['UNIDADE'] == selected_hospital]
+        # 2. If user chooses a specific hospital from the sidebar, restrict
+        #    the doctor list to those that appear in that hospital. If user chooses
+        #    "All Hospitals", allow all doctors in the entire filtered_df.
+        if selected_hospital == 'All Hospitals':
+            possible_docs_df = filtered_df
+        else:
+            possible_docs_df = filtered_df[filtered_df['UNIDADE'] == selected_hospital]
 
-        # DOCTOR FILTER
-        doctor_list = sorted(hospital_df['MEDICO_LAUDO_DEFINITIVO'].dropna().unique())
+        # 3. Doctor Filter (based on the possible_docs_df)
+        doctor_list = sorted(possible_docs_df['MEDICO_LAUDO_DEFINITIVO'].dropna().unique())
         selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
 
-        # Match and autofill payment for selected doctor
+        # 4. Now gather ALL data for the selected doctor (across all hospitals)
+        doctor_df = filtered_df[filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor]
+
+        # 5. Payment for selected doctor
         payment_data['NORMALIZED_MEDICO'] = payment_data['MEDICO'].apply(normalize_name)
         normalized_doctor_name = normalize_name(selected_doctor)
         doctor_payment = payment_data[payment_data['NORMALIZED_MEDICO'] == normalized_doctor_name]
@@ -192,32 +204,42 @@ with tab1:
         st.sidebar.markdown(f"### Payment: R$ {total_payment:,.2f}")
         st.markdown(f"<h1 style='color:red;'>{selected_doctor}</h1>", unsafe_allow_html=True)
 
-        # Filter data for the selected doctor
-        preliminar_df = hospital_df[
-            (hospital_df['STATUS_PRELIMINAR'].notna()) &
-            (hospital_df['MEDICO_LAUDOO_PRELIMINAR'] == selected_doctor)
+        # 6. Separate PRELIMINAR and APROVADO for this doctor (across all hospitals)
+        preliminar_df = doctor_df[
+            (doctor_df['STATUS_PRELIMINAR'].notna()) &
+            (doctor_df['MEDICO_LAUDOO_PRELIMINAR'] == selected_doctor)
         ]
-        aprovado_df = hospital_df[
-            (hospital_df['STATUS_APROVADO'].notna()) &
-            (hospital_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
+        aprovado_df = doctor_df[
+            (doctor_df['STATUS_APROVADO'].notna()) &
+            (doctor_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
         ]
 
         total_preliminar_events = len(preliminar_df)
         total_aprovado_events = len(aprovado_df)
-        st.markdown(f"<h3 style='color:#f0ad4e;'>Total PRELIMINAR Events: {total_preliminar_events}</h3>", unsafe_allow_html=True)
-        st.markdown(f"<h3 style='color:#4682b4;'>Total APROVADO Events: {total_aprovado_events}</h3>", unsafe_allow_html=True)
+
+        st.markdown(
+            f"<h3 style='color:#f0ad4e;'>Total PRELIMINAR Events: {total_preliminar_events}</h3>",
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f"<h3 style='color:#4682b4;'>Total APROVADO Events: {total_aprovado_events}</h3>",
+            unsafe_allow_html=True
+        )
 
         if total_aprovado_events > 0:
             unitary_value = total_payment / total_aprovado_events
         else:
             unitary_value = 0.0
+
         st.markdown(f"<h3 style='color:green;'>Payment: R$ {total_payment:,.2f}</h3>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='color:green;'>Unitary Event Value: R$ {unitary_value:,.2f}</h3>", unsafe_allow_html=True)
 
-        # Combine data for display
+        # 7. Combine data for a simple display
         doctor_all_events = pd.concat([preliminar_df, aprovado_df], ignore_index=True)
         if not doctor_all_events.empty:
+            # Convert to string for display
             doctor_all_events['STATUS_APROVADO'] = doctor_all_events['STATUS_APROVADO'].dt.strftime('%Y-%m-%d %H:%M')
+
         filtered_columns = [
             'SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 'DESCRICAO_PROCEDIMENTO',
             'ESPECIALIDADE', 'STATUS_PRELIMINAR', 'MEDICO_LAUDOO_PRELIMINAR',
@@ -225,10 +247,7 @@ with tab1:
         ]
         st.dataframe(doctor_all_events[filtered_columns], width=1200, height=400)
 
-        # -------------
-        # Points calculation for the selected doctor
-        # -------------
-        # (We already made DESCRICAO_PROCEDIMENTO uppercase above)
+        # 8. Points calculation for the selected doctor (ALL hospitals)
         merged_df = pd.merge(aprovado_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
         merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
         merged_df['POINTS'] = (merged_df['STATUS_APROVADO'].notna().astype(int) * merged_df['MULTIPLIER']).round(1)
@@ -247,7 +266,9 @@ with tab1:
         total_count_sum = doctor_grouped['COUNT'].sum()
         total_point_value_sum = doctor_grouped['POINT_VALUE'].sum()
 
-        for hosp in doctor_grouped['UNIDADE'].unique():
+        # 9. Display breakdown by each hospital but remember totals are across all hospitals
+        unique_hospitals_for_doc = doctor_grouped['UNIDADE'].unique()
+        for hosp in unique_hospitals_for_doc:
             hos_df = doctor_grouped[doctor_grouped['UNIDADE'] == hosp]
             st.markdown(f"<h2 style='color:yellow;'>{hosp}</h2>", unsafe_allow_html=True)
             for grupo in hos_df['GRUPO'].unique():
@@ -267,28 +288,28 @@ with tab1:
                     ]].style.format({'POINT_VALUE': "R$ {:.2f}"})
                 )
 
-        st.markdown(f"<h2 style='color:red;'>Total Points: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
-        st.markdown(f"<h2 style='color:red;'>Total Value: R$ {total_point_value_sum:.2f}</h2>", unsafe_allow_html=True)
-        st.markdown(f"<h2 style='color:red;'>Total Exams: {total_count_sum}</h2>", unsafe_allow_html=True)
+        # 10. Show sums across ALL hospitals
+        st.markdown(f"<h2 style='color:red;'>Total Points (All Hospitals): {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='color:red;'>Total Value (All Hospitals): R$ {total_point_value_sum:.2f}</h2>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='color:red;'>Total Exams (All Hospitals): {total_count_sum}</h2>", unsafe_allow_html=True)
         st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.2f}/point</h2>", unsafe_allow_html=True)
 
         # --------------------------------------------------------------------
         # LAUDO PRELIMINAR x LAUDO APROVADO (Tomografia & Ressonancia)
-        # Now with APROVADO_POINTS included
+        # Now showing data across all hospitals (for selected doctor)
         # --------------------------------------------------------------------
-
         valid_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA']
 
-        preliminar_filtered = hospital_df[
-            (hospital_df['GRUPO'].isin(valid_groups)) &
-            (hospital_df['STATUS_PRELIMINAR'].notna()) &
-            (hospital_df['MEDICO_LAUDOO_PRELIMINAR'] == selected_doctor)
+        preliminar_filtered = doctor_df[
+            (doctor_df['GRUPO'].isin(valid_groups)) &
+            (doctor_df['STATUS_PRELIMINAR'].notna()) &
+            (doctor_df['MEDICO_LAUDOO_PRELIMINAR'] == selected_doctor)
         ].copy()
 
-        aprovado_filtered = hospital_df[
-            (hospital_df['GRUPO'].isin(valid_groups)) &
-            (hospital_df['STATUS_APROVADO'].notna()) &
-            (hospital_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
+        aprovado_filtered = doctor_df[
+            (doctor_df['GRUPO'].isin(valid_groups)) &
+            (doctor_df['STATUS_APROVADO'].notna()) &
+            (doctor_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
         ].copy()
 
         # --- PRELIMINAR grouping ---
@@ -325,16 +346,13 @@ with tab1:
 
         # --- APROVADO grouping (points) ---
         if not aprovado_filtered.empty:
-            # Merge with csv_df to get MULTIPLIER
             aprovado_points_merged = pd.merge(
                 aprovado_filtered, 
                 csv_df, 
                 on='DESCRICAO_PROCEDIMENTO', 
                 how='left'
             )
-            # Convert multiplier to numeric
             aprovado_points_merged['MULTIPLIER'] = pd.to_numeric(aprovado_points_merged['MULTIPLIER'], errors='coerce').fillna(0)
-            # Sum multipliers per day/period
             aprovado_points_grouped = (
                 aprovado_points_merged
                 .groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'], dropna=False)['MULTIPLIER']
@@ -343,152 +361,51 @@ with tab1:
                 .rename(columns={'MEDICO_LAUDO_DEFINITIVO': 'MEDICO'})
             )
         else:
-            aprovado_points_grouped = pd.DataFrame(
-                columns=['MEDICO','DATE','DAY_OF_WEEK','PERIOD','APROVADO_POINTS']
-            )
+            aprovado_points_grouped = pd.DataFrame(columns=['MEDICO','DATE','DAY_OF_WEEK','PERIOD','APROVADO_POINTS'])
 
         # --- Merge preliminar_counts + aprovado_counts + aprovado_points ---
-        days_merged = pd.merge(
-            preliminar_days_grouped,
-            aprovado_days_grouped,
-            on=['MEDICO','DATE','DAY_OF_WEEK','PERIOD'],
-            how='outer'
-        ).merge(
-            aprovado_points_grouped,
-            on=['MEDICO','DATE','DAY_OF_WEEK','PERIOD'],
-            how='outer'
-        ).fillna(0)
+        days_merged = (
+            pd.merge(
+                preliminar_days_grouped,
+                aprovado_days_grouped,
+                on=['MEDICO','DATE','DAY_OF_WEEK','PERIOD'],
+                how='outer'
+            )
+            .merge(
+                aprovado_points_grouped,
+                on=['MEDICO','DATE','DAY_OF_WEEK','PERIOD'],
+                how='outer'
+            )
+            .fillna(0)
+        )
 
-        # Convert numeric columns to int/float as needed
         days_merged['PRELIMINAR_COUNT'] = days_merged['PRELIMINAR_COUNT'].astype(int)
-        days_merged['APROVADO_COUNT']    = days_merged['APROVADO_COUNT'].astype(int)
-        days_merged['APROVADO_POINTS']   = days_merged['APROVADO_POINTS'].astype(float)
+        days_merged['APROVADO_COUNT'] = days_merged['APROVADO_COUNT'].astype(int)
+        days_merged['APROVADO_POINTS'] = days_merged['APROVADO_POINTS'].astype(float)
 
         # Enforce custom PERIOD order if desired
         period_order = ['Manhã', 'Tarde', 'Noite', 'Madrugada']
         days_merged['PERIOD'] = pd.Categorical(days_merged['PERIOD'], categories=period_order, ordered=True)
         days_merged = days_merged.sort_values(['DATE', 'PERIOD'])
 
-        # --- Style for DataFrame (optional) ---
         def color_rows(row):
             return [
                 f'background-color: {period_colors.get(row["PERIOD"], "white")}; color: white'
                 for _ in row.index
             ]
 
-        styled_df = days_merged.style.apply(color_rows, axis=1)
+        styled_df = (
+            days_merged
+            .style
+            .apply(color_rows, axis=1)
+            .format({'APROVADO_POINTS': '{:.2f}'})
+        )
 
-        st.markdown("### LAUDO PRELIMINAR and LAUDO APROVADO (Tomografia/Ressonância), including APROVADO_POINTS")
+        st.markdown("### LAUDO PRELIMINAR and LAUDO APROVADO (Tomografia/Ressonância), including APROVADO_POINTS (across all hospitals)")
         st.dataframe(styled_df, width=1200, height=400)
 
     except Exception as e:
         st.error(f"An error occurred in Tab 1: {e}")
-
-
-# ------------------------------------------------------------------------------
-# TAB 2: Worst 10 & Best 10 Doctors (by VALUE_PER_UNIT) + VALUE_PER_POINT
-# ------------------------------------------------------------------------------
-with tab2:
-    st.subheader("Worst & Best Doctors by Value per Approved Exam (and Value per Point)")
-
-    try:
-        # 1) Focus on the entire dataset for the selected month/year 
-        #    (only rows that actually have a 'STATUS_APROVADO')
-        month_df = excel_df[
-            (excel_df['MONTH'] == selected_month) & 
-            (excel_df['YEAR'] == selected_year)
-        ].dropna(subset=['STATUS_APROVADO']).copy()
-
-        # 2) Merge with csv_df to get MULTIPLIER, compute total points
-        #    Because we already did uppercase merges above, 
-        #    we can safely join on DESCRICAO_PROCEDIMENTO
-        points_merged = pd.merge(month_df, csv_df, on="DESCRICAO_PROCEDIMENTO", how="left")
-        points_merged['MULTIPLIER'] = pd.to_numeric(points_merged['MULTIPLIER'], errors='coerce').fillna(0)
-        points_merged['POINTS'] = points_merged['MULTIPLIER']  # 1 exam => "MULTIPLIER" points
-
-        # 3) Sum total points by doctor
-        points_sum = (
-            points_merged
-            .groupby("MEDICO_LAUDO_DEFINITIVO")['POINTS']
-            .sum()
-            .reset_index(name="TOTAL_POINTS")
-        )
-        points_sum["NORMALIZED_MEDICO"] = points_sum["MEDICO_LAUDO_DEFINITIVO"].apply(normalize_name)
-
-        # 4) Count how many approved exams each doctor has
-        approved_counts = (
-            month_df
-            .groupby("MEDICO_LAUDO_DEFINITIVO")
-            .size()
-            .reset_index(name="APPROVED_COUNT")
-        )
-        approved_counts["NORMALIZED_MEDICO"] = approved_counts["MEDICO_LAUDO_DEFINITIVO"].apply(normalize_name)
-
-        # 5) Sum total payments for the same month in 'payment_data'
-        pay_month = payment_data.copy()  # already filtered by month
-        pay_month["NORMALIZED_MEDICO"] = pay_month["MEDICO"].apply(normalize_name)
-        pay_sums = (
-            pay_month
-            .groupby("NORMALIZED_MEDICO")["PAYMENT"]
-            .sum()
-            .reset_index(name="TOTAL_PAYMENT")
-        )
-
-        # 6) Merge to get: APPROVED_COUNT, TOTAL_POINTS, TOTAL_PAYMENT
-        merged_doctors = pd.merge(approved_counts, points_sum, on="NORMALIZED_MEDICO", how="inner")
-        merged_doctors = pd.merge(merged_doctors, pay_sums, on="NORMALIZED_MEDICO", how="inner")
-
-        # 7) Filter only doctors with > 0 payment and > 0 approved exams
-        merged_doctors = merged_doctors[
-            (merged_doctors["TOTAL_PAYMENT"] > 0) & 
-            (merged_doctors["APPROVED_COUNT"] > 0)
-        ]
-
-        # 8) Compute both metrics
-        merged_doctors["VALUE_PER_UNIT"] = merged_doctors["TOTAL_PAYMENT"] / merged_doctors["APPROVED_COUNT"]
-        merged_doctors["VALUE_PER_POINT"] = merged_doctors["TOTAL_PAYMENT"] / merged_doctors["TOTAL_POINTS"]
-
-        # 9) Sort for worst 10 (highest VALUE_PER_UNIT) and best 10 (lowest)
-        worst_10 = merged_doctors.nlargest(10, "VALUE_PER_UNIT")
-        best_10 = merged_doctors.nsmallest(10, "VALUE_PER_UNIT")
-
-        # 10) Display results
-        st.markdown("### Worst 10 Doctors by Value per Approved Exam")
-        st.dataframe(
-            worst_10[[
-                "NORMALIZED_MEDICO",
-                "APPROVED_COUNT",
-                "TOTAL_POINTS",
-                "TOTAL_PAYMENT",
-                "VALUE_PER_UNIT",
-                "VALUE_PER_POINT",
-            ]].style.format({
-                "TOTAL_POINTS": "{:.2f}",
-                "TOTAL_PAYMENT": "R$ {:.2f}",
-                "VALUE_PER_UNIT": "R$ {:.2f}",
-                "VALUE_PER_POINT": "R$ {:.2f}"
-            })
-        )
-
-        st.markdown("### Best 10 Doctors by Value per Approved Exam")
-        st.dataframe(
-            best_10[[
-                "NORMALIZED_MEDICO",
-                "APPROVED_COUNT",
-                "TOTAL_POINTS",
-                "TOTAL_PAYMENT",
-                "VALUE_PER_UNIT",
-                "VALUE_PER_POINT",
-            ]].style.format({
-                "TOTAL_POINTS": "{:.2f}",
-                "TOTAL_PAYMENT": "R$ {:.2f}",
-                "VALUE_PER_UNIT": "R$ {:.2f}",
-                "VALUE_PER_POINT": "R$ {:.2f}"
-            })
-        )
-
-    except Exception as e:
-        st.error(f"An error occurred while creating the worst/best lists: {e}")
 
 # -----------------------------------------------------------------------------
 # EXPORT SUMMARY AND DOCTORS DATAFRAMES AS A COMBINED PDF REPORT
