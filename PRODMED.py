@@ -131,10 +131,7 @@ try:
     else:
         raise ValueError(f"Sheet matching '{formatted_sheet_name}' not found in {payment_file_url}")
 
-    hospital_list = filtered_df['UNIDADE'].unique()
-    selected_hospital = st.sidebar.selectbox('Select Hospital', hospital_list)
-    filtered_df = filtered_df[filtered_df['UNIDADE'] == selected_hospital]
-
+    # Remove hospital filter and show all hospitals for the selected doctor
     doctor_list = filtered_df['MEDICO_LAUDO_DEFINITIVO'].unique()
     selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
 
@@ -155,6 +152,7 @@ try:
 
     st.markdown(f"<h1 style='color:red;'>{selected_doctor}</h1>", unsafe_allow_html=True)
 
+    # Filter data for the selected doctor across all hospitals
     preliminar_df = filtered_df[
         (filtered_df['STATUS_PRELIMINAR'].notna()) &
         (filtered_df['MEDICO_LAUDOO_PRELIMINAR'] == selected_doctor)
