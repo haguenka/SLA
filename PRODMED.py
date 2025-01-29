@@ -273,65 +273,112 @@ with tab1:
         st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.2f}/point</h2>", unsafe_allow_html=True)
 
         # --------------------------------------------------------------------
-        # LAUDO PRELIMINAR x LAUDO APROVADO (Tomografia & Ressonancia) 
+        # LAUDO PRELIMINAR x LAUDO APROVADO (Tomografia & Ressonancia)
+        # Now with APROVADO_POINTS included
         # --------------------------------------------------------------------
+
         valid_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA']
 
-        preliminar_filtered = preliminar_df[preliminar_df['GRUPO'].isin(valid_groups)]
-        aprovado_filtered = aprovado_df[aprovado_df['GRUPO'].isin(valid_groups)]
+        preliminar_filtered = hospital_df[
+            (hospital_df['GRUPO'].isin(valid_groups)) &
+            (hospital_df['STATUS_PRELIMINAR'].notna()) &
+            (hospital_df['MEDICO_LAUDOO_PRELIMINAR'] == selected_doctor)
+        ].copy()
 
-        # PRELIMINAR
+        aprovado_filtered = hospital_df[
+            (hospital_df['GRUPO'].isin(valid_groups)) &
+            (hospital_df['STATUS_APROVADO'].notna()) &
+            (hospital_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
+        ].copy()
+
+        # --- PRELIMINAR grouping ---
         if not preliminar_filtered.empty:
             preliminar_filtered['DAY_OF_WEEK'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.day_name().map(day_translations)
             preliminar_filtered['DATE'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.date.astype(str)
             preliminar_filtered['PERIOD'] = preliminar_filtered['STATUS_PRELIMINAR'].dt.hour.apply(assign_period)
-            preliminar_days_grouped = preliminar_filtered.groupby(
-                ['MEDICO_LAUDOO_PRELIMINAR', 'DATE', 'DAY_OF_WEEK', 'PERIOD'],
-                dropna=False
-            ).size().reset_index(name='PRELIMINAR_COUNT')
-            preliminar_days_grouped = preliminar_days_grouped.rename(columns={'MEDICO_LAUDOO_PRELIMINAR': 'MEDICO'})
+            
+            preliminar_days_grouped = (
+                preliminar_filtered
+                .groupby(['MEDICO_LAUDOO_PRELIMINAR', 'DATE', 'DAY_OF_WEEK', 'PERIOD'], dropna=False)
+                .size()
+                .reset_index(name='PRELIMINAR_COUNT')
+                .rename(columns={'MEDICO_LAUDOO_PRELIMINAR': 'MEDICO'})
+            )
         else:
             preliminar_days_grouped = pd.DataFrame(columns=['MEDICO','DATE','DAY_OF_WEEK','PERIOD','PRELIMINAR_COUNT'])
 
-        # APROVADO
+        # --- APROVADO grouping (counts) ---
         if not aprovado_filtered.empty:
             aprovado_filtered['DAY_OF_WEEK'] = aprovado_filtered['STATUS_APROVADO'].dt.day_name().map(day_translations)
             aprovado_filtered['DATE'] = aprovado_filtered['STATUS_APROVADO'].dt.date.astype(str)
             aprovado_filtered['PERIOD'] = aprovado_filtered['STATUS_APROVADO'].dt.hour.apply(assign_period)
-            aprovado_days_grouped = aprovado_filtered.groupby(
-                ['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'],
-                dropna=False
-            ).size().reset_index(name='APROVADO_COUNT')
-            aprovado_days_grouped = aprovado_days_grouped.rename(columns={'MEDICO_LAUDO_DEFINITIVO': 'MEDICO'})
+            
+            aprovado_days_grouped = (
+                aprovado_filtered
+                .groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'], dropna=False)
+                .size()
+                .reset_index(name='APROVADO_COUNT')
+                .rename(columns={'MEDICO_LAUDO_DEFINITIVO': 'MEDICO'})
+            )
         else:
             aprovado_days_grouped = pd.DataFrame(columns=['MEDICO','DATE','DAY_OF_WEEK','PERIOD','APROVADO_COUNT'])
 
-        # Merge both
+        # --- APROVADO grouping (points) ---
+        if not aprovado_filtered.empty:
+            # Merge with csv_df to get MULTIPLIER
+            aprovado_points_merged = pd.merge(
+                aprovado_filtered, 
+                csv_df, 
+                on='DESCRICAO_PROCEDIMENTO', 
+                how='left'
+            )
+            # Convert multiplier to numeric
+            aprovado_points_merged['MULTIPLIER'] = pd.to_numeric(aprovado_points_merged['MULTIPLIER'], errors='coerce').fillna(0)
+            # Sum multipliers per day/period
+            aprovado_points_grouped = (
+                aprovado_points_merged
+                .groupby(['MEDICO_LAUDO_DEFINITIVO', 'DATE', 'DAY_OF_WEEK', 'PERIOD'], dropna=False)['MULTIPLIER']
+                .sum()
+                .reset_index(name='APROVADO_POINTS')
+                .rename(columns={'MEDICO_LAUDO_DEFINITIVO': 'MEDICO'})
+            )
+        else:
+            aprovado_points_grouped = pd.DataFrame(
+                columns=['MEDICO','DATE','DAY_OF_WEEK','PERIOD','APROVADO_POINTS']
+            )
+
+        # --- Merge preliminar_counts + aprovado_counts + aprovado_points ---
         days_merged = pd.merge(
-            preliminar_days_grouped, 
+            preliminar_days_grouped,
             aprovado_days_grouped,
+            on=['MEDICO','DATE','DAY_OF_WEEK','PERIOD'],
+            how='outer'
+        ).merge(
+            aprovado_points_grouped,
             on=['MEDICO','DATE','DAY_OF_WEEK','PERIOD'],
             how='outer'
         ).fillna(0)
 
-        # Convert to integers
+        # Convert numeric columns to int/float as needed
         days_merged['PRELIMINAR_COUNT'] = days_merged['PRELIMINAR_COUNT'].astype(int)
-        days_merged['APROVADO_COUNT'] = days_merged['APROVADO_COUNT'].astype(int)
+        days_merged['APROVADO_COUNT']    = days_merged['APROVADO_COUNT'].astype(int)
+        days_merged['APROVADO_POINTS']   = days_merged['APROVADO_POINTS'].astype(float)
 
-        # Enforce order of periods
+        # Enforce custom PERIOD order if desired
         period_order = ['Manhã', 'Tarde', 'Noite', 'Madrugada']
         days_merged['PERIOD'] = pd.Categorical(days_merged['PERIOD'], categories=period_order, ordered=True)
-        days_merged = days_merged.sort_values('PERIOD')
+        days_merged = days_merged.sort_values(['DATE', 'PERIOD'])
 
-        # Style for DataFrame
+        # --- Style for DataFrame (optional) ---
         def color_rows(row):
             return [
                 f'background-color: {period_colors.get(row["PERIOD"], "white")}; color: white'
                 for _ in row.index
             ]
+
         styled_df = days_merged.style.apply(color_rows, axis=1)
 
-        st.markdown("### LAUDO PRELIMINAR and LAUDO APROVADO Counts by Period (Tomografia and Ressonancia)")
+        st.markdown("### LAUDO PRELIMINAR and LAUDO APROVADO (Tomografia/Ressonância), including APROVADO_POINTS")
         st.dataframe(styled_df, width=1200, height=400)
 
     except Exception as e:
