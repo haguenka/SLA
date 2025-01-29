@@ -60,7 +60,7 @@ hospital_name_mapping = {
 def merge_hospital_names(df, column_name):
     return df.replace({column_name: hospital_name_mapping})
 
-def normalize_name(name):
+def normalize_name(name: str) -> str:
     """
     Helper function to normalize doctor names
     so they match between excel_df and payment_data.
@@ -98,10 +98,14 @@ payment_file_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/pagament
 payment_excel = pd.ExcelFile(payment_file_url)
 available_sheets = payment_excel.sheet_names
 
-# -----------------------------
-# Pre-process excel_df
-# -----------------------------
+# Convert to uppercase **once** so that merges are consistent
+excel_df['DESCRICAO_PROCEDIMENTO'] = excel_df['DESCRICAO_PROCEDIMENTO'].astype(str).str.upper()
+csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].astype(str).str.upper()
+
 try:
+    # -----------------------------
+    # Pre-process excel_df
+    # -----------------------------
     excel_df['STATUS_APROVADO'] = pd.to_datetime(excel_df['STATUS_APROVADO'], format='%d-%m-%Y %H:%M', errors='coerce')
     excel_df['STATUS_PRELIMINAR'] = pd.to_datetime(excel_df['STATUS_PRELIMINAR'], format='%d-%m-%Y %H:%M', errors='coerce')
 
@@ -118,8 +122,8 @@ try:
     # Unique years
     unique_years = sorted(excel_df['YEAR'].dropna().unique())
     
-    # Sidebar selects MONTH/YEAR
     st.sidebar.header('Filter Options')
+    # Sidebar selects MONTH/YEAR
     selected_month_name = st.sidebar.selectbox(
         'Select Month/Year',
         [f"{month}/{year}" for year in unique_years for month in month_names]
@@ -161,7 +165,7 @@ except Exception as e:
 tab1, tab2 = st.tabs(["Individual Doctor View", "Worst/Best Doctors"])
 
 # ------------------------------------------------------------------------------
-# TAB 1: Original Code for Single Doctor Analysis
+# TAB 1: Original Single-Doctor Analysis
 # ------------------------------------------------------------------------------
 with tab1:
     try:
@@ -224,8 +228,7 @@ with tab1:
         # -------------
         # Points calculation for the selected doctor
         # -------------
-        csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
-        aprovado_df['DESCRICAO_PROCEDIMENTO'] = aprovado_df['DESCRICAO_PROCEDIMENTO'].str.upper()
+        # (We already made DESCRICAO_PROCEDIMENTO uppercase above)
         merged_df = pd.merge(aprovado_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
         merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
         merged_df['POINTS'] = (merged_df['STATUS_APROVADO'].notna().astype(int) * merged_df['MULTIPLIER']).round(1)
@@ -244,9 +247,9 @@ with tab1:
         total_count_sum = doctor_grouped['COUNT'].sum()
         total_point_value_sum = doctor_grouped['POINT_VALUE'].sum()
 
-        for hospital in doctor_grouped['UNIDADE'].unique():
-            hos_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
-            st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
+        for hosp in doctor_grouped['UNIDADE'].unique():
+            hos_df = doctor_grouped[doctor_grouped['UNIDADE'] == hosp]
+            st.markdown(f"<h2 style='color:yellow;'>{hosp}</h2>", unsafe_allow_html=True)
             for grupo in hos_df['GRUPO'].unique():
                 grupo_df = hos_df[hos_df['GRUPO'] == grupo].copy()
                 total_points = grupo_df['POINTS'].sum()
@@ -332,62 +335,111 @@ with tab1:
         st.dataframe(styled_df, width=1200, height=400)
 
     except Exception as e:
-        st.error(f"An error occurred: {e}")
+        st.error(f"An error occurred in Tab 1: {e}")
+
 
 # ------------------------------------------------------------------------------
-# TAB 2: New - Worst 10 & Best 10 Doctors by Value per Approved Exam
+# TAB 2: Worst 10 & Best 5 Doctors (by VALUE_PER_UNIT) + VALUE_PER_POINT
 # ------------------------------------------------------------------------------
 with tab2:
-    st.subheader("Worst & Best Doctors by Value per Unit (Approved Exam)")
+    st.subheader("Worst & Best Doctors by Value per Approved Exam (and Value per Point)")
 
     try:
-        # 1) Filter the entire excel_df by selected month/year
+        # 1) Focus on the entire dataset for the selected month/year 
+        #    (only rows that actually have a 'STATUS_APROVADO')
         month_df = excel_df[
             (excel_df['MONTH'] == selected_month) & 
             (excel_df['YEAR'] == selected_year)
-        ].dropna(subset=['STATUS_APROVADO'])
+        ].dropna(subset=['STATUS_APROVADO']).copy()
 
-        # 2) Group by doctor to get total APPROVED count
+        # 2) Merge with csv_df to get MULTIPLIER, compute total points
+        #    Because we already did uppercase merges above, 
+        #    we can safely join on DESCRICAO_PROCEDIMENTO
+        points_merged = pd.merge(month_df, csv_df, on="DESCRICAO_PROCEDIMENTO", how="left")
+        points_merged['MULTIPLIER'] = pd.to_numeric(points_merged['MULTIPLIER'], errors='coerce').fillna(0)
+        points_merged['POINTS'] = points_merged['MULTIPLIER']  # 1 exam => "MULTIPLIER" points
+
+        # 3) Sum total points by doctor
+        points_sum = (
+            points_merged
+            .groupby("MEDICO_LAUDO_DEFINITIVO")['POINTS']
+            .sum()
+            .reset_index(name="TOTAL_POINTS")
+        )
+        points_sum["NORMALIZED_MEDICO"] = points_sum["MEDICO_LAUDO_DEFINITIVO"].apply(normalize_name)
+
+        # 4) Count how many approved exams each doctor has
         approved_counts = (
-            month_df.groupby("MEDICO_LAUDO_DEFINITIVO")
-                    .size()
-                    .reset_index(name="APPROVED_COUNT")
+            month_df
+            .groupby("MEDICO_LAUDO_DEFINITIVO")
+            .size()
+            .reset_index(name="APPROVED_COUNT")
         )
         approved_counts["NORMALIZED_MEDICO"] = approved_counts["MEDICO_LAUDO_DEFINITIVO"].apply(normalize_name)
 
-        # 3) Filter payment_data for the same month, sum by doctor
+        # 5) Sum total payments for the same month in 'payment_data'
         pay_month = payment_data.copy()  # already filtered by month
         pay_month["NORMALIZED_MEDICO"] = pay_month["MEDICO"].apply(normalize_name)
-        pay_sums = pay_month.groupby("NORMALIZED_MEDICO")["PAYMENT"].sum().reset_index(name="TOTAL_PAYMENT")
-
-        # 4) Merge: only doctors with a positive total payment & at least one approved exam
-        merged = pd.merge(approved_counts, pay_sums, on="NORMALIZED_MEDICO", how="inner")
-        merged = merged[(merged["TOTAL_PAYMENT"] > 0) & (merged["APPROVED_COUNT"] > 0)]
-
-        # 5) Compute value per unit = total_payment / approved_count
-        merged["VALUE_PER_UNIT"] = merged["TOTAL_PAYMENT"] / merged["APPROVED_COUNT"]
-
-        # 6) Sort to find worst 10 (highest) and best 5 (lowest)
-        worst_10 = merged.nlargest(10, "VALUE_PER_UNIT")
-        best_10 = merged.nsmallest(10, "VALUE_PER_UNIT")
-
-        # 7) Display data
-        st.markdown("### Worst 10 Doctors by Value per Unit")
-        st.dataframe(
-            worst_10[["MEDICO_LAUDO_DEFINITIVO","APPROVED_COUNT","TOTAL_PAYMENT","VALUE_PER_UNIT"]] \
-            .style.format({"TOTAL_PAYMENT":"R$ {:.2f}","VALUE_PER_UNIT":"R$ {:.2f}"})
+        pay_sums = (
+            pay_month
+            .groupby("NORMALIZED_MEDICO")["PAYMENT"]
+            .sum()
+            .reset_index(name="TOTAL_PAYMENT")
         )
 
-        st.markdown("### Best 5 Doctors by Value per Unit")
+        # 6) Merge to get: APPROVED_COUNT, TOTAL_POINTS, TOTAL_PAYMENT
+        merged_doctors = pd.merge(approved_counts, points_sum, on="NORMALIZED_MEDICO", how="inner")
+        merged_doctors = pd.merge(merged_doctors, pay_sums, on="NORMALIZED_MEDICO", how="inner")
+
+        # 7) Filter only doctors with > 0 payment and > 0 approved exams
+        merged_doctors = merged_doctors[
+            (merged_doctors["TOTAL_PAYMENT"] > 0) & 
+            (merged_doctors["APPROVED_COUNT"] > 0)
+        ]
+
+        # 8) Compute both metrics
+        merged_doctors["VALUE_PER_UNIT"] = merged_doctors["TOTAL_PAYMENT"] / merged_doctors["APPROVED_COUNT"]
+        merged_doctors["VALUE_PER_POINT"] = merged_doctors["TOTAL_PAYMENT"] / merged_doctors["TOTAL_POINTS"]
+
+        # 9) Sort for worst 10 (highest VALUE_PER_UNIT) and best 5 (lowest)
+        worst_10 = merged_doctors.nlargest(10, "VALUE_PER_UNIT")
+        best_10 = merged_doctors.nsmallest(5, "VALUE_PER_UNIT")
+
+        # 10) Display results
+        st.markdown("### Worst 10 Doctors by Value per Approved Exam")
         st.dataframe(
-            best_10[["MEDICO_LAUDO_DEFINITIVO","APPROVED_COUNT","TOTAL_PAYMENT","VALUE_PER_UNIT"]] \
-            .style.format({"TOTAL_PAYMENT":"R$ {:.2f}","VALUE_PER_UNIT":"R$ {:.2f}"})
+            worst_10[[
+                "MEDICO_LAUDO_DEFINITIVO",
+                "APPROVED_COUNT",
+                "TOTAL_POINTS",
+                "TOTAL_PAYMENT",
+                "VALUE_PER_UNIT",
+                "VALUE_PER_POINT",
+            ]].style.format({
+                "TOTAL_PAYMENT": "R$ {:.2f}",
+                "VALUE_PER_UNIT": "R$ {:.2f}",
+                "VALUE_PER_POINT": "R$ {:.2f}"
+            })
+        )
+
+        st.markdown("### Best 10 Doctors by Value per Approved Exam")
+        st.dataframe(
+            best_10[[
+                "MEDICO_LAUDO_DEFINITIVO",
+                "APPROVED_COUNT",
+                "TOTAL_POINTS",
+                "TOTAL_PAYMENT",
+                "VALUE_PER_UNIT",
+                "VALUE_PER_POINT",
+            ]].style.format({
+                "TOTAL_PAYMENT": "R$ {:.2f}",
+                "VALUE_PER_UNIT": "R$ {:.2f}",
+                "VALUE_PER_POINT": "R$ {:.2f}"
+            })
         )
 
     except Exception as e:
         st.error(f"An error occurred while creating the worst/best lists: {e}")
-
-
 
 # -----------------------------------------------------------------------------
 # EXPORT SUMMARY AND DOCTORS DATAFRAMES AS A COMBINED PDF REPORT
