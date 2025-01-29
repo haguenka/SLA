@@ -416,6 +416,7 @@ with tab2:
                 "VALUE_PER_UNIT",
                 "VALUE_PER_POINT",
             ]].style.format({
+                "TOTAL_POINTS": "R$ {:.2f}",
                 "TOTAL_PAYMENT": "R$ {:.2f}",
                 "VALUE_PER_UNIT": "R$ {:.2f}",
                 "VALUE_PER_POINT": "R$ {:.2f}"
@@ -432,6 +433,7 @@ with tab2:
                 "VALUE_PER_UNIT",
                 "VALUE_PER_POINT",
             ]].style.format({
+                "TOTAL_POINTS": "R$ {:.2f}",
                 "TOTAL_PAYMENT": "R$ {:.2f}",
                 "VALUE_PER_UNIT": "R$ {:.2f}",
                 "VALUE_PER_POINT": "R$ {:.2f}"
