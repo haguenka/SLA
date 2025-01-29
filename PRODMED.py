@@ -95,64 +95,64 @@ try:
     unique_years = sorted(excel_df['YEAR'].dropna().unique())
     unique_months = sorted(excel_df['MONTH'].dropna().unique())
     
-    # Dropdown for month and year selection
-    selected_month_name = st.sidebar.selectbox('Select Month/Year', 
-                                             [f"{month}/{year}" for year in unique_years for month in month_names])
+    # Dropdown for month and year selection in the format "MONTH/YEAR"
+    selected_month_name = st.sidebar.selectbox('Select Month/Year', [f"{month}/{year}" for year in unique_years for month in month_names])
     
-    # Extract selected month and year
+    # Extract the selected month and year from the selected string
     selected_month, selected_year_str = selected_month_name.split('/')
-    selected_month = month_names.index(selected_month) + 1
-    selected_year = int(selected_year_str.split('.')[0])
+    selected_month = month_names.index(selected_month) + 1  # Convert month name to number
     
-    # Filter data
+    # Remove decimals from the year string (e.g., "2024.0" -> "2024")
+    selected_year_str = selected_year_str.split('.')[0]
+    
+    # Convert the cleaned year string to an integer
+    selected_year = int(selected_year_str)
+    
+    # Filter data based on selected month and year
     filtered_df = excel_df[
         (excel_df['MONTH'] == selected_month) & 
         (excel_df['YEAR'] == selected_year)
     ]
 
-    # Payment data processing
+    # Payment data loading and processing
     payment_file_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/pagamento.xlsx'
     payment_excel = pd.ExcelFile(payment_file_url)
-    
-    formatted_sheet_name = f"{month_names[selected_month - 1].lower()} {selected_year}"
-    matched_sheet_name = next(
-        (sheet for sheet in payment_excel.sheet_names 
-         if formatted_sheet_name in sheet.lower().replace('-', ' ')),
-        None
-    )
+    available_sheets = payment_excel.sheet_names
+
+    # Attempt to match sheet name dynamically
+    formatted_sheet_name = f"{month_names[selected_month - 1].capitalize()} {selected_year}"
+    matched_sheet_name = next((sheet for sheet in available_sheets if formatted_sheet_name.lower() in sheet.lower()), None)
 
     if matched_sheet_name:
+        # Read the matched sheet
         payment_data = pd.read_excel(payment_excel, sheet_name=matched_sheet_name)
         payment_data['DATE'] = pd.to_datetime(payment_data['DATE'], errors='coerce')
         payment_data = payment_data[payment_data['DATE'].dt.month == selected_month]
     else:
-        raise ValueError(f"Sheet matching '{formatted_sheet_name}' not found")
+        raise ValueError(f"Sheet matching '{formatted_sheet_name}' not found in {payment_file_url}")
 
-    # Doctor selection
+    # Remove hospital filter and show all hospitals for the selected doctor
     doctor_list = filtered_df['MEDICO_LAUDO_DEFINITIVO'].unique()
     selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
 
-    # Payment calculation
+    # Match and autofill payment for selected doctor
     def normalize_name(name):
-        return (
-            name.lower()
-            .replace("dr.", "")
-            .replace("dra.", "")
-            .translate(str.maketrans('', '', string.punctuation))
-            .strip()
-        )
+        return name.replace("Dr. ", "").replace("Dra. ", "").replace("Dra.","").strip().upper()
 
     normalized_doctor_name = normalize_name(selected_doctor)
     payment_data['NORMALIZED_MEDICO'] = payment_data['MEDICO'].apply(normalize_name)
+
     doctor_payment = payment_data[payment_data['NORMALIZED_MEDICO'] == normalized_doctor_name]
-    total_payment = doctor_payment['PAYMENT'].sum() if not doctor_payment.empty else 0.0
+    if not doctor_payment.empty:
+        total_payment = doctor_payment['PAYMENT'].sum()
+    else:
+        total_payment = 0.0
 
     st.sidebar.markdown(f"### Payment: R$ {total_payment:,.2f}")
 
-    # Main display
     st.markdown(f"<h1 style='color:red;'>{selected_doctor}</h1>", unsafe_allow_html=True)
 
-    # Data processing
+    # Filter data for the selected doctor across all hospitals
     preliminar_df = filtered_df[
         (filtered_df['STATUS_PRELIMINAR'].notna()) &
         (filtered_df['MEDICO_LAUDOO_PRELIMINAR'] == selected_doctor)
@@ -162,6 +162,29 @@ try:
         (filtered_df['MEDICO_LAUDO_DEFINITIVO'] == selected_doctor)
     ]
 
+    total_preliminar_events = len(preliminar_df)
+    total_aprovado_events = len(aprovado_df)
+    st.markdown(f"<h3 style='color:#f0ad4e;'>Total PRELIMINAR Events: {total_preliminar_events}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:#4682b4;'>Total APROVADO Events: {total_aprovado_events}</h3>", unsafe_allow_html=True)
+
+    if total_aprovado_events > 0:
+        unitary_value = total_payment / total_aprovado_events
+    else:
+        unitary_value = 0.0
+    st.markdown(f"<h3 style='color:green;'>Payment: R$ {total_payment:,.2f}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:green;'>Unitary Event Value: R$ {unitary_value:,.2f}</h3>", unsafe_allow_html=True)
+
+    # Combine both preliminar and aprovado data for display (removing seconds from STATUS_APROVADO)
+    doctor_all_events = pd.concat([preliminar_df, aprovado_df], ignore_index=True)
+    if not doctor_all_events.empty:
+        doctor_all_events['STATUS_APROVADO'] = doctor_all_events['STATUS_APROVADO'].dt.strftime('%Y-%m-%d %H:%M')
+    filtered_columns = [
+        'SAME', 'NOME_PACIENTE', 'TIPO_ATENDIMENTO', 'GRUPO', 'DESCRICAO_PROCEDIMENTO',
+        'ESPECIALIDADE', 'STATUS_PRELIMINAR', 'MEDICO_LAUDOO_PRELIMINAR',
+        'STATUS_APROVADO', 'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE'
+    ]
+    st.dataframe(doctor_all_events[filtered_columns], width=1200, height=400)
+
     # Points calculation
     csv_df['DESCRICAO_PROCEDIMENTO'] = csv_df['DESCRICAO_PROCEDIMENTO'].str.upper()
     aprovado_df['DESCRICAO_PROCEDIMENTO'] = aprovado_df['DESCRICAO_PROCEDIMENTO'].str.upper()
@@ -169,7 +192,7 @@ try:
     merged_df['MULTIPLIER'] = pd.to_numeric(merged_df['MULTIPLIER'], errors='coerce').fillna(0)
     merged_df['POINTS'] = (merged_df['STATUS_APROVADO'].notna().astype(int) * merged_df['MULTIPLIER']).round(1)
 
-    # Group data
+    # Group and calculate point values
     doctor_grouped = merged_df.groupby(['UNIDADE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO']).agg({
         'MULTIPLIER': 'first',
         'STATUS_APROVADO': 'count'
@@ -180,77 +203,32 @@ try:
     unitary_point_value = total_payment / total_points_sum if total_points_sum > 0 else 0.0
     doctor_grouped['POINT_VALUE'] = doctor_grouped['POINTS'] * unitary_point_value
 
-    # Hospital display order
-    hospital_order = [
-        "Casa de Saúde São José",
-        "Hospital Santa Catarina",
-        "Hospital Nossa Senhora da Conceição"
-    ]
+    # Display results
+    total_count_sum = doctor_grouped['COUNT'].sum()
+    total_point_value_sum = doctor_grouped['POINT_VALUE'].sum()
 
-    # Display hospital sections
-    st.markdown("---")
-    st.markdown("<h2 style='text-align: center; color: #2c3e50;'>Hospital Production Breakdown</h2>", 
-                unsafe_allow_html=True)
+    for hospital in doctor_grouped['UNIDADE'].unique():
+        hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
+        st.markdown(f"<h2 style='color:yellow;'>{hospital}</h2>", unsafe_allow_html=True)
+        for grupo in hospital_df['GRUPO'].unique():
+            grupo_df = hospital_df[hospital_df['GRUPO'] == grupo].copy()
+            total_points = grupo_df['POINTS'].sum()
+            total_point_value = grupo_df['POINT_VALUE'].sum()
+            total_count = grupo_df['COUNT'].sum()
 
-    for hospital in hospital_order:
-        if hospital in doctor_grouped['UNIDADE'].unique():
-            with st.expander(f"🏥 {hospital}", expanded=True):
-                # Hospital header
-                st.markdown(f"<h3 style='color: #2980b9; border-bottom: 2px solid #3498db; padding-bottom: 5px;'>{hospital}</h3>", 
-                            unsafe_allow_html=True)
-                
-                # Hospital data
-                hospital_df = doctor_grouped[doctor_grouped['UNIDADE'] == hospital]
-                total_points = hospital_df['POINTS'].sum()
-                total_value = hospital_df['POINT_VALUE'].sum()
-                total_exams = hospital_df['COUNT'].sum()
-                
-                # Metrics
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Total Points", f"{total_points:.1f}")
-                with col2:
-                    st.metric("Total Value", f"R$ {total_value:,.2f}")
-                with col3:
-                    st.metric("Total Exams", total_exams)
-                
-                # Modality breakdown
-                for grupo in hospital_df['GRUPO'].unique():
-                    st.markdown(f"<h4 style='color: #16a085; margin-top: 20px;'>{grupo}</h4>", 
-                                unsafe_allow_html=True)
-                    grupo_df = hospital_df[hospital_df['GRUPO'] == grupo]
-                    
-                    # Display procedure table
-                    st.dataframe(
-                        grupo_df[[
-                            'DESCRICAO_PROCEDIMENTO', 
-                            'COUNT', 
-                            'MULTIPLIER', 
-                            'POINTS', 
-                            'POINT_VALUE'
-                        ]].style.format({
-                            'POINT_VALUE': "R$ {:.2f}",
-                            'MULTIPLIER': "{:.1f}×",
-                            'POINTS': "{:.1f}"
-                        }),
-                        height=150,
-                        use_container_width=True
-                    )
-                
-                st.markdown("---")
+            st.markdown(f"<h3 style='color:#0a84ff;'>{grupo}</h3>", unsafe_allow_html=True)
+            st.dataframe(grupo_df[[
+                'DESCRICAO_PROCEDIMENTO', 
+                'COUNT', 
+                'MULTIPLIER', 
+                'POINTS', 
+                'POINT_VALUE'
+            ]].style.format({'POINT_VALUE': "R$ {:.2f}"}))
 
-    # Global totals
-    st.markdown("<h2 style='color: #c0392b;'>Global Totals</h2>", unsafe_allow_html=True)
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Total Points", f"{total_points_sum:.1f}")
-    with col2:
-        st.metric("Total Value", f"R$ {total_payment:,.2f}")
-    with col3:
-        st.metric("Total Exams", doctor_grouped['COUNT'].sum())
-    with col4:
-        st.metric("Point Value", f"R$ {unitary_point_value:.2f}/point")
-
+    st.markdown(f"<h2 style='color:red;'>Total Points: {total_points_sum:.1f}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='color:red;'>Total Value: R$ {total_point_value_sum:.2f}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='color:red;'>Total Exams: {total_count_sum}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='color:green;'>Point Value: R$ {unitary_point_value:.2f}/point</h2>", unsafe_allow_html=True)
 
     # ------------------------------------------------------------------------------------
     # SHOWING LAUDO PRELIMINAR AND LAUDO APROVADO COUNTS FOR TOMOGRAFIA E RESSONANCIA
