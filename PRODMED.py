@@ -369,7 +369,7 @@ with tab2:
 
         # 6) Sort to find worst 10 (highest) and best 5 (lowest)
         worst_10 = merged.nlargest(10, "VALUE_PER_UNIT")
-        best_5 = merged.nsmallest(5, "VALUE_PER_UNIT")
+        best_5 = merged.nsmallest(10, "VALUE_PER_UNIT")
 
         # 7) Display data
         st.markdown("### Worst 10 Doctors by Value per Unit")
@@ -380,7 +380,7 @@ with tab2:
 
         st.markdown("### Best 5 Doctors by Value per Unit")
         st.dataframe(
-            best_5[["MEDICO_LAUDO_DEFINITIVO","APPROVED_COUNT","TOTAL_PAYMENT","VALUE_PER_UNIT"]] \
+            best_10[["MEDICO_LAUDO_DEFINITIVO","APPROVED_COUNT","TOTAL_PAYMENT","VALUE_PER_UNIT"]] \
             .style.format({"TOTAL_PAYMENT":"R$ {:.2f}","VALUE_PER_UNIT":"R$ {:.2f}"})
         )
 
