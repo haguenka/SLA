@@ -335,7 +335,7 @@ with tab1:
         st.error(f"An error occurred: {e}")
 
 # ------------------------------------------------------------------------------
-# TAB 2: New - Worst 10 & Best 5 Doctors by Value per Approved Exam
+# TAB 2: New - Worst 10 & Best 10 Doctors by Value per Approved Exam
 # ------------------------------------------------------------------------------
 with tab2:
     st.subheader("Worst & Best Doctors by Value per Unit (Approved Exam)")
@@ -369,7 +369,7 @@ with tab2:
 
         # 6) Sort to find worst 10 (highest) and best 5 (lowest)
         worst_10 = merged.nlargest(10, "VALUE_PER_UNIT")
-        best_5 = merged.nsmallest(10, "VALUE_PER_UNIT")
+        best_10 = merged.nsmallest(10, "VALUE_PER_UNIT")
 
         # 7) Display data
         st.markdown("### Worst 10 Doctors by Value per Unit")
