@@ -339,7 +339,7 @@ with tab1:
 
 
 # ------------------------------------------------------------------------------
-# TAB 2: Worst 10 & Best 5 Doctors (by VALUE_PER_UNIT) + VALUE_PER_POINT
+# TAB 2: Worst 10 & Best 10 Doctors (by VALUE_PER_UNIT) + VALUE_PER_POINT
 # ------------------------------------------------------------------------------
 with tab2:
     st.subheader("Worst & Best Doctors by Value per Approved Exam (and Value per Point)")
@@ -401,9 +401,9 @@ with tab2:
         merged_doctors["VALUE_PER_UNIT"] = merged_doctors["TOTAL_PAYMENT"] / merged_doctors["APPROVED_COUNT"]
         merged_doctors["VALUE_PER_POINT"] = merged_doctors["TOTAL_PAYMENT"] / merged_doctors["TOTAL_POINTS"]
 
-        # 9) Sort for worst 10 (highest VALUE_PER_UNIT) and best 5 (lowest)
+        # 9) Sort for worst 10 (highest VALUE_PER_UNIT) and best 10 (lowest)
         worst_10 = merged_doctors.nlargest(10, "VALUE_PER_UNIT")
-        best_10 = merged_doctors.nsmallest(5, "VALUE_PER_UNIT")
+        best_10 = merged_doctors.nsmallest(10, "VALUE_PER_UNIT")
 
         # 10) Display results
         st.markdown("### Worst 10 Doctors by Value per Approved Exam")
