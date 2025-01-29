@@ -409,7 +409,7 @@ with tab2:
         st.markdown("### Worst 10 Doctors by Value per Approved Exam")
         st.dataframe(
             worst_10[[
-                "MEDICO_LAUDO_DEFINITIVO",
+                "NORMALIZED_MEDICO",
                 "APPROVED_COUNT",
                 "TOTAL_POINTS",
                 "TOTAL_PAYMENT",
@@ -425,7 +425,7 @@ with tab2:
         st.markdown("### Best 10 Doctors by Value per Approved Exam")
         st.dataframe(
             best_10[[
-                "MEDICO_LAUDO_DEFINITIVO",
+                "NORMALIZED_MEDICO",
                 "APPROVED_COUNT",
                 "TOTAL_POINTS",
                 "TOTAL_PAYMENT",
