@@ -96,7 +96,10 @@ try:
     unique_months = sorted(excel_df['MONTH'].dropna().unique())
     
     # Dropdown for month and year selection in the format "MONTH/YEAR"
-    selected_month_name = st.sidebar.selectbox('Select Month/Year', [f"{month}/{year}" for year in unique_years for month in month_names])
+    selected_month_name = st.sidebar.selectbox(
+        'Select Month/Year', 
+        [f"{month}/{year}" for year in unique_years for month in month_names]
+    )
     
     # Extract the selected month and year from the selected string
     selected_month, selected_year_str = selected_month_name.split('/')
@@ -113,6 +116,18 @@ try:
         (excel_df['MONTH'] == selected_month) & 
         (excel_df['YEAR'] == selected_year)
     ]
+
+    # ------------------------------
+    # ADD HOSPITAL FILTER
+    # ------------------------------
+    # Create a list of hospitals with an 'All' option if you want to show everything
+    hospital_list = sorted(filtered_df['UNIDADE'].dropna().unique())
+    selected_hospital = st.sidebar.selectbox(
+        'Select Hospital', 
+        hospital_list
+    )
+    # Filter dataframe by selected hospital
+    filtered_df = filtered_df[filtered_df['UNIDADE'] == selected_hospital]
 
     # Payment data loading and processing
     payment_file_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/pagamento.xlsx'
@@ -131,9 +146,11 @@ try:
     else:
         raise ValueError(f"Sheet matching '{formatted_sheet_name}' not found in {payment_file_url}")
 
-    # Remove hospital filter and show all hospitals for the selected doctor
-    doctor_list = filtered_df['MEDICO_LAUDO_DEFINITIVO'].unique()
-    selected_doctor = st.sidebar.selectbox('Select Doctor', doctor_list)
+    # ------------------------------
+    # FILTER DOCTOR LIST BASED ON SELECTED HOSPITAL
+    # ------------------------------
+    doctor_list = filtered_df['MEDICO_LAUDO_DEFINITIVO'].dropna().unique()
+    selected_doctor = st.sidebar.selectbox('Select Doctor', sorted(doctor_list))
 
     # Match and autofill payment for selected doctor
     def normalize_name(name):
@@ -152,7 +169,7 @@ try:
 
     st.markdown(f"<h1 style='color:red;'>{selected_doctor}</h1>", unsafe_allow_html=True)
 
-    # Filter data for the selected doctor across all hospitals
+    # Filter data for the selected doctor (within the chosen hospital)
     preliminar_df = filtered_df[
         (filtered_df['STATUS_PRELIMINAR'].notna()) &
         (filtered_df['MEDICO_LAUDOO_PRELIMINAR'] == selected_doctor)
@@ -297,7 +314,6 @@ except Exception as e:
     st.error(f"An error occurred: {e}")
 
 
-
 # -----------------------------------------------------------------------------
 # EXPORT SUMMARY AND DOCTORS DATAFRAMES AS A COMBINED PDF REPORT
 # -----------------------------------------------------------------------------
@@ -409,7 +425,7 @@ if st.button('Export Summary and Doctors Dataframes as PDF'):
                 pdf.cell(30, 10, 'Points', 1, 1, 'C')
 
                 # Add rows to the table
-                pdf.set_font('Arial', 'B', 10)
+                pdf.set_font('Arial', '', 10)
                 for _, row in grupo_df.iterrows():
                     procedure_text = row['DESCRICAO_PROCEDIMENTO']
                     # Truncate if too long
