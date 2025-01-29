@@ -407,6 +407,112 @@ with tab1:
     except Exception as e:
         st.error(f"An error occurred in Tab 1: {e}")
 
+
+# ------------------------------------------------------------------------------
+# TAB 2: Worst 10 & Best 10 Doctors (by VALUE_PER_UNIT) + VALUE_PER_POINT
+# ------------------------------------------------------------------------------
+with tab2:
+    st.subheader("Worst & Best Doctors by Value per Approved Exam (and Value per Point)")
+
+    try:
+        # 1) Focus on the entire dataset for the selected month/year 
+        #    (only rows that actually have a 'STATUS_APROVADO')
+        month_df = excel_df[
+            (excel_df['MONTH'] == selected_month) & 
+            (excel_df['YEAR'] == selected_year)
+        ].dropna(subset=['STATUS_APROVADO']).copy()
+
+        # 2) Merge with csv_df to get MULTIPLIER, compute total points
+        #    Because we already did uppercase merges above, 
+        #    we can safely join on DESCRICAO_PROCEDIMENTO
+        points_merged = pd.merge(month_df, csv_df, on="DESCRICAO_PROCEDIMENTO", how="left")
+        points_merged['MULTIPLIER'] = pd.to_numeric(points_merged['MULTIPLIER'], errors='coerce').fillna(0)
+        points_merged['POINTS'] = points_merged['MULTIPLIER']  # 1 exam => "MULTIPLIER" points
+
+        # 3) Sum total points by doctor
+        points_sum = (
+            points_merged
+            .groupby("MEDICO_LAUDO_DEFINITIVO")['POINTS']
+            .sum()
+            .reset_index(name="TOTAL_POINTS")
+        )
+        points_sum["NORMALIZED_MEDICO"] = points_sum["MEDICO_LAUDO_DEFINITIVO"].apply(normalize_name)
+
+        # 4) Count how many approved exams each doctor has
+        approved_counts = (
+            month_df
+            .groupby("MEDICO_LAUDO_DEFINITIVO")
+            .size()
+            .reset_index(name="APPROVED_COUNT")
+        )
+        approved_counts["NORMALIZED_MEDICO"] = approved_counts["MEDICO_LAUDO_DEFINITIVO"].apply(normalize_name)
+
+        # 5) Sum total payments for the same month in 'payment_data'
+        pay_month = payment_data.copy()  # already filtered by month
+        pay_month["NORMALIZED_MEDICO"] = pay_month["MEDICO"].apply(normalize_name)
+        pay_sums = (
+            pay_month
+            .groupby("NORMALIZED_MEDICO")["PAYMENT"]
+            .sum()
+            .reset_index(name="TOTAL_PAYMENT")
+        )
+
+        # 6) Merge to get: APPROVED_COUNT, TOTAL_POINTS, TOTAL_PAYMENT
+        merged_doctors = pd.merge(approved_counts, points_sum, on="NORMALIZED_MEDICO", how="inner")
+        merged_doctors = pd.merge(merged_doctors, pay_sums, on="NORMALIZED_MEDICO", how="inner")
+
+        # 7) Filter only doctors with > 0 payment and > 0 approved exams
+        merged_doctors = merged_doctors[
+            (merged_doctors["TOTAL_PAYMENT"] > 0) & 
+            (merged_doctors["APPROVED_COUNT"] > 0)
+        ]
+
+        # 8) Compute both metrics
+        merged_doctors["VALUE_PER_UNIT"] = merged_doctors["TOTAL_PAYMENT"] / merged_doctors["APPROVED_COUNT"]
+        merged_doctors["VALUE_PER_POINT"] = merged_doctors["TOTAL_PAYMENT"] / merged_doctors["TOTAL_POINTS"]
+
+        # 9) Sort for worst 10 (highest VALUE_PER_UNIT) and best 10 (lowest)
+        worst_10 = merged_doctors.nlargest(10, "VALUE_PER_UNIT")
+        best_10 = merged_doctors.nsmallest(10, "VALUE_PER_UNIT")
+
+        # 10) Display results
+        st.markdown("### Worst 10 Doctors by Value per Approved Exam")
+        st.dataframe(
+            worst_10[[
+                "NORMALIZED_MEDICO",
+                "APPROVED_COUNT",
+                "TOTAL_POINTS",
+                "TOTAL_PAYMENT",
+                "VALUE_PER_UNIT",
+                "VALUE_PER_POINT",
+            ]].style.format({
+                "TOTAL_POINTS": "{:.2f}",
+                "TOTAL_PAYMENT": "R$ {:.2f}",
+                "VALUE_PER_UNIT": "R$ {:.2f}",
+                "VALUE_PER_POINT": "R$ {:.2f}"
+            })
+        )
+
+        st.markdown("### Best 10 Doctors by Value per Approved Exam")
+        st.dataframe(
+            best_10[[
+                "NORMALIZED_MEDICO",
+                "APPROVED_COUNT",
+                "TOTAL_POINTS",
+                "TOTAL_PAYMENT",
+                "VALUE_PER_UNIT",
+                "VALUE_PER_POINT",
+            ]].style.format({
+                "TOTAL_POINTS": "{:.2f}",
+                "TOTAL_PAYMENT": "R$ {:.2f}",
+                "VALUE_PER_UNIT": "R$ {:.2f}",
+                "VALUE_PER_POINT": "R$ {:.2f}"
+            })
+        )
+
+    except Exception as e:
+        st.error(f"An error occurred while creating the worst/best lists: {e}")
+
 # -----------------------------------------------------------------------------
 # EXPORT SUMMARY AND DOCTORS DATAFRAMES AS A COMBINED PDF REPORT
 # -----------------------------------------------------------------------------
