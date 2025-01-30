@@ -296,8 +296,9 @@ with tab1:
 
         # --------------------------------------------------------------------
         # LAUDO PRELIMINAR x LAUDO APROVADO (Tomografia & Ressonancia)
-        # Now showing data across all hospitals (for selected doctor)
+        # Adding TARGET_FLAG and color-coding it
         # --------------------------------------------------------------------
+
         valid_groups = ['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA']
 
         preliminar_filtered = doctor_df[
@@ -379,29 +380,59 @@ with tab1:
             .fillna(0)
         )
 
+        # Convert numeric columns
         days_merged['PRELIMINAR_COUNT'] = days_merged['PRELIMINAR_COUNT'].astype(int)
-        days_merged['APROVADO_COUNT'] = days_merged['APROVADO_COUNT'].astype(int)
-        days_merged['APROVADO_POINTS'] = days_merged['APROVADO_POINTS'].astype(float)
+        days_merged['APROVADO_COUNT']   = days_merged['APROVADO_COUNT'].astype(int)
+        days_merged['APROVADO_POINTS']  = days_merged['APROVADO_POINTS'].astype(float)
 
-        # Enforce custom PERIOD order if desired
+        # 1) Create TARGET_FLAG column
+        def assign_target_flag(points):
+            # target range: 22 to 24
+            if points < 22:
+                return "OUT OF TARGET"
+            elif points <= 24:
+                return "ON TARGET"
+            else:
+                return "BONUS"
+
+        days_merged['TARGET_FLAG'] = days_merged['APROVADO_POINTS'].apply(assign_target_flag)
+
+        # 2) Keep your custom ordering by PERIOD
         period_order = ['Manhã', 'Tarde', 'Noite', 'Madrugada']
         days_merged['PERIOD'] = pd.Categorical(days_merged['PERIOD'], categories=period_order, ordered=True)
         days_merged = days_merged.sort_values(['DATE', 'PERIOD'])
 
-        def color_rows(row):
-            return [
+        # 3) Single row-level style function
+        def style_period_and_target(row):
+            """Color the entire row by PERIOD, except the TARGET_FLAG cell is color-coded by target status."""
+            # By default, color each cell using the PERIOD color
+            row_styles = [
                 f'background-color: {period_colors.get(row["PERIOD"], "white")}; color: white'
                 for _ in row.index
             ]
+            # Then override the 'TARGET_FLAG' cell color
+            # find the index of the 'TARGET_FLAG' column
+            if 'TARGET_FLAG' in row.index:
+                col_idx = row.index.get_loc('TARGET_FLAG')
+                status = row['TARGET_FLAG']
+                if status == 'OUT OF TARGET':
+                    row_styles[col_idx] = 'background-color: red; color: white'
+                elif status == 'ON TARGET':
+                    row_styles[col_idx] = 'background-color: green; color: white'
+                elif status == 'BONUS':
+                    row_styles[col_idx] = 'background-color: yellow; color: black'
+            
+            return row_styles
 
+        # 4) Build styled dataframe:
         styled_df = (
             days_merged
             .style
-            .apply(color_rows, axis=1)
-            .format({'APROVADO_POINTS': '{:.2f}'})
+            .apply(style_period_and_target, axis=1)            # Apply row-level style
+            .format({'APROVADO_POINTS': '{:.2f}'})             # Keep 2 decimals for points
         )
 
-        st.markdown("### LAUDO PRELIMINAR and LAUDO APROVADO (Tomografia/Ressonância), including APROVADO_POINTS (across all hospitals)")
+        st.markdown("### LAUDO PRELIMINAR and LAUDO APROVADO (Tomografia/Ressonância) with TARGET_FLAG")
         st.dataframe(styled_df, width=1200, height=400)
 
     except Exception as e:
