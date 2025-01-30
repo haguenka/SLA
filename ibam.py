@@ -27,9 +27,9 @@ def load_excel_from_github(url):
         return None
 
 def match_names(patient_name, exam_names):
-    """ Encontra um nome semelhante usando fuzzy matching """
+    """ Encontra um nome semelhante usando fuzzy matching com maior tolerância """
     match, score = process.extractOne(patient_name, exam_names, scorer=fuzz.token_sort_ratio)
-    return match if score >= 70 else None  # Apenas considera nomes com ≥85% de similaridade
+    return match if score >= 70 else None  # Agora aceita similaridade ≥70%
 
 def highlight_rows(row):
     """ Destaca toda a linha em amarelo se houver match """
@@ -118,25 +118,26 @@ def main():
         # 🔹 **Filtrar consultas do médico selecionado**
         consultas_doctor_df = df_consultas[df_consultas['Prestador'] == selected_doctor] if selected_doctor in df_consultas['Prestador'].values else pd.DataFrame()
 
-        # 🔹 **Exibir lista de exames por modalidade**
-        st.subheader(f"Exames por Modalidade - {selected_doctor.capitalize()}")
-        if not exames_doctor_df.empty:
-            for modalidade in exames_doctor_df['GRUPO'].unique():
-                exames_mod_df = exames_doctor_df[exames_doctor_df['GRUPO'] == modalidade]
-                st.subheader(f"{modalidade} - Total de Exames: {len(exames_mod_df)}")
-                st.dataframe(exames_mod_df[['NOME_PACIENTE', 'SAME', 'Data', 'GRUPO', 'TIPO_ATENDIMENTO', 'MEDICO_SOLICITANTE']])
-        else:
-            st.warning("Nenhum exame encontrado para este médico.")
-
         # 🔹 **Marcar pacientes encontrados nos exames**
         exam_patients = set(exames_doctor_df['NOME_PACIENTE'].dropna().str.lower())
 
         if not consultas_doctor_df.empty:
             consultas_doctor_df['Destaque'] = consultas_doctor_df['Paciente'].apply(lambda x: match_names(x.lower(), exam_patients))
 
-            st.subheader(f"Consultas - Total de Pacientes: {len(consultas_doctor_df)}")
-            st.dataframe(consultas_doctor_df.style.apply(highlight_rows, axis=1))
+        if not exames_doctor_df.empty:
+            exames_doctor_df['Destaque'] = exames_doctor_df['NOME_PACIENTE'].apply(lambda x: match_names(x.lower(), set(consultas_doctor_df['Paciente'].dropna().str.lower())))
 
+        # 🔹 **Exibir lista de exames por modalidade**
+        st.subheader(f"Exames por Modalidade - {selected_doctor.capitalize()}")
+        if not exames_doctor_df.empty:
+            st.dataframe(exames_doctor_df.style.apply(highlight_rows, axis=1))
+        else:
+            st.warning("Nenhum exame encontrado para este médico.")
+
+        # 🔹 **Exibir lista de consultas destacadas**
+        st.subheader(f"Consultas - Total de Pacientes: {len(consultas_doctor_df)}")
+        if not consultas_doctor_df.empty:
+            st.dataframe(consultas_doctor_df.style.apply(highlight_rows, axis=1))
         else:
             st.warning("Nenhuma consulta encontrada para este médico.")
 
