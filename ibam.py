@@ -95,7 +95,9 @@ def main():
         filtered_df = df[(df['UNIDADE'] == unidade) & (df['TIPO_ATENDIMENTO'] == tipo_atendimento)]
 
         if date_range and len(date_range) == 2:
-            start_date, end_date = date_range
+            start_date = pd.to_datetime(date_range[0])  # Converte para datetime64[ns]
+            end_date = pd.to_datetime(date_range[1])  # Converte para datetime64[ns]
+
             filtered_df = filtered_df[(filtered_df['Data'] >= start_date) & (filtered_df['Data'] <= end_date)]
             df_consultas = df_consultas[(df_consultas['Data'] >= start_date) & (df_consultas['Data'] <= end_date)]
 
