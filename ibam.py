@@ -114,12 +114,25 @@ def main():
 
         selected_doctor = st.sidebar.selectbox("Selecione o Médico Prescritor", options=filtered_df['MEDICO_SOLICITANTE'].unique())
 
+        # 🔹 **Filtrar exames do médico selecionado**
+        exames_doctor_df = filtered_df[filtered_df['MEDICO_SOLICITANTE'] == selected_doctor]
+
+        # 🔹 **Filtrar consultas do médico selecionado**
         consultas_doctor_df = df_consultas[df_consultas['Prestador'] == selected_doctor] if selected_doctor in df_consultas['Prestador'].values else pd.DataFrame()
 
-        # Lista de pacientes nos exames
-        exam_patients = set(filtered_df['NOME_PACIENTE'].dropna().str.lower())
+        # 🔹 **Exibir lista de exames por modalidade**
+        st.subheader(f"Exames por Modalidade - {selected_doctor.capitalize()}")
+        if not exames_doctor_df.empty:
+            for modalidade in exames_doctor_df['GRUPO'].unique():
+                exames_mod_df = exames_doctor_df[exames_doctor_df['GRUPO'] == modalidade]
+                st.subheader(f"{modalidade} - Total de Exames: {len(exames_mod_df)}")
+                st.dataframe(exames_mod_df[['NOME_PACIENTE', 'SAME', 'Data', 'GRUPO', 'TIPO_ATENDIMENTO', 'MEDICO_SOLICITANTE']])
+        else:
+            st.warning("Nenhum exame encontrado para este médico.")
 
-        # Marcar pacientes encontrados nos exames
+        # 🔹 **Marcar pacientes encontrados nos exames**
+        exam_patients = set(exames_doctor_df['NOME_PACIENTE'].dropna().str.lower())
+
         if not consultas_doctor_df.empty:
             consultas_doctor_df['Destaque'] = consultas_doctor_df['Paciente'].apply(lambda x: match_names(x.lower(), exam_patients))
 
@@ -132,7 +145,7 @@ def main():
         else:
             st.warning("Nenhuma consulta encontrada para este médico.")
 
-        # Criar a lista de convênios atendidos pelo médico
+        # 🔹 **Criar lista de convênios atendidos pelo médico**
         if 'Convênio' in df_consultas.columns and not consultas_doctor_df.empty:
             convenio_counts = consultas_doctor_df['Convênio'].value_counts().reset_index()
             convenio_counts.columns = ['Convênio', 'Total de Atendimentos']
