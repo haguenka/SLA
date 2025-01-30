@@ -58,7 +58,7 @@ def main():
             st.error(f"Colunas faltando no dataset SLA: {', '.join([col for col in required_columns if col not in df.columns])}")
             return
 
-        required_columns_consultas = ['Prestador', 'Paciente', 'Data', 'Convenio']
+        required_columns_consultas = ['Prestador', 'Paciente', 'Data', 'Convênio']
         if any(col not in df_consultas.columns for col in required_columns_consultas):
             st.error(f"Colunas faltando no dataset Consultas: {', '.join([col for col in required_columns_consultas if col not in df_consultas.columns])}")
             return
@@ -66,7 +66,7 @@ def main():
         # Padroniza 'MEDICO_SOLICITANTE' e 'PRESTADOR'
         df['MEDICO_SOLICITANTE'] = df['MEDICO_SOLICITANTE'].astype(str).str.strip().str.lower()
         df_consultas['Prestador'] = df_consultas['Prestador'].astype(str).str.strip().str.lower()
-        df_consultas['Convenio'] = df_consultas['Convenio'].astype(str).str.strip().str.upper()  # Padronizar convênios
+        df_consultas['Convênio'] = df_consultas['Convênio'].astype(str).str.strip().str.upper()  # Padronizar convênios
 
         # Filtro de grupos
         allowed_groups = [
