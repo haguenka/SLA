@@ -112,7 +112,7 @@ def main():
 
         # Criar a lista de convênios atendidos pelo médico e a contagem de atendimentos
         if not consultas_doctor_df.empty:
-            convenio_counts = consultas_doctor_df['Convenio'].value_counts().reset_index()
+            convenio_counts = consultas_doctor_df['Convênio'].value_counts().reset_index()
             convenio_counts.columns = ['Convênio', 'Total de Atendimentos']
 
             st.subheader(f"Convênios Atendidos - Total: {len(convenio_counts)}")
