@@ -49,7 +49,7 @@ def main():
 
     try:
         # Verifica a existência de colunas essenciais
-        required_columns = ['MEDICO_SOLICITANTE', 'PACIENTE', 'UNIDADE', 'TIPO_ATENDIMENTO', 'GRUPO', 'STATUS_ALAUDAR']
+        required_columns = ['MEDICO_SOLICITANTE', 'NOME_PACIENTE', 'UNIDADE', 'TIPO_ATENDIMENTO', 'GRUPO', 'STATUS_ALAUDAR']
         missing_columns = [col for col in required_columns if col not in df.columns]
 
         if missing_columns:
@@ -94,7 +94,7 @@ def main():
         # Exibir tabela de pacientes por modalidade
         st.subheader(f"Pacientes Atendidos por Modalidade - {selected_doctor.capitalize()}")
         if not doctor_df.empty:
-            modality_patients = doctor_df.groupby('GRUPO')['PACIENTE'].apply(list).reset_index()
+            modality_patients = doctor_df.groupby('GRUPO')['NOME_PACIENTE'].apply(list).reset_index()
             modality_patients.columns = ['Modalidade', 'Pacientes']
             st.table(modality_patients)
         else:
