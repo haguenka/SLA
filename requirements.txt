@@ -8,3 +8,5 @@ plotly
 pillow
 fpdf2
 streamlit-aggrid
+pdfplumber
+thefuzz
