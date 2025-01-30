@@ -26,10 +26,10 @@ def load_excel_from_github(url):
     except requests.exceptions.RequestException:
         return None
 
-def match_names(patient_name, exam_names):
-    """ Encontra um nome semelhante usando fuzzy matching com maior tolerância """
-    match, score = process.extractOne(patient_name, exam_names, scorer=fuzz.token_sort_ratio)
-    return match if score >= 70 else None  # Agora aceita similaridade ≥70%
+def match_names_fuzzy(consulta_name, solicitante_names, threshold=70):
+    """ Realiza fuzzy matching entre um nome e uma lista de nomes """
+    match, score = process.extractOne(consulta_name, solicitante_names, scorer=fuzz.token_sort_ratio)
+    return match if score >= threshold else None
 
 def highlight_rows(row):
     """ Destaca toda a linha em amarelo se houver match """
@@ -85,7 +85,15 @@ def main():
         if 'Convênio' in df_consultas.columns:
             df_consultas['Convênio'] = df_consultas['Convênio'].str.strip().str.upper()
 
-        # 🔹 **Correção: Converter "STATUS_ALAUDAR" para datetime**
+        # 🔹 **Fuzzy Matching entre "Prestador" e "MEDICO_SOLICITANTE"**
+        solicitantes = df['MEDICO_SOLICITANTE'].unique()
+        df_consultas['Matched_Medico'] = df_consultas['Prestador'].apply(lambda x: match_names_fuzzy(x, solicitantes))
+
+        # 🔹 **Remover registros sem correspondência**
+        df_consultas.dropna(subset=['Matched_Medico'], inplace=True)
+        df_consultas['Matched_Medico'] = df_consultas['Matched_Medico'].str.lower()
+
+        # 🔹 **Converter "STATUS_ALAUDAR" para datetime**
         df['STATUS_ALAUDAR'] = pd.to_datetime(df['STATUS_ALAUDAR'], dayfirst=True, errors='coerce')
         df = df.dropna(subset=['STATUS_ALAUDAR'])  # Remove valores inválidos
         df.rename(columns={'STATUS_ALAUDAR': 'Data'}, inplace=True)
@@ -102,7 +110,6 @@ def main():
             start_date = pd.to_datetime(date_range[0])  
             end_date = pd.to_datetime(date_range[1])  
             
-            # 🔹 **Correção na filtragem de datas**
             filtered_df = filtered_df[(filtered_df['Data'] >= start_date) & (filtered_df['Data'] <= end_date)]
             df_consultas = df_consultas[(df_consultas['Data'] >= start_date) & (df_consultas['Data'] <= end_date)]
 
@@ -110,22 +117,21 @@ def main():
             st.warning("Nenhum dado disponível para o período selecionado.")
             return
 
-        selected_doctor = st.sidebar.selectbox("Selecione o Médico Prescritor", options=filtered_df['MEDICO_SOLICITANTE'].unique())
+        # Usar o nome consolidado (Matched_Medico) para o menu
+        selected_doctor = st.sidebar.selectbox("Selecione o Médico Prescritor", options=df_consultas['Matched_Medico'].unique())
 
-        # 🔹 **Filtrar exames do médico selecionado**
+        # 🔹 **Filtrar exames e consultas usando o nome consolidado**
         exames_doctor_df = filtered_df[filtered_df['MEDICO_SOLICITANTE'] == selected_doctor]
-
-        # 🔹 **Filtrar consultas do médico selecionado**
-        consultas_doctor_df = df_consultas[df_consultas['Prestador'] == selected_doctor] if selected_doctor in df_consultas['Prestador'].values else pd.DataFrame()
+        consultas_doctor_df = df_consultas[df_consultas['Matched_Medico'] == selected_doctor]
 
         # 🔹 **Marcar pacientes encontrados nos exames**
         exam_patients = set(exames_doctor_df['NOME_PACIENTE'].dropna().str.lower())
 
         if not consultas_doctor_df.empty:
-            consultas_doctor_df['Destaque'] = consultas_doctor_df['Paciente'].apply(lambda x: match_names(x.lower(), exam_patients))
+            consultas_doctor_df['Destaque'] = consultas_doctor_df['Paciente'].apply(lambda x: match_names_fuzzy(x.lower(), exam_patients))
 
         if not exames_doctor_df.empty:
-            exames_doctor_df['Destaque'] = exames_doctor_df['NOME_PACIENTE'].apply(lambda x: match_names(x.lower(), set(consultas_doctor_df['Paciente'].dropna().str.lower())))
+            exames_doctor_df['Destaque'] = exames_doctor_df['NOME_PACIENTE'].apply(lambda x: match_names_fuzzy(x.lower(), set(consultas_doctor_df['Paciente'].dropna().str.lower())))
 
         # 🔹 **Exibir lista de exames por modalidade separadamente**
         st.subheader(f"Exames por Modalidade - {selected_doctor.capitalize()}")
