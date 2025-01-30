@@ -110,18 +110,29 @@ def main():
         else:
             st.write("Nenhum dado disponível para o médico selecionado.")
 
-        # Calcular o total de exames prescritos por médico
-        exams_per_doctor = filtered_df.groupby('MEDICO_SOLICITANTE').size()
+        # Calcular o total de exames prescritos por médico (Top 10)
+        exams_per_doctor = filtered_df.groupby('MEDICO_SOLICITANTE').size().nlargest(10)
 
-        # Gráfico de médicos com total de exames prescritos
-        st.subheader("Quantidade Total de Exames Prescritos por Médico")
+        # Gráfico de médicos com total de exames prescritos (Top 10)
+        st.subheader("Top 10 Médicos Prescritores - Exames Prescritos")
         if not exams_per_doctor.empty:
-            fig, ax = plt.subplots()
-            exams_per_doctor.plot(kind='bar', ax=ax, color='skyblue')
-            ax.set_title("Exames Prescritos por Médico")
+            fig, ax = plt.subplots(figsize=(10, 6))
+            bars = exams_per_doctor.plot(kind='bar', ax=ax, color='skyblue')
+
+            ax.set_title("Top 10 Médicos Prescritores - Exames Prescritos")
             ax.set_ylabel("Quantidade de Exames")
             ax.set_xlabel("Médicos")
             ax.set_xticklabels(exams_per_doctor.index, rotation=45, ha='right')  # Melhoria na legibilidade
+
+            # Exibir números acima das barras
+            for bar in bars.patches:
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2, 
+                    bar.get_height() + 2,  # Posição do texto
+                    str(int(bar.get_height())), 
+                    ha='center', va='bottom', fontsize=10, fontweight='bold'
+                )
+
             st.pyplot(fig)
         else:
             st.write("Nenhum dado disponível para o filtro selecionado.")
