@@ -27,7 +27,7 @@ def load_excel_from_github():
         return None
 
 def main():
-    st.title("Análise de SLA Dashboard")
+    st.title("Análise IBAM")
 
     # Load and display logo from GitHub
     url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
