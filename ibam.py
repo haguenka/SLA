@@ -132,7 +132,9 @@ def main():
         if not exames_doctor_df.empty:
             for modalidade in exames_doctor_df['GRUPO'].unique():
                 exames_mod_df = exames_doctor_df[exames_doctor_df['GRUPO'] == modalidade]
-                st.subheader(f"{modalidade} - Total de Exames: {len(exames_mod_df)}")
+                total_exames = len(exames_mod_df)
+                total_grifados = exames_mod_df['Destaque'].notna().sum()
+                st.subheader(f"{modalidade} - Total: {total_exames} (Grifados: {total_grifados})")
                 st.dataframe(exames_mod_df.style.apply(highlight_rows, axis=1))
         else:
             st.warning("Nenhum exame encontrado para este médico.")
@@ -143,15 +145,6 @@ def main():
             st.dataframe(consultas_doctor_df.style.apply(highlight_rows, axis=1))
         else:
             st.warning("Nenhuma consulta encontrada para este médico.")
-
-        # 🔹 **Criar lista de convênios atendidos pelo médico**
-        if 'Convênio' in df_consultas.columns and not consultas_doctor_df.empty:
-            convenio_counts = consultas_doctor_df['Convênio'].value_counts().reset_index()
-            convenio_counts.columns = ['Convênio', 'Total de Atendimentos']
-            st.subheader(f"Convênios Atendidos - Total: {len(convenio_counts)}")
-            st.dataframe(convenio_counts)
-        else:
-            st.warning("Nenhuma informação de convênio disponível para este médico.")
 
     except Exception as e:
         st.error(f"Ocorreu um erro: {e}")
