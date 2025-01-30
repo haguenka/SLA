@@ -87,6 +87,13 @@ def main():
         if 'Convênio' in df_consultas.columns:
             df_consultas['Convênio'] = df_consultas['Convênio'].str.strip().str.upper()
 
+        # 🔹 **Correção: Converter "STATUS_ALAUDAR" para datetime**
+        df['STATUS_ALAUDAR'] = pd.to_datetime(df['STATUS_ALAUDAR'], dayfirst=True, errors='coerce')
+        df = df.dropna(subset=['STATUS_ALAUDAR'])  # Remove valores inválidos
+        df.rename(columns={'STATUS_ALAUDAR': 'Data'}, inplace=True)
+
+        df_consultas['Data'] = pd.to_datetime(df_consultas['Data'], dayfirst=True, errors='coerce')
+
         # Filtragem por período
         unidade = st.sidebar.selectbox("Selecione a Unidade", options=df['UNIDADE'].unique())
         date_range = st.sidebar.date_input("Selecione o Período", [])
@@ -96,7 +103,9 @@ def main():
         if date_range and len(date_range) == 2:
             start_date = pd.to_datetime(date_range[0])  
             end_date = pd.to_datetime(date_range[1])  
-            filtered_df = filtered_df[(filtered_df['STATUS_ALAUDAR'] >= start_date) & (filtered_df['STATUS_ALAUDAR'] <= end_date)]
+            
+            # 🔹 **Correção na filtragem de datas**
+            filtered_df = filtered_df[(filtered_df['Data'] >= start_date) & (filtered_df['Data'] <= end_date)]
             df_consultas = df_consultas[(df_consultas['Data'] >= start_date) & (df_consultas['Data'] <= end_date)]
 
         if filtered_df.empty:
