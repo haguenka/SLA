@@ -49,15 +49,11 @@ def main():
 
     try:
         # Verifica a existência de colunas essenciais
-        required_columns = ['MEDICO_SOLICITANTE', 'UNIDADE', 'TIPO_ATENDIMENTO', 'STATUS_ALAUDAR', 'STATUS_PRELIMINAR', 'STATUS_APROVADO']
+        required_columns = ['MEDICO_SOLICITANTE', 'PACIENTE', 'UNIDADE', 'TIPO_ATENDIMENTO', 'GRUPO', 'STATUS_ALAUDAR']
         missing_columns = [col for col in required_columns if col not in df.columns]
 
         if missing_columns:
             st.error(f"As seguintes colunas estão faltando no dataset: {', '.join(missing_columns)}")
-            return
-
-        if 'GRUPO' not in df.columns:
-            st.error("'GRUPO' column not found in the data.")
             return
 
         # Padroniza 'MEDICO_SOLICITANTE'
@@ -73,11 +69,6 @@ def main():
 
         # Conversão de colunas em datetime
         df['STATUS_ALAUDAR'] = pd.to_datetime(df['STATUS_ALAUDAR'], dayfirst=True, errors='coerce')
-        df['STATUS_PRELIMINAR'] = pd.to_datetime(df['STATUS_PRELIMINAR'], dayfirst=True, errors='coerce')
-        df['STATUS_APROVADO'] = pd.to_datetime(df['STATUS_APROVADO'], dayfirst=True, errors='coerce')
-
-        # Remove linhas sem STATUS_PRELIMINAR e STATUS_APROVADO (ambos vazios)
-        df = df.dropna(subset=['STATUS_PRELIMINAR', 'STATUS_APROVADO'], how='all')
 
         # Selections
         unidade = st.sidebar.selectbox("Selecione a Unidade", options=df['UNIDADE'].unique())
@@ -100,28 +91,37 @@ def main():
         # Filtrar dados pelo médico selecionado
         doctor_df = filtered_df[filtered_df['MEDICO_SOLICITANTE'] == selected_doctor]
 
-        # Contagem de exames por modalidade
+        # Exibir tabela de pacientes por modalidade
+        st.subheader(f"Pacientes Atendidos por Modalidade - {selected_doctor.capitalize()}")
+        if not doctor_df.empty:
+            modality_patients = doctor_df.groupby('GRUPO')['PACIENTE'].apply(list).reset_index()
+            modality_patients.columns = ['Modalidade', 'Pacientes']
+            st.table(modality_patients)
+        else:
+            st.write("Nenhum dado disponível para o médico selecionado.")
+
+        # Contagem de exames por modalidade para o médico
         modality_counts = doctor_df['GRUPO'].value_counts()
 
-        # Exibir tabela com contagem de pacientes por modalidade
-        st.subheader(f"Pacientes Atendidos por Modalidade - {selected_doctor.capitalize()}")
+        # Exibir tabela com contagem de exames por modalidade
+        st.subheader(f"Total de Exames por Modalidade - {selected_doctor.capitalize()}")
         if not modality_counts.empty:
             st.table(modality_counts)
         else:
             st.write("Nenhum dado disponível para o médico selecionado.")
 
-        # Calcular os top 10 médicos solicitantes
-        top_doctors = filtered_df['MEDICO_SOLICITANTE'].value_counts().head(10)
+        # Calcular o total de exames prescritos por médico
+        exams_per_doctor = filtered_df['MEDICO_SOLICITANTE'].value_counts()
 
-        # Gráfico de médicos com total de exames
-        st.subheader("Top 10 Médicos Solicitantes (Quantidade Total de Exames)")
-        if not top_doctors.empty:
+        # Gráfico de médicos com total de exames prescritos
+        st.subheader("Quantidade Total de Exames Prescritos por Médico")
+        if not exams_per_doctor.empty:
             fig, ax = plt.subplots()
-            top_doctors.plot(kind='bar', ax=ax, color='skyblue')
-            ax.set_title("Top 10 Médicos Solicitantes")
+            exams_per_doctor.plot(kind='bar', ax=ax, color='skyblue')
+            ax.set_title("Exames Prescritos por Médico")
             ax.set_ylabel("Quantidade de Exames")
             ax.set_xlabel("Médicos")
-            ax.set_xticklabels(top_doctors.index, rotation=45, ha='right')  # Melhoria na legibilidade
+            ax.set_xticklabels(exams_per_doctor.index, rotation=45, ha='right')  # Melhoria na legibilidade
             st.pyplot(fig)
         else:
             st.write("Nenhum dado disponível para o filtro selecionado.")
