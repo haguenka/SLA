@@ -61,7 +61,7 @@ def main():
             return
 
         # Verifica a existência de colunas essenciais no Consultas dataset
-        required_columns_consultas = ['PRESTADOR', 'PACIENTE', 'DATA']
+        required_columns_consultas = ['Prestador', 'Paciente', 'Data']
         missing_columns_consultas = [col for col in required_columns_consultas if col not in df_consultas.columns]
 
         if missing_columns_consultas:
@@ -70,7 +70,7 @@ def main():
 
         # Padroniza 'MEDICO_SOLICITANTE' e 'PRESTADOR'
         df.loc[:, 'MEDICO_SOLICITANTE'] = df['MEDICO_SOLICITANTE'].astype(str).str.strip().str.lower()
-        df_consultas.loc[:, 'PRESTADOR'] = df_consultas['PRESTADOR'].astype(str).str.strip().str.lower()
+        df_consultas.loc[:, 'Prestador'] = df_consultas['Prestador'].astype(str).str.strip().str.lower()
 
         # Filtro de grupos
         allowed_groups = [
@@ -82,9 +82,9 @@ def main():
 
         # Conversão de colunas em datetime
         df['STATUS_ALAUDAR'] = pd.to_datetime(df['STATUS_ALAUDAR'], dayfirst=True, errors='coerce')
-        df.rename(columns={'STATUS_ALAUDAR': 'DATA'}, inplace=True)
+        df.rename(columns={'STATUS_ALAUDAR': 'Data'}, inplace=True)
 
-        df_consultas['DATA'] = pd.to_datetime(df_consultas['DATA'], dayfirst=True, errors='coerce')
+        df_consultas['Data'] = pd.to_datetime(df_consultas['Data'], dayfirst=True, errors='coerce')
 
         # Selections
         unidade = st.sidebar.selectbox("Selecione a Unidade", options=df['UNIDADE'].unique())
@@ -97,7 +97,7 @@ def main():
         if date_range and len(date_range) == 2:
             start_date, end_date = date_range
             filtered_df = filtered_df[(filtered_df['DATA'] >= start_date) & (filtered_df['DATA'] <= end_date)]
-            df_consultas = df_consultas[(df_consultas['DATA'] >= start_date) & (df_consultas['DATA'] <= end_date)]
+            df_consultas = df_consultas[(df_consultas['Data'] >= start_date) & (df_consultas['Data'] <= end_date)]
 
         # Seleção de Médico Prescritor
         selected_doctor = st.sidebar.selectbox("Selecione o Médico Prescritor", options=filtered_df['MEDICO_SOLICITANTE'].unique())
@@ -106,7 +106,7 @@ def main():
         doctor_df = filtered_df[filtered_df['MEDICO_SOLICITANTE'] == selected_doctor]
 
         # Filtrar dados pelo médico selecionado no Consultas dataset
-        consultas_doctor_df = df_consultas[df_consultas['PRESTADOR'] == selected_doctor]
+        consultas_doctor_df = df_consultas[df_consultas['Prestador'] == selected_doctor]
 
         # Exibir tabelas de pacientes por modalidade no SLA dataset
         if not doctor_df.empty:
