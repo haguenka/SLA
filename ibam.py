@@ -5,7 +5,7 @@ from PIL import Image
 import requests
 from io import BytesIO
 import numpy as np
-from fuzzywuzzy import fuzz
+from fuzzywuzzy import fuzz, process
 
 # Streamlit app
 @st.cache_data
@@ -28,16 +28,14 @@ def load_excel_from_github(url):
 
 def match_names(patient_name, exam_names):
     """ Encontra um nome semelhante usando fuzzy matching """
-    best_match = None
-    highest_score = 0
-    
-    for exam_name in exam_names:
-        score = fuzz.token_sort_ratio(patient_name, exam_name)
-        if score > highest_score:
-            highest_score = score
-            best_match = exam_name
-    
-    return best_match if highest_score >= 85 else None  # Apenas considera nomes com ≥85% de similaridade
+    match, score = process.extractOne(patient_name, exam_names, scorer=fuzz.token_sort_ratio)
+    return match if score >= 85 else None  # Apenas considera nomes com ≥85% de similaridade
+
+def highlight_rows(row):
+    """ Destaca toda a linha em amarelo se houver match """
+    if pd.notna(row['Destaque']):
+        return ['background-color: yellow'] * len(row)
+    return [''] * len(row)
 
 def main():
     st.title("Análise IBAM")
@@ -135,9 +133,6 @@ def main():
 
         if not consultas_doctor_df.empty:
             consultas_doctor_df['Destaque'] = consultas_doctor_df['Paciente'].apply(lambda x: match_names(x.lower(), exam_patients))
-
-            def highlight_rows(row):
-                return ['background-color: yellow' if pd.notna(row['Destaque']) else '' for _ in row]
 
             st.subheader(f"Consultas - Total de Pacientes: {len(consultas_doctor_df)}")
             st.dataframe(consultas_doctor_df.style.apply(highlight_rows, axis=1))
