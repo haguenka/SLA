@@ -111,7 +111,7 @@ def main():
             st.write("Nenhum dado disponível para o médico selecionado.")
 
         # Calcular o total de exames prescritos por médico
-        exams_per_doctor = filtered_df['MEDICO_SOLICITANTE'].value_counts()
+        exams_per_doctor = filtered_df.groupby('MEDICO_SOLICITANTE').size()
 
         # Gráfico de médicos com total de exames prescritos
         st.subheader("Quantidade Total de Exames Prescritos por Médico")
