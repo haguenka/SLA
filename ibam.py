@@ -5,8 +5,6 @@ from PIL import Image
 import requests
 from io import BytesIO
 import numpy as np
-import os
-import re
 
 # Streamlit app
 @st.cache_data
@@ -51,16 +49,19 @@ def main():
 
     try:
         # Verifica a existência de colunas essenciais
-        if 'MEDICO_SOLICITANTE' not in df.columns:
-            st.error("'MEDICO_SOLICITANTE' column not found in the data.")
+        required_columns = ['MEDICO_SOLICITANTE', 'UNIDADE', 'TIPO_ATENDIMENTO', 'STATUS_ALAUDAR', 'STATUS_PRELIMINAR', 'STATUS_APROVADO']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+
+        if missing_columns:
+            st.error(f"As seguintes colunas estão faltando no dataset: {', '.join(missing_columns)}")
             return
 
-        if 'UNIDADE' not in df.columns or 'TIPO_ATENDIMENTO' not in df.columns:
-            st.error("'UNIDADE' or 'TIPO_ATENDIMENTO' column not found.")
+        if 'GRUPO' not in df.columns:
+            st.error("'GRUPO' column not found in the data.")
             return
 
         # Padroniza 'MEDICO_SOLICITANTE'
-        df['MEDICO_SOLICITANTE'] = df['MEDICO_SOLICITANTE'].astype(str).str.strip().str.lower()
+        df.loc[:, 'MEDICO_SOLICITANTE'] = df['MEDICO_SOLICITANTE'].astype(str).str.strip().str.lower()
 
         # Filtro de grupos
         allowed_groups = [
@@ -85,10 +86,13 @@ def main():
 
         # Filtrar com base nas seleções
         filtered_df = df[(df['UNIDADE'] == unidade) & (df['TIPO_ATENDIMENTO'] == tipo_atendimento)]
-        if date_range:
-            if len(date_range) == 2:
-                start_date, end_date = date_range
-                filtered_df = filtered_df[(filtered_df['STATUS_ALAUDAR'] >= start_date) & (filtered_df['STATUS_ALAUDAR'] <= end_date)]
+
+        if date_range and len(date_range) == 2:
+            start_date, end_date = date_range
+            filtered_df = filtered_df[
+                (filtered_df['STATUS_ALAUDAR'] >= pd.to_datetime(start_date)) & 
+                (filtered_df['STATUS_ALAUDAR'] <= pd.to_datetime(end_date))
+            ]
 
         # Calcular os top 10 médicos solicitantes
         top_doctors = filtered_df['MEDICO_SOLICITANTE'].value_counts().head(10)
@@ -101,6 +105,7 @@ def main():
             ax.set_title("Top 10 Médicos Solicitantes")
             ax.set_ylabel("Quantidade de Solicitações")
             ax.set_xlabel("Médicos")
+            ax.set_xticklabels(top_doctors.index, rotation=45, ha='right')  # Melhoria na legibilidade
             st.pyplot(fig)
         else:
             st.write("Nenhum dado disponível para o filtro selecionado.")
