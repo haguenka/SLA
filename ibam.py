@@ -96,7 +96,7 @@ def main():
 
         if date_range and len(date_range) == 2:
             start_date, end_date = date_range
-            filtered_df = filtered_df[(filtered_df['DATA'] >= start_date) & (filtered_df['DATA'] <= end_date)]
+            filtered_df = filtered_df[(filtered_df['Data'] >= start_date) & (filtered_df['Data'] <= end_date)]
             df_consultas = df_consultas[(df_consultas['Data'] >= start_date) & (df_consultas['Data'] <= end_date)]
 
         # Seleção de Médico Prescritor
