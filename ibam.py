@@ -29,7 +29,7 @@ def load_excel_from_github(url):
 def match_names(patient_name, exam_names):
     """ Encontra um nome semelhante usando fuzzy matching """
     match, score = process.extractOne(patient_name, exam_names, scorer=fuzz.token_sort_ratio)
-    return match if score >= 85 else None  # Apenas considera nomes com ≥85% de similaridade
+    return match if score >= 70 else None  # Apenas considera nomes com ≥85% de similaridade
 
 def highlight_rows(row):
     """ Destaca toda a linha em amarelo se houver match """
