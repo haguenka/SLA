@@ -111,37 +111,13 @@ def main():
         # Exibir tabelas de pacientes por modalidade no SLA dataset
         if not doctor_df.empty:
             for modality in doctor_df['GRUPO'].unique():
-                modality_df = doctor_df[doctor_df['GRUPO'] == modality][['NOME_PACIENTE', 'SAME', 'DATA', 'GRUPO', 'TIPO_ATENDIMENTO', 'MEDICO_SOLICITANTE']]
+                modality_df = doctor_df[doctor_df['GRUPO'] == modality][['NOME_PACIENTE', 'SAME', 'Data', 'GRUPO', 'TIPO_ATENDIMENTO', 'MEDICO_SOLICITANTE']]
                 st.subheader(f"{modality} - Total de Exames: {len(modality_df)}")
                 st.dataframe(modality_df)
 
         # Exibir consultas do médico selecionado
         st.subheader(f"Consultas - Total de Pacientes: {len(consultas_doctor_df)}")
         st.dataframe(consultas_doctor_df)
-
-        # Calcular o total de exames prescritos por médico (Top 10)
-        exams_per_doctor = filtered_df.groupby('MEDICO_SOLICITANTE').size().nlargest(10)
-
-        # Gráfico de médicos com total de exames prescritos (Top 10)
-        st.subheader("Top 10 Médicos Prescritores - Exames Prescritos")
-        if not exams_per_doctor.empty:
-            fig, ax = plt.subplots(figsize=(10, 6))
-            bars = ax.bar(exams_per_doctor.index, exams_per_doctor.values, color='skyblue')
-
-            ax.set_title("Top 10 Médicos Prescritores - Exames Prescritos")
-            ax.set_ylabel("Quantidade de Exames")
-            ax.set_xlabel("Médicos")
-            ax.set_xticks(range(len(exams_per_doctor.index)))
-            ax.set_xticklabels(exams_per_doctor.index, rotation=45, ha='right')
-
-            # Exibir números acima das barras
-            for bar in bars:
-                ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 2, str(int(bar.get_height())), 
-                        ha='center', va='bottom', fontsize=10, fontweight='bold')
-
-            st.pyplot(fig)
-        else:
-            st.write("Nenhum dado disponível para o filtro selecionado.")
 
     except Exception as e:
         st.error(f"Ocorreu um erro: {e}")
