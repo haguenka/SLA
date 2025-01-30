@@ -17,9 +17,8 @@ def load_excel(file):
     return pd.read_excel(file)
 
 @st.cache_data
-def load_excel_from_github():
+def load_excel_from_github(url):
     try:
-        url = 'https://raw.githubusercontent.com/haguenka/SLA/main/baseslaM.xlsx'
         response = requests.get(url)
         response.raise_for_status()
         return pd.read_excel(BytesIO(response.content))
@@ -30,15 +29,20 @@ def main():
     st.title("Análise IBAM")
 
     # Load and display logo from GitHub
-    url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
-    logo = load_logo(url)
+    url_logo = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
+    logo = load_logo(url_logo)
     st.sidebar.image(logo, use_container_width=True)
 
-    # Load Excel file from GitHub if available
-    df = load_excel_from_github()
+    # Load primary dataset (SLA)
+    url_sla = 'https://raw.githubusercontent.com/haguenka/SLA/main/baseslaM.xlsx'
+    df = load_excel_from_github(url_sla)
+
+    # Load secondary dataset (Consultas)
+    url_lista = 'https://raw.githubusercontent.com/haguenka/SLA/main/lista.xlsx'
+    df_consultas = load_excel_from_github(url_lista)
 
     # File upload if GitHub file is not available
-    if df is None:
+    if df is None or df_consultas is None:
         st.sidebar.header("Carregar arquivo")
         uploaded_file = st.sidebar.file_uploader("Escolher um arquivo Excel", type=['xlsx'])
         if uploaded_file is not None:
@@ -48,16 +52,25 @@ def main():
             return
 
     try:
-        # Verifica a existência de colunas essenciais
+        # Verifica a existência de colunas essenciais no SLA dataset
         required_columns = ['MEDICO_SOLICITANTE', 'NOME_PACIENTE', 'SAME', 'STATUS_ALAUDAR', 'UNIDADE', 'TIPO_ATENDIMENTO', 'GRUPO']
         missing_columns = [col for col in required_columns if col not in df.columns]
 
         if missing_columns:
-            st.error(f"As seguintes colunas estão faltando no dataset: {', '.join(missing_columns)}")
+            st.error(f"As seguintes colunas estão faltando no dataset SLA: {', '.join(missing_columns)}")
             return
 
-        # Padroniza 'MEDICO_SOLICITANTE'
+        # Verifica a existência de colunas essenciais no Consultas dataset
+        required_columns_consultas = ['PRESTADOR', 'PACIENTE', 'DATA']
+        missing_columns_consultas = [col for col in required_columns_consultas if col not in df_consultas.columns]
+
+        if missing_columns_consultas:
+            st.error(f"As seguintes colunas estão faltando no dataset Consultas: {', '.join(missing_columns_consultas)}")
+            return
+
+        # Padroniza 'MEDICO_SOLICITANTE' e 'PRESTADOR'
         df.loc[:, 'MEDICO_SOLICITANTE'] = df['MEDICO_SOLICITANTE'].astype(str).str.strip().str.lower()
+        df_consultas.loc[:, 'PRESTADOR'] = df_consultas['PRESTADOR'].astype(str).str.strip().str.lower()
 
         # Filtro de grupos
         allowed_groups = [
@@ -71,35 +84,40 @@ def main():
         df['STATUS_ALAUDAR'] = pd.to_datetime(df['STATUS_ALAUDAR'], dayfirst=True, errors='coerce')
         df.rename(columns={'STATUS_ALAUDAR': 'DATA'}, inplace=True)
 
+        df_consultas['DATA'] = pd.to_datetime(df_consultas['DATA'], dayfirst=True, errors='coerce')
+
         # Selections
         unidade = st.sidebar.selectbox("Selecione a Unidade", options=df['UNIDADE'].unique())
         date_range = st.sidebar.date_input("Selecione o Período", [])
         tipo_atendimento = st.sidebar.selectbox("Selecione o Tipo de Atendimento", options=df['TIPO_ATENDIMENTO'].unique())
 
-        # Filtrar com base nas seleções
+        # Filtrar SLA dataset
         filtered_df = df[(df['UNIDADE'] == unidade) & (df['TIPO_ATENDIMENTO'] == tipo_atendimento)]
 
         if date_range and len(date_range) == 2:
             start_date, end_date = date_range
-            filtered_df = filtered_df[
-                (filtered_df['DATA'] >= pd.to_datetime(start_date)) & 
-                (filtered_df['DATA'] <= pd.to_datetime(end_date))
-            ]
+            filtered_df = filtered_df[(filtered_df['DATA'] >= start_date) & (filtered_df['DATA'] <= end_date)]
+            df_consultas = df_consultas[(df_consultas['DATA'] >= start_date) & (df_consultas['DATA'] <= end_date)]
 
         # Seleção de Médico Prescritor
         selected_doctor = st.sidebar.selectbox("Selecione o Médico Prescritor", options=filtered_df['MEDICO_SOLICITANTE'].unique())
 
-        # Filtrar dados pelo médico selecionado
+        # Filtrar dados pelo médico selecionado no SLA dataset
         doctor_df = filtered_df[filtered_df['MEDICO_SOLICITANTE'] == selected_doctor]
 
-        # Exibir tabelas de pacientes por modalidade
+        # Filtrar dados pelo médico selecionado no Consultas dataset
+        consultas_doctor_df = df_consultas[df_consultas['PRESTADOR'] == selected_doctor]
+
+        # Exibir tabelas de pacientes por modalidade no SLA dataset
         if not doctor_df.empty:
             for modality in doctor_df['GRUPO'].unique():
                 modality_df = doctor_df[doctor_df['GRUPO'] == modality][['NOME_PACIENTE', 'SAME', 'DATA', 'GRUPO', 'TIPO_ATENDIMENTO', 'MEDICO_SOLICITANTE']]
                 st.subheader(f"{modality} - Total de Exames: {len(modality_df)}")
                 st.dataframe(modality_df)
-        else:
-            st.write("Nenhum dado disponível para o médico selecionado.")
+
+        # Exibir consultas do médico selecionado
+        st.subheader(f"Consultas - Total de Pacientes: {len(consultas_doctor_df)}")
+        st.dataframe(consultas_doctor_df)
 
         # Calcular o total de exames prescritos por médico (Top 10)
         exams_per_doctor = filtered_df.groupby('MEDICO_SOLICITANTE').size().nlargest(10)
@@ -118,12 +136,8 @@ def main():
 
             # Exibir números acima das barras
             for bar in bars:
-                ax.text(
-                    bar.get_x() + bar.get_width() / 2, 
-                    bar.get_height() + 2,  
-                    str(int(bar.get_height())), 
-                    ha='center', va='bottom', fontsize=10, fontweight='bold'
-                )
+                ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 2, str(int(bar.get_height())), 
+                        ha='center', va='bottom', fontsize=10, fontweight='bold')
 
             st.pyplot(fig)
         else:
