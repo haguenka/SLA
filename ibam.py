@@ -94,16 +94,32 @@ def main():
                 (filtered_df['STATUS_ALAUDAR'] <= pd.to_datetime(end_date))
             ]
 
+        # Seleção de Médico Prescritor
+        selected_doctor = st.sidebar.selectbox("Selecione o Médico Prescritor", options=filtered_df['MEDICO_SOLICITANTE'].unique())
+
+        # Filtrar dados pelo médico selecionado
+        doctor_df = filtered_df[filtered_df['MEDICO_SOLICITANTE'] == selected_doctor]
+
+        # Contagem de exames por modalidade
+        modality_counts = doctor_df['GRUPO'].value_counts()
+
+        # Exibir tabela com contagem de pacientes por modalidade
+        st.subheader(f"Pacientes Atendidos por Modalidade - {selected_doctor.capitalize()}")
+        if not modality_counts.empty:
+            st.table(modality_counts)
+        else:
+            st.write("Nenhum dado disponível para o médico selecionado.")
+
         # Calcular os top 10 médicos solicitantes
         top_doctors = filtered_df['MEDICO_SOLICITANTE'].value_counts().head(10)
 
-        # Gerar gráfico
-        st.subheader("Top 10 Médicos Solicitantes")
+        # Gráfico de médicos com total de exames
+        st.subheader("Top 10 Médicos Solicitantes (Quantidade Total de Exames)")
         if not top_doctors.empty:
             fig, ax = plt.subplots()
             top_doctors.plot(kind='bar', ax=ax, color='skyblue')
             ax.set_title("Top 10 Médicos Solicitantes")
-            ax.set_ylabel("Quantidade de Solicitações")
+            ax.set_ylabel("Quantidade de Exames")
             ax.set_xlabel("Médicos")
             ax.set_xticklabels(top_doctors.index, rotation=45, ha='right')  # Melhoria na legibilidade
             st.pyplot(fig)
