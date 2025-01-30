@@ -146,6 +146,15 @@ def main():
         else:
             st.warning("Nenhuma consulta encontrada para este médico.")
 
+        # 🔹 **Criar lista de convênios atendidos pelo médico**
+        if 'Convênio' in df_consultas.columns and not consultas_doctor_df.empty:
+            convenio_counts = consultas_doctor_df['Convênio'].value_counts().reset_index()
+            convenio_counts.columns = ['Convênio', 'Total de Atendimentos']
+            st.subheader(f"Convênios Atendidos - Total: {len(convenio_counts)}")
+            st.dataframe(convenio_counts)
+        else:
+            st.warning("Nenhuma informação de convênio disponível para este médico.")
+
     except Exception as e:
         st.error(f"Ocorreu um erro: {e}")
 
