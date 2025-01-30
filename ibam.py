@@ -49,7 +49,7 @@ def main():
 
     try:
         # Verifica a existência de colunas essenciais
-        required_columns = ['MEDICO_SOLICITANTE', 'NOME_PACIENTE', 'UNIDADE', 'TIPO_ATENDIMENTO', 'GRUPO', 'STATUS_ALAUDAR']
+        required_columns = ['MEDICO_SOLICITANTE', 'NOME_PACIENTE', 'SAME', 'STATUS_ALAUDAR', 'UNIDADE', 'TIPO_ATENDIMENTO', 'GRUPO']
         missing_columns = [col for col in required_columns if col not in df.columns]
 
         if missing_columns:
@@ -69,6 +69,7 @@ def main():
 
         # Conversão de colunas em datetime
         df['STATUS_ALAUDAR'] = pd.to_datetime(df['STATUS_ALAUDAR'], dayfirst=True, errors='coerce')
+        df.rename(columns={'STATUS_ALAUDAR': 'DATA'}, inplace=True)
 
         # Selections
         unidade = st.sidebar.selectbox("Selecione a Unidade", options=df['UNIDADE'].unique())
@@ -81,8 +82,8 @@ def main():
         if date_range and len(date_range) == 2:
             start_date, end_date = date_range
             filtered_df = filtered_df[
-                (filtered_df['STATUS_ALAUDAR'] >= pd.to_datetime(start_date)) & 
-                (filtered_df['STATUS_ALAUDAR'] <= pd.to_datetime(end_date))
+                (filtered_df['DATA'] >= pd.to_datetime(start_date)) & 
+                (filtered_df['DATA'] <= pd.to_datetime(end_date))
             ]
 
         # Seleção de Médico Prescritor
@@ -91,22 +92,12 @@ def main():
         # Filtrar dados pelo médico selecionado
         doctor_df = filtered_df[filtered_df['MEDICO_SOLICITANTE'] == selected_doctor]
 
-        # Exibir tabela de pacientes por modalidade
-        st.subheader(f"Pacientes Atendidos por Modalidade - {selected_doctor.capitalize()}")
+        # Exibir tabelas de pacientes por modalidade
         if not doctor_df.empty:
-            modality_patients = doctor_df.groupby('GRUPO')['NOME_PACIENTE'].apply(list).reset_index()
-            modality_patients.columns = ['Modalidade', 'Pacientes']
-            st.table(modality_patients)
-        else:
-            st.write("Nenhum dado disponível para o médico selecionado.")
-
-        # Contagem de exames por modalidade para o médico
-        modality_counts = doctor_df['GRUPO'].value_counts()
-
-        # Exibir tabela com contagem de exames por modalidade
-        st.subheader(f"Total de Exames por Modalidade - {selected_doctor.capitalize()}")
-        if not modality_counts.empty:
-            st.table(modality_counts)
+            for modality in doctor_df['GRUPO'].unique():
+                modality_df = doctor_df[doctor_df['GRUPO'] == modality][['NOME_PACIENTE', 'SAME', 'DATA', 'GRUPO', 'TIPO_ATENDIMENTO', 'MEDICO_SOLICITANTE']]
+                st.subheader(f"{modality} - Total de Exames: {len(modality_df)}")
+                st.dataframe(modality_df)
         else:
             st.write("Nenhum dado disponível para o médico selecionado.")
 
@@ -117,18 +108,19 @@ def main():
         st.subheader("Top 10 Médicos Prescritores - Exames Prescritos")
         if not exams_per_doctor.empty:
             fig, ax = plt.subplots(figsize=(10, 6))
-            bars = exams_per_doctor.plot(kind='bar', ax=ax, color='skyblue')
+            bars = ax.bar(exams_per_doctor.index, exams_per_doctor.values, color='skyblue')
 
             ax.set_title("Top 10 Médicos Prescritores - Exames Prescritos")
             ax.set_ylabel("Quantidade de Exames")
             ax.set_xlabel("Médicos")
-            ax.set_xticklabels(exams_per_doctor.index, rotation=45, ha='right')  # Melhoria na legibilidade
+            ax.set_xticks(range(len(exams_per_doctor.index)))
+            ax.set_xticklabels(exams_per_doctor.index, rotation=45, ha='right')
 
             # Exibir números acima das barras
-            for bar in bars.patches:
+            for bar in bars:
                 ax.text(
                     bar.get_x() + bar.get_width() / 2, 
-                    bar.get_height() + 2,  # Posição do texto
+                    bar.get_height() + 2,  
                     str(int(bar.get_height())), 
                     ha='center', va='bottom', fontsize=10, fontweight='bold'
                 )
