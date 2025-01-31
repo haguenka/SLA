@@ -167,12 +167,9 @@ def main():
         
         if 'Convênio' in df_consultas.columns:
             st.subheader("Consultas por Convênio")
-            convenio_counts = df_consultas['Convênio'].value_counts()
-            fig, ax = plt.subplots()
-            convenio_counts.plot(kind='bar', ax=ax)
-            ax.set_ylabel("Quantidade")
-            ax.set_xlabel("Convênio")
-            st.pyplot(fig)
+            convenio_counts = df_consultas['Convênio'].value_counts().reset_index()
+            convenio_counts.columns = ['Convênio', 'Quantidade']
+            st.dataframe(convenio_counts)
         
         st.subheader("Top 10 Médicos com Mais Consultas")
         doctor_counts = df_consultas['Prestador'].value_counts().head(10)
