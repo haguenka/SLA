@@ -156,7 +156,10 @@ def main():
                 st.dataframe(convenio_counts)
             else:
                 st.warning("Nenhuma informação de convênio disponível para este médico.")
-
+    
+        except Exception as e:
+            st.error(f"Ocorreu um erro: {e}")
+  
     with tab2:
         st.subheader("Estatísticas Gerais")
         total_consultas = len(df_consultas)
