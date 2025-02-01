@@ -45,7 +45,7 @@ def main():
     with tab1:
         # Load and display logo from GitHub
         url_logo = 'https://raw.githubusercontent.com/haguenka/SLA/main/sj.png'
-        logo = load_image(url_logo)
+        logo = load_logo(url_logo)
         
         # Convert to RGB and adjust contrast using gamma correction
         enhanced_logo = logo.convert('RGB')
