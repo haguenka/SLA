@@ -60,7 +60,7 @@ def main():
         # Optional: Apply color balance enhancement using CLAHE
         enhanced_image = Image.fromarray(pixels)
         enhanced_image = enhanced_image.crop()
-        enhanced_image = ImageEnhance.Color(enhanced_image).enhance(1.5)
+        enhanced_image = ImageEnhance.Color(enhanced_image).enhance(0.7)
         final_image = Image.fromarray(np.array(enhanced_image))
         
         st.sidebar.image(final_image, use_container_width=True)
