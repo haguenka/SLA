@@ -54,13 +54,13 @@ def main():
         # Apply gamma correction for enhanced contrast
         gamma = 0.5  # Adjust this value between 0 and 1; lower values increase contrast
         pixels[:, :, 0] = (pixels[:, :, 0] ** gamma) * 180  # Red channel
-        pixels[:, :, 1] = (pixels[:, :, 1] ** gamma) * 200  # Green channel
+        pixels[:, :, 1] = (pixels[:, :, 1] ** gamma) * 220  # Green channel
         pixels[:, :, 2] = (pixels[:, :, 2] ** gamma) * 220  # Blue channel
         
         # Optional: Apply color balance enhancement using CLAHE
         enhanced_image = Image.fromarray(pixels)
         enhanced_image = enhanced_image.crop()
-        enhanced_image = ImageEnhance.Color(enhanced_image).enhance(0.5)
+        enhanced_image = ImageEnhance.Color(enhanced_image).enhance(0.4)
         final_image = Image.fromarray(np.array(enhanced_image))
         
         st.sidebar.image(final_image, use_container_width=True)
