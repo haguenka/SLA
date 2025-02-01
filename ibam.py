@@ -55,7 +55,7 @@ def main():
         gamma = 0.9  # Adjust this value between 0 and 1; lower values increase contrast
         pixels[:, :, 0] = (pixels[:, :, 0] ** gamma) * 255  # Red channel
         pixels[:, :, 1] = (pixels[:, :, 1] ** gamma) * 100  # Green channel
-        pixels[:, :, 2] = (pixels[:, :, 2] ** gamma) * 255  # Blue channel
+        pixels[:, :, 2] = (pixels[:, :, 2] ** gamma) * 155  # Blue channel
         
         # Optional: Apply color balance enhancement using CLAHE
         enhanced_image = Image.fromarray(pixels)
