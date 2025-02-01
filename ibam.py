@@ -44,8 +44,23 @@ def main():
     with tab1:
         # Load and display logo from GitHub
         url_logo = 'https://raw.githubusercontent.com/haguenka/SLA/main/sj.png'
-        logo = load_logo(url_logo)
-        st.sidebar.image(logo, use_container_width=True)
+        logo = load_image(url_logo)
+        
+        # Convert to RGB and adjust contrast
+        enhanced_logo = logo.convert('RGB')
+        for i in range(3):
+            # Stretch the pixel values beyond 255 for better contrast
+            enhanced_logo pixels = np.array(enhanced_logo)
+            gamma = 0.8  # Adjust this value between 0 and 1 to change contrast
+            pixels[:, :, i] = (pixels[:, :, i] ** gamma) * 255
+        enhanced_logo = Image.fromarray(pixels)
+        
+        # Add white balance correction for better color accuracy
+        enhanced_logo = enhanced_logo.crop()
+        enhanced_logo = ImageEnhance.Color(enhanced_logo). enhance(1.5)
+        enhanced_logo = enhanced_logo.resize((logo.width, logo.height))
+        
+        st.sidebar.image(enhanced_logo, use_container_width=True)
     
         # Load datasets
         url_sla = 'https://raw.githubusercontent.com/haguenka/SLA/main/baseslaM.xlsx'
