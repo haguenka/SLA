@@ -43,7 +43,7 @@ def main():
 
     with tab1:
         # Load and display logo from GitHub
-        url_logo = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
+        url_logo = 'https://raw.githubusercontent.com/haguenka/SLA/main/sj.jpg'
         logo = load_logo(url_logo)
         st.sidebar.image(logo, use_container_width=True)
     
