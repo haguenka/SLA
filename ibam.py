@@ -47,21 +47,23 @@ def main():
         url_logo = 'https://raw.githubusercontent.com/haguenka/SLA/main/sj.png'
         logo = load_image(url_logo)
         
-        # Convert to RGB and adjust contrast
+        # Convert to RGB and adjust contrast using gamma correction
         enhanced_logo = logo.convert('RGB')
-        for i in range(3):
-            # Stretch the pixel values beyond 255 for better contrast
-            enhanced_logo pixels = np.array(enhanced_logo)
-            gamma = 0.8  # Adjust this value between 0 and 1 to change contrast
-            pixels[:, :, i] = (pixels[:, :, i] ** gamma) * 255
-        enhanced_logo = Image.fromarray(pixels)
+        pixels = np.array(enhanced_logo)  # Convert the image to a numpy array
         
-        # Add white balance correction for better color accuracy
-        enhanced_logo = enhanced_logo.crop()
-        enhanced_logo = ImageEnhance.Color(enhanced_logo). enhance(1.5)
-        enhanced_logo = enhanced_logo.resize((logo.width, logo.height))
+        # Apply gamma correction for enhanced contrast
+        gamma = 0.8  # Adjust this value between 0 and 1; lower values increase contrast
+        pixels[:, :, 0] = (pixels[:, :, 0] ** gamma) * 255  # Red channel
+        pixels[:, :, 1] = (pixels[:, :, 1] ** gamma) * 255  # Green channel
+        pixels[:, :, 2] = (pixels[:, :, 2] ** gamma) * 255  # Blue channel
         
-        st.sidebar.image(enhanced_logo, use_container_width=True)
+        # Optional: Apply color balance enhancement using CLAHE
+        enhanced_image = Image.fromarray(pixels)
+        enhanced_image = enhanced_image.crop()
+        enhanced_image = ImageEnhance.Color(enhanced_image).enhance(1.5)
+        final_image = Image.fromarray(np.array(enhanced_image))
+        
+        st.sidebar.image(final_image, use_container_width=True)
     
         # Load datasets
         url_sla = 'https://raw.githubusercontent.com/haguenka/SLA/main/baseslaM.xlsx'
