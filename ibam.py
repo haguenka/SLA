@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from PIL import Image
+from PIL import ImageEnhance
 import requests
 from io import BytesIO
 import numpy as np
