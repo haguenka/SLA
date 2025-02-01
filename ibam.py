@@ -53,7 +53,7 @@ def main():
         
         # Apply gamma correction for enhanced contrast
         gamma = 0.5  # Adjust this value between 0 and 1; lower values increase contrast
-        pixels[:, :, 0] = (pixels[:, :, 0] ** gamma) * 150  # Red channel
+        pixels[:, :, 0] = (pixels[:, :, 0] ** gamma) * 180  # Red channel
         pixels[:, :, 1] = (pixels[:, :, 1] ** gamma) * 100  # Green channel
         pixels[:, :, 2] = (pixels[:, :, 2] ** gamma) * 180  # Blue channel
         
