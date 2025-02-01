@@ -52,7 +52,7 @@ def main():
         pixels = np.array(enhanced_logo)  # Convert the image to a numpy array
         
         # Apply gamma correction for enhanced contrast
-        gamma = 0.9  # Adjust this value between 0 and 1; lower values increase contrast
+        gamma = 0.5  # Adjust this value between 0 and 1; lower values increase contrast
         pixels[:, :, 0] = (pixels[:, :, 0] ** gamma) * 155  # Red channel
         pixels[:, :, 1] = (pixels[:, :, 1] ** gamma) * 130  # Green channel
         pixels[:, :, 2] = (pixels[:, :, 2] ** gamma) * 180  # Blue channel
