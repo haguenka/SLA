@@ -204,20 +204,28 @@ def main():
         # Volumetria de Exames por Modalidade com Exames Convertidos
         st.subheader("Volumetria de Exames por Modalidade com Exames Convertidos")
         
-        # Para evitar warnings de atribuição, fazemos uma cópia do DataFrame filtrado
+        # Copia do DataFrame para evitar warnings de atribuição
         filtered_exams = filtered_df.copy()
         
         # Cria um set com os nomes dos pacientes das consultas (em lowercase)
         consulta_patients = set(df_consultas['Paciente'].dropna().str.lower())
         
+        # Dicionário para cache dos resultados de matching
+        match_cache = {}
+        
+        def cached_match(name, patient_set):
+            if name in match_cache:
+                return match_cache[name]
+            result = match_names(name, patient_set)
+            match_cache[name] = result
+            return result
+
         # Para cada exame, verifica se o nome do paciente teve correspondência (exame convertido)
         filtered_exams['Exames Convertido'] = filtered_exams['NOME_PACIENTE'].apply(
-            lambda x: 1 if match_names(x.lower(), consulta_patients) is not None else 0
+            lambda x: 1 if cached_match(x.lower(), consulta_patients) is not None else 0
         )
         
-        # Agrupa por modalidade e calcula:
-        # - Quantidade total de exames (contando os pacientes)
-        # - Quantidade de exames convertidos (soma da coluna criada)
+        # Agrupa por modalidade e calcula o total de exames e a soma dos convertidos
         volumetria_exames = filtered_exams.groupby('GRUPO').agg(
             Quantidade_de_Exames=('NOME_PACIENTE', 'count'),
             Exames_Convertido=('Exames Convertido', 'sum')
