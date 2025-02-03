@@ -209,21 +209,19 @@ def main():
         
         # Cria um set com os nomes dos pacientes das consultas (em lowercase)
         consulta_patients = set(df_consultas['Paciente'].dropna().str.lower())
+        consulta_patients_list = list(consulta_patients)  # Converter para lista para o process.extractOne
         
-        # Dicionário para cache dos resultados de matching
-        match_cache = {}
+        # Pré-calcular o resultado para cada nome único de exame
+        unique_names = filtered_exams['NOME_PACIENTE'].dropna().str.lower().unique()
+        name_to_converted = {}
         
-        def cached_match(name, patient_set):
-            if name in match_cache:
-                return match_cache[name]
-            result = match_names(name, patient_set)
-            match_cache[name] = result
-            return result
-
-        # Para cada exame, verifica se o nome do paciente teve correspondência (exame convertido)
-        filtered_exams['Exames Convertido'] = filtered_exams['NOME_PACIENTE'].apply(
-            lambda x: 1 if cached_match(x.lower(), consulta_patients) is not None else 0
-        )
+        for name in unique_names:
+            # Usando rapidfuzz para melhor performance
+            match = process.extractOne(name, consulta_patients_list, scorer=fuzz.token_sort_ratio)
+            name_to_converted[name] = 1 if match and match[1] >= 70 else 0
+        
+        # Mapear os resultados pré-calculados para o DataFrame
+        filtered_exams['Exames Convertido'] = filtered_exams['NOME_PACIENTE'].str.lower().map(name_to_converted)
         
         # Agrupa por modalidade e calcula o total de exames e a soma dos convertidos
         volumetria_exames = filtered_exams.groupby('GRUPO').agg(
@@ -232,6 +230,6 @@ def main():
         ).reset_index()
         
         st.dataframe(volumetria_exames)
-
+        
 if __name__ == "__main__":
     main()
