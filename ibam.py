@@ -6,6 +6,7 @@ from PIL import ImageEnhance
 import requests
 from io import BytesIO
 import numpy as np
+from rapidfuzz import fuzz, process
 from fuzzywuzzy import fuzz, process
 
 # Streamlit app
@@ -27,9 +28,10 @@ def load_excel_from_github(url):
     except requests.exceptions.RequestException:
         return None
 
-def match_names(patient_name, exam_names):
-    match, score = process.extractOne(patient_name, exam_names, scorer=fuzz.token_sort_ratio)
-    return match if score >= 70 else None
+def match_names(name, exam_names):
+    match = process.extractOne(name, exam_names, scorer=fuzz.token_sort_ratio)
+    # O RapidFuzz já retorna uma tupla (match, score, index) – adapte se necessário
+    return match[0] if match and match[1] >= 70 else None
 
 def highlight_rows(row):
     if pd.notna(row['Destaque']):
