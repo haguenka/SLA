@@ -180,6 +180,8 @@ def main():
   
     with tab2:
         st.subheader("Estatísticas Gerais")
+        
+        # Estatísticas de Consultas
         total_consultas = len(df_consultas)
         st.metric("Total de Consultas no Período", total_consultas)
         
@@ -196,6 +198,12 @@ def main():
         ax.set_ylabel("Quantidade de Consultas")
         ax.set_xlabel("Médico")
         st.pyplot(fig)
+        
+        # Volumetria de Exames por Modalidade
+        st.subheader("Volumetria de Exames por Modalidade")
+        # Aqui utilizamos o DataFrame filtrado por unidade e período (filtered_df)
+        volumetria_exames = filtered_df.groupby('GRUPO').size().reset_index(name='Quantidade de Exames')
+        st.dataframe(volumetria_exames)
 
 if __name__ == "__main__":
     main()
