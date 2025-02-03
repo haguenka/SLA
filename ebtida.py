@@ -7,13 +7,17 @@ st.set_page_config(
     layout="centered"
 )
 
-# CSS customizado para uma UI moderna e fancy
+# CSS customizado para modo escuro e UI moderna
 st.markdown(
     """
     <style>
-    /* Define a cor de fundo da página */
+    /* Define a cor de fundo da página para modo escuro */
     .stApp {
-        background-color: #f0f2f6;
+        background-color: #121212;
+    }
+    /* Estilização do texto geral para modo escuro */
+    .css-1d391kg, .css-1d391kg * {
+        color: #e0e0e0;
     }
     /* Estilização dos botões */
     .stButton>button {
@@ -28,8 +32,15 @@ st.markdown(
     /* Estilização do título */
     .title {
         font-size: 2.5em;
-        color: #333333;
+        color: #ffffff;
         text-align: center;
+    }
+    /* Estilização dos inputs */
+    .stNumberInput input {
+        background-color: #424242;
+        color: #ffffff;
+        border: 1px solid #616161;
+        border-radius: 4px;
     }
     </style>
     """, unsafe_allow_html=True
