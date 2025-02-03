@@ -7,7 +7,6 @@ import requests
 from io import BytesIO
 import numpy as np
 from rapidfuzz import fuzz, process
-from fuzzywuzzy import fuzz, process
 
 # Streamlit app
 @st.cache_data
