@@ -199,10 +199,28 @@ def main():
         ax.set_xlabel("Médico")
         st.pyplot(fig)
         
-        # Volumetria de Exames por Modalidade
-        st.subheader("Volumetria de Exames por Modalidade")
-        # Aqui utilizamos o DataFrame filtrado por unidade e período (filtered_df)
-        volumetria_exames = filtered_df.groupby('GRUPO').size().reset_index(name='Quantidade de Exames')
+        # Volumetria de Exames por Modalidade com Exames Convertidos
+        st.subheader("Volumetria de Exames por Modalidade com Exames Convertidos")
+        
+        # Para evitar warnings de atribuição, fazemos uma cópia do DataFrame filtrado
+        filtered_exams = filtered_df.copy()
+        
+        # Cria um set com os nomes dos pacientes das consultas (em lowercase)
+        consulta_patients = set(df_consultas['Paciente'].dropna().str.lower())
+        
+        # Para cada exame, verifica se o nome do paciente teve correspondência (exame convertido)
+        filtered_exams['Exames Convertido'] = filtered_exams['NOME_PACIENTE'].apply(
+            lambda x: 1 if match_names(x.lower(), consulta_patients) is not None else 0
+        )
+        
+        # Agrupa por modalidade e calcula:
+        # - Quantidade total de exames (contando os pacientes)
+        # - Quantidade de exames convertidos (soma da coluna criada)
+        volumetria_exames = filtered_exams.groupby('GRUPO').agg(
+            Quantidade_de_Exames=('NOME_PACIENTE', 'count'),
+            Exames_Convertido=('Exames Convertido', 'sum')
+        ).reset_index()
+        
         st.dataframe(volumetria_exames)
 
 if __name__ == "__main__":
