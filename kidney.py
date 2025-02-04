@@ -238,7 +238,7 @@ def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
     internados_df['Paciente'] = internados_df['Paciente'].fillna("").astype(str)
     
     # Verifica se a coluna 'convenio' existe no internados_df; caso não exista, cria-a com valores None
-    if 'convenio' not in internados_df.columns:
+    if 'Convenio' not in internados_df.columns:
         st.warning("A coluna 'convenio' não foi encontrada no dataframe de internados. Será criada com valores vazios.")
         internados_df['convenio'] = None
 
@@ -261,14 +261,14 @@ def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
             matched_indices.append(idx)
             # Localiza o primeiro registro em internados_df cujo nome corresponde ao best_match
             match_idx = internados_df[internados_df['Paciente_lower'] == best_match].index[0]
-            convenio_value = internados_df.loc[match_idx, 'convenio']
+            convenio_value = internados_df.loc[match_idx, 'Convenio']
             convenios.append(convenio_value)
     
     # Cria o dataframe de pacientes correlacionados a partir dos índices encontrados
     correlated_df = pacientes_df.loc[matched_indices].copy()
     correlated_df.drop(columns=['Paciente_lower'], inplace=True)
     # Adiciona a coluna 'convenio' com os valores extraídos
-    correlated_df['convenio'] = convenios
+    correlated_df['Convenio'] = convenios
     return correlated_df
 
 # -------------------------------
