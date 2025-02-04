@@ -136,7 +136,6 @@ def processar_pdfs_streamlit(pdf_files):
                     mes, ano = 0, 0
             else:
                 mes, ano = 0, 0
-            # Garante que a chave seja sempre uma tupla (ano, mes)
             key = (ano, mes)
             if key not in relatorio_mensal:
                 relatorio_mensal[key] = set()
@@ -241,6 +240,14 @@ def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
     return correlated_df
 
 # -------------------------------
+# Armazenamento em cache via session_state
+# -------------------------------
+if "pacientes_minerados_df" not in st.session_state:
+    st.session_state["pacientes_minerados_df"] = pd.DataFrame(columns=["Paciente", "Idade", "Same", "Data do Exame", "Tamanho"])
+    st.session_state["relatorio_mensal"] = {}
+    st.session_state["lista_calculos"] = []
+
+# -------------------------------
 # INTERFACE STREAMLIT (SIDEBAR)
 # -------------------------------
 upload_method = st.sidebar.radio("Selecione o método de upload:", 
@@ -258,52 +265,84 @@ internados_file = st.sidebar.file_uploader("Arquivo internados.xlsx (opcional)",
 # BOTÃO DE PROCESSAMENTO
 # -------------------------------
 if st.sidebar.button("Processar"):
+    # Processamento dos novos arquivos
     if upload_method == "Upload de PDFs" and pdf_files:
         with st.spinner("Processando PDFs..."):
-            relatorio_mensal, lista_calculos, pacientes_minerados_df = processar_pdfs_streamlit(pdf_files)
+            new_relatorio, new_lista_calculos, new_df = processar_pdfs_streamlit(pdf_files)
         st.success("Processamento concluído!")
     elif upload_method == "Upload de ZIP" and zip_file:
         with st.spinner("Processando arquivo ZIP..."):
-            relatorio_mensal, lista_calculos, pacientes_minerados_df = processar_pdfs_from_zip(zip_file)
+            new_relatorio, new_lista_calculos, new_df = processar_pdfs_from_zip(zip_file)
         st.success("Processamento concluído!")
     else:
         st.error("Por favor, selecione os arquivos PDF ou o arquivo ZIP.")
-    
+        new_relatorio, new_lista_calculos, new_df = {}, [], pd.DataFrame()
+
+    # Combina os dados novos com os já armazenados em cache
+    if not new_df.empty:
+        combined_df = pd.concat([st.session_state["pacientes_minerados_df"], new_df], ignore_index=True)
+        # Reaplica a deduplicação, dando preferência a registros com medida extraída
+        combined_df['has_measure'] = combined_df['Tamanho'].apply(lambda x: 0 if x.strip().lower() == "não informado" else 1)
+        combined_df = combined_df.sort_values('has_measure', ascending=False)
+        combined_df = combined_df.drop_duplicates(subset=['Paciente', 'Same'], keep='first')
+        combined_df.drop(columns=['has_measure'], inplace=True)
+        st.session_state["pacientes_minerados_df"] = combined_df
+
+        # Recalcula o relatório mensal a partir do DataFrame combinado
+        combined_relatorio = {}
+        for idx, row in combined_df.iterrows():
+            data_exame = row["Data do Exame"]
+            partes_data = data_exame.split("/")
+            if len(partes_data) == 3:
+                try:
+                    dia, mes, ano = partes_data
+                    mes = int(mes)
+                    ano = int(ano)
+                except ValueError:
+                    mes, ano = 0, 0
+            else:
+                mes, ano = 0, 0
+            key = (ano, mes)
+            if key not in combined_relatorio:
+                combined_relatorio[key] = set()
+            combined_relatorio[key].add(row["Paciente"])
+        for key in combined_relatorio:
+            combined_relatorio[key] = len(combined_relatorio[key])
+        st.session_state["relatorio_mensal"] = combined_relatorio
+
+        # Atualiza a lista de cálculos
+        st.session_state["lista_calculos"] = combined_df.to_dict(orient="records")
+
     # -------------------------------
     # MONTAGEM DO RELATÓRIO
     # -------------------------------
     report_md = "### Pacientes encontrados com cálculos por mês:\n"
-    # Para evitar erro caso alguma chave não seja uma tupla de 2 elementos, usamos um lambda que verifica:
-    for key in sorted(relatorio_mensal.keys(), key=lambda x: (x[0], x[1]) if isinstance(x, tuple) and len(x) == 2 else (0, 0)):
-        ano, mes = key if isinstance(key, tuple) and len(key) == 2 else (0, 0)
+    for key in sorted(st.session_state["relatorio_mensal"].keys(), key=lambda x: (x[0], x[1]) if isinstance(x, tuple) and len(x)==2 else (0,0)):
+        ano, mes = key if isinstance(key, tuple) and len(key)==2 else (0, 0)
         nome_mes = calendar.month_name[mes] if 1 <= mes <= 12 else "Desconhecido"
-        report_md += f"- **{nome_mes}/{ano}**: {relatorio_mensal.get((ano, mes), 0)} paciente(s)\n"
+        report_md += f"- **{nome_mes}/{ano}**: {st.session_state['relatorio_mensal'].get((ano, mes), 0)} paciente(s)\n"
     report_md += "\n### Dados dos pacientes minerados:\n"
-    #for item in lista_calculos:
-     #   report_md += (f"**Paciente:** {item['Paciente']} | **Idade:** {item['Idade']} | "
-      #                f"**SAME:** {item['Same']} | **Data:** {item['Data do Exame']} | "
-       #               f"**Tamanho:** {item['Tamanho']}\n\n")
     
     st.markdown(report_md)
-    st.dataframe(pacientes_minerados_df)
-    
+    st.dataframe(st.session_state["pacientes_minerados_df"])
+
     # -------------------------------
     # DOWNLOAD DO ARQUIVO EXCEL (Pacientes Minerados)
     # -------------------------------
     towrite = BytesIO()
-    pacientes_minerados_df.to_excel(towrite, index=False, engine='openpyxl')
+    st.session_state["pacientes_minerados_df"].to_excel(towrite, index=False, engine='openpyxl')
     towrite.seek(0)
     st.download_button(
-        label="Download Excel de Pacientes Minerados",
+        label="Download Excel de Pacientes Minerados (Atualizado)",
         data=towrite,
-        file_name="pacientes_minerados.xlsx",
+        file_name="pacientes_minerados_atualizado.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     
     # Se o arquivo de internados for carregado, realiza a correlação
     if internados_file:
         internados_df = pd.read_excel(internados_file)
-        correlated_df = correlacionar_pacientes_fuzzy(pacientes_minerados_df.copy(), internados_df, threshold=70)
+        correlated_df = correlacionar_pacientes_fuzzy(st.session_state["pacientes_minerados_df"].copy(), internados_df, threshold=70)
         st.markdown(f"### Correlação com Internados:\nForam encontrados **{len(correlated_df)}** pacientes minerados internados.")
         st.dataframe(correlated_df)
         towrite_corr = BytesIO()
