@@ -54,7 +54,7 @@ st.markdown("""
 # -------------------------------
 st.title("Rastreador de Cálculo Renal CSSJ")
 if logo is not None:
-    st.sidebar.image(logo, use_column_width=True)
+    st.sidebar.image(logo, use_container_width=True)
 st.sidebar.header("Selecione os Arquivos")
 
 # -------------------------------
