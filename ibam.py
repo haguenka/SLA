@@ -8,6 +8,7 @@ from io import BytesIO
 import numpy as np
 from rapidfuzz import fuzz, process
 
+
 # Streamlit app
 @st.cache_data
 def load_logo(url):
