@@ -279,12 +279,12 @@ if st.sidebar.button("Processar"):
         nome_mes = calendar.month_name[mes] if 1 <= mes <= 12 else "Desconhecido"
         report_md += f"- **{nome_mes}/{ano}**: {relatorio_mensal.get((ano, mes), 0)} paciente(s)\n"
     report_md += "\n### Dados dos pacientes minerados:\n"
-    for item in lista_calculos:
-        report_md += (f"**Paciente:** {item['Paciente']} | **Idade:** {item['Idade']} | "
-                      f"**SAME:** {item['Same']} | **Data:** {item['Data do Exame']} | "
-                      f"**Tamanho:** {item['Tamanho']}\n\n")
+    #for item in lista_calculos:
+     #   report_md += (f"**Paciente:** {item['Paciente']} | **Idade:** {item['Idade']} | "
+      #                f"**SAME:** {item['Same']} | **Data:** {item['Data do Exame']} | "
+       #               f"**Tamanho:** {item['Tamanho']}\n\n")
     
-    #st.markdown(report_md)
+    st.markdown(report_md)
     st.dataframe(pacientes_minerados_df)
     
     # -------------------------------
