@@ -326,10 +326,11 @@ if st.sidebar.button("Processar"):
     for key in sorted(st.session_state["relatorio_mensal"].keys(), key=lambda x: (x[0], x[1]) if isinstance(x, tuple) and len(x)==2 else (0,0)):
         ano, mes = key if isinstance(key, tuple) and len(key)==2 else (0, 0)
         nome_mes = calendar.month_name[mes] if 1 <= mes <= 12 else "Desconhecido"
-        report_md += f"- **{nome_mes}/{ano}**: {st.session_state['relatorio_mensal'].get((ano, mes), 0)} paciente(s)\n"
-    report_md += "\n### Dados dos pacientes minerados:\n"
+        # Utiliza uma tag <span> com estilo inline para definir a cor amarela e aumentar a fonte
+        report_md += f"- <span style='color: yellow; font-size: 20px;'>{nome_mes}/{ano}</span>: {st.session_state['relatorio_mensal'].get((ano, mes), 0)} paciente(s)<br>"
+    report_md += "<br>### Dados dos pacientes minerados:<br>"
     
-    st.markdown(report_md)
+    st.markdown(report_md, unsafe_allow_html=True)
     st.dataframe(st.session_state["pacientes_minerados_df"])
 
     # -------------------------------
