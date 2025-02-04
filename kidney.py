@@ -328,7 +328,7 @@ if st.sidebar.button("Processar"):
         nome_mes = calendar.month_name[mes] if 1 <= mes <= 12 else "Desconhecido"
         # Utiliza uma tag <span> com estilo inline para definir a cor amarela e aumentar a fonte
         report_md += f"- <span style='color: yellow; font-size: 20px;'>{nome_mes}/{ano}</span>: {st.session_state['relatorio_mensal'].get((ano, mes), 0)} paciente(s)<br>"
-    report_md += "<br>### Dados dos pacientes minerados:<br>"
+    report_md += "<br>Dados dos pacientes minerados:<br>"
     
     st.markdown(report_md, unsafe_allow_html=True)
     st.dataframe(st.session_state["pacientes_minerados_df"])
