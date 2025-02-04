@@ -407,30 +407,26 @@ if st.sidebar.button("Processar"):
     # -------------------------------
     # SEÇÃO: Lista de Pacientes Minerados com Acesso ao PDF
     # -------------------------------
+    # (Após montar os relatórios e combinar os dados em st.session_state)
+    st.markdown(report_md, unsafe_allow_html=True)
+    st.dataframe(st.session_state["pacientes_minerados_df"])  # (Opcional, se quiser exibir o DataFrame padrão)
+    
+    # Agora, adicione a coluna com o link para download do PDF
+    import base64  # Já importado anteriormente
+    
+    def create_download_link(pdf_bytes, file_name):
+        try:
+            b64 = base64.b64encode(pdf_bytes).decode()
+        except Exception as e:
+            return "Erro na conversão"
+        return f'<a href="data:application/octet-stream;base64,{b64}" download="{file_name}">Download PDF</a>'
+    
+    df_display = st.session_state["pacientes_minerados_df"].copy()
+    df_display["Acesso PDF"] = df_display.apply(lambda row: create_download_link(row["pdf_bytes"], row["Arquivo"]), axis=1)
+    df_display = df_display.drop(columns=["pdf_bytes"], errors="ignore")
+    
     st.markdown("### Lista de Pacientes Minerados com Acesso ao PDF:")
-
-    for record in st.session_state["lista_calculos"]:
-        col1, col2 = st.columns([3, 1])
-        col1.markdown(
-            f"**Paciente:** {record['Paciente']} | **Idade:** {record['Idade']} | "
-            f"**SAME:** {record['Same']} | **Data:** {record['Data do Exame']} | "
-            f"**Tamanho:** {record['Tamanho']}"
-        )
-        
-        # Garante que o dado esteja no formato bytes
-        pdf_data = record["pdf_bytes"]
-        if not isinstance(pdf_data, bytes):
-            try:
-                pdf_data = BytesIO(pdf_data).getvalue()
-            except Exception as e:
-                st.error(f"Erro convertendo pdf_data para bytes: {e}")
-        
-        col2.download_button(
-            "Download PDF",
-            data=pdf_data,
-            file_name=record["Arquivo"],
-            key=str(record["Arquivo"]) + "_" + str(record["Paciente"])
-        )
+    st.markdown(df_display.to_html(escape=False, index=False), unsafe_allow_html=True)
 
     
     # -------------------------------
