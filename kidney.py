@@ -269,6 +269,7 @@ def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
             convenios.append(convenio_value)
     correlated_df = pacientes_df.loc[matched_indices].copy()
     correlated_df.drop(columns=['Paciente_lower'], inplace=True)
+    correlated_df = correlated_df.drop(columns=["Arquivo", "pdf_bytes"], errors="ignore")
     correlated_df['Convenio'] = convenios
     return correlated_df
 
