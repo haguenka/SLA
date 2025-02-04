@@ -355,7 +355,9 @@ if st.sidebar.button("Processar"):
     report_md += "<br>Dados dos pacientes minerados:<br>"
     
     st.markdown(report_md, unsafe_allow_html=True)
-    st.dataframe(st.session_state["pacientes_minerados_df"])
+    # Cria uma cópia do DataFrame sem os dados do PDF
+    df_para_exibicao = st.session_state["pacientes_minerados_df"].drop(columns=["pdf_bytes"], errors="ignore")
+    st.dataframe(df_para_exibicao)
     
     # -------------------------------
     # RELATÓRIO DIÁRIO: Quantidade de pacientes minerados por dia (exibição com tabela HTML)
