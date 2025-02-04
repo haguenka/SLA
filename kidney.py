@@ -407,11 +407,17 @@ if st.sidebar.button("Processar"):
     # SEÇÃO: Lista de Pacientes Minerados com Acesso ao PDF
     # -------------------------------
     st.markdown("### Lista de Pacientes Minerados com Acesso ao PDF:")
+
     for record in st.session_state["lista_calculos"]:
         col1, col2 = st.columns([3, 1])
-        col1.markdown(f"**Paciente:** {record['Paciente']} | **Idade:** {record['Idade']} | **SAME:** {record['Same']} | **Data:** {record['Data do Exame']} | **Tamanho:** {record['Tamanho']}")
-        # Cada botão de download utiliza a chave composta do nome do arquivo e do paciente para evitar duplicatas
-        # Garante que o dado seja do tipo bytes
+        # Exibe os dados do paciente na primeira coluna
+        col1.markdown(
+            f"**Paciente:** {record['Paciente']} | **Idade:** {record['Idade']} | "
+            f"**SAME:** {record['Same']} | **Data:** {record['Data do Exame']} | "
+            f"**Tamanho:** {record['Tamanho']}"
+        )
+        
+        # Garante que os dados armazenados em "pdf_bytes" estejam no formato bytes
         pdf_data = record["pdf_bytes"]
         if not isinstance(pdf_data, bytes):
             if hasattr(pdf_data, "getvalue"):
@@ -426,6 +432,7 @@ if st.sidebar.button("Processar"):
                 except Exception as e:
                     st.error(f"Erro convertendo pdf_data para bytes: {e}")
         
+        # Cria o botão de download, utilizando uma chave única composta pelo nome do arquivo e pelo nome do paciente
         col2.download_button(
             "Download PDF",
             data=pdf_data,
