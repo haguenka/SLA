@@ -410,29 +410,20 @@ if st.sidebar.button("Processar"):
 
     for record in st.session_state["lista_calculos"]:
         col1, col2 = st.columns([3, 1])
-        # Exibe os dados do paciente na primeira coluna
         col1.markdown(
             f"**Paciente:** {record['Paciente']} | **Idade:** {record['Idade']} | "
             f"**SAME:** {record['Same']} | **Data:** {record['Data do Exame']} | "
             f"**Tamanho:** {record['Tamanho']}"
         )
         
-        # Garante que os dados armazenados em "pdf_bytes" estejam no formato bytes
+        # Garante que o dado esteja no formato bytes
         pdf_data = record["pdf_bytes"]
         if not isinstance(pdf_data, bytes):
-            if hasattr(pdf_data, "getvalue"):
-                pdf_data = pdf_data.getvalue()
-            elif isinstance(pdf_data, memoryview):
-                pdf_data = pdf_data.tobytes()
-            elif isinstance(pdf_data, str):
-                pdf_data = pdf_data.encode("utf-8")
-            else:
-                try:
-                    pdf_data = bytes(pdf_data)
-                except Exception as e:
-                    st.error(f"Erro convertendo pdf_data para bytes: {e}")
+            try:
+                pdf_data = BytesIO(pdf_data).getvalue()
+            except Exception as e:
+                st.error(f"Erro convertendo pdf_data para bytes: {e}")
         
-        # Cria o botão de download, utilizando uma chave única composta pelo nome do arquivo e pelo nome do paciente
         col2.download_button(
             "Download PDF",
             data=pdf_data,
