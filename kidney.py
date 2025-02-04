@@ -344,37 +344,55 @@ if st.sidebar.button("Processar"):
     # -------------------------------
     # RELATÓRIO DIÁRIO: Quantidade de pacientes minerados por dia
     # -------------------------------
-    relatorio_diario = {}
-    for idx, row in st.session_state["pacientes_minerados_df"].iterrows():
-        data = row["Data do Exame"]
-        partes = data.split("/")
-        if len(partes) == 3:
-            dia = partes[0].zfill(2)  # Garante que o dia tenha dois dígitos
-            try:
-                mes = int(partes[1])
-            except:
-                mes = 0
-            ano = partes[2]
-            key = (ano, mes, dia)
-            if key not in relatorio_diario:
-                relatorio_diario[key] = set()
-            relatorio_diario[key].add(row["Paciente"])
-    
-    grouped_by_month = {}
-    for (ano, mes, dia), pacientes in relatorio_diario.items():
-        month_key = (ano, mes)
-        if month_key not in grouped_by_month:
-            grouped_by_month[month_key] = {}
-        grouped_by_month[month_key][dia] = len(pacientes)
-    
-    daily_report_md = "\n### Pacientes minerados por dia:\n"
-    for (ano, mes) in sorted(grouped_by_month.keys(), key=lambda x: (x[0], x[1])):
-        nome_mes = calendar.month_name[mes] if 1 <= mes <= 12 else "Desconhecido"
-        daily_report_md += f"\n<strong>{nome_mes}/{ano}:</strong><br>"
-        for dia in sorted(grouped_by_month[(ano, mes)].keys()):
-            count = grouped_by_month[(ano, mes)][dia]
-            daily_report_md += f"- Dia {dia}: {count} paciente(s)<br>"
-    st.markdown(daily_report_md, unsafe_allow_html=True)
+    # -------------------------------
+# RELATÓRIO DIÁRIO: Quantidade de pacientes minerados por dia
+# -------------------------------
+relatorio_diario = {}
+for idx, row in st.session_state["pacientes_minerados_df"].iterrows():
+    data = row["Data do Exame"]
+    partes = data.split("/")
+    if len(partes) == 3:
+        dia = partes[0].zfill(2)  # Garante dois dígitos para o dia
+        try:
+            mes = int(partes[1])
+        except:
+            mes = 0
+        ano = partes[2]
+        key = (ano, mes, dia)
+        if key not in relatorio_diario:
+            relatorio_diario[key] = set()
+        relatorio_diario[key].add(row["Paciente"])
+
+# Agrupa os dados por mês (ano, mes)
+grouped_by_month = {}
+for (ano, mes, dia), pacientes in relatorio_diario.items():
+    month_key = (ano, mes)
+    if month_key not in grouped_by_month:
+        grouped_by_month[month_key] = {}
+    grouped_by_month[month_key][dia] = len(pacientes)
+
+# Monta o relatório diário usando uma tabela HTML para cada mês
+daily_report_md = "<h3>Pacientes minerados por dia</h3>"
+for (ano, mes) in sorted(grouped_by_month.keys(), key=lambda x: (x[0], x[1])):
+    nome_mes = calendar.month_name[mes] if 1 <= mes <= 12 else "Desconhecido"
+    daily_report_md += f"<h4 style='color: cyan;'>{nome_mes}/{ano}</h4>"
+    daily_report_md += (
+        "<table style='width: 50%; border-collapse: collapse;'>"
+        "<tr>"
+        "<th style='border: 1px solid #ffffff; padding: 4px;'>Dia</th>"
+        "<th style='border: 1px solid #ffffff; padding: 4px;'>Pacientes</th>"
+        "</tr>"
+    )
+    for dia in sorted(grouped_by_month[(ano, mes)].keys()):
+        count = grouped_by_month[(ano, mes)][dia]
+        daily_report_md += (
+            f"<tr>"
+            f"<td style='border: 1px solid #ffffff; padding: 4px;'>{dia}</td>"
+            f"<td style='border: 1px solid #ffffff; padding: 4px;'>{count}</td>"
+            f"</tr>"
+        )
+    daily_report_md += "</table><br>"
+st.markdown(daily_report_md, unsafe_allow_html=True)
     
     # -------------------------------
     # DOWNLOAD DO ARQUIVO EXCEL (Pacientes Minerados)
