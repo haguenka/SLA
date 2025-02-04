@@ -408,8 +408,8 @@ if st.sidebar.button("Processar"):
     # SEÇÃO: Lista de Pacientes Minerados com Acesso ao PDF
     # -------------------------------
     # (Após montar os relatórios e combinar os dados em st.session_state)
-    st.markdown(report_md, unsafe_allow_html=True)
-    st.dataframe(st.session_state["pacientes_minerados_df"])  # (Opcional, se quiser exibir o DataFrame padrão)
+    #st.markdown(report_md, unsafe_allow_html=True)
+    #st.dataframe(st.session_state["pacientes_minerados_df"])  # (Opcional, se quiser exibir o DataFrame padrão)
     
     # Agora, adicione a coluna com o link para download do PDF
     import base64  # Já importado anteriormente
