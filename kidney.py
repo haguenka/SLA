@@ -54,7 +54,7 @@ st.markdown("""
 # -------------------------------
 st.title("Rastreador de Cálculo Renal CSSJ")
 if logo is not None:
-    st.sidebar.image(logo, use_container_width=True)
+    st.sidebar.image(logo, use_column_width=True)
 st.sidebar.header("Selecione os Arquivos")
 
 # -------------------------------
@@ -109,11 +109,15 @@ def processar_pdfs_streamlit(pdf_files):
     """
     Processa os PDFs carregados via file uploader.
     Retorna o relatório mensal, uma lista de registros e um DataFrame com os pacientes minerados.
+    Cada registro inclui o nome do arquivo e os bytes do PDF.
     """
     relatorio_mensal = {}
     lista_calculos = []
     for uploaded_file in pdf_files:
-        pdf_stream = BytesIO(uploaded_file.read())
+        # Armazena o nome e os bytes do PDF
+        file_name = uploaded_file.name
+        pdf_bytes = uploaded_file.read()
+        pdf_stream = BytesIO(pdf_bytes)
         texto_completo = extrair_texto(pdf_stream)
         cabecalho = extrair_informacoes(texto_completo)
         sentencas = re.split(r'(?<=[.!?])\s+', texto_completo)
@@ -141,7 +145,7 @@ def processar_pdfs_streamlit(pdf_files):
                 try:
                     dia, mes, ano = partes_data
                     mes = int(mes)
-                    ano = int(ano)  # Converte para inteiro se possível
+                    ano = int(ano)
                 except ValueError:
                     mes, ano = 0, 0
             else:
@@ -151,7 +155,11 @@ def processar_pdfs_streamlit(pdf_files):
                 relatorio_mensal[key] = set()
             relatorio_mensal[key].add(cabecalho["Paciente"])
             for tamanho in ocorrencias_validas:
-                lista_calculos.append({**cabecalho, "Tamanho": tamanho})
+                record = {**cabecalho,
+                          "Tamanho": tamanho,
+                          "Arquivo": file_name,
+                          "pdf_bytes": pdf_bytes}
+                lista_calculos.append(record)
     for key in relatorio_mensal:
         relatorio_mensal[key] = len(relatorio_mensal[key])
     pacientes_minerados_df = pd.DataFrame(lista_calculos)
@@ -168,6 +176,7 @@ def processar_pdfs_from_zip(zip_file):
     """
     Recebe um arquivo ZIP e extrai todos os PDFs contidos nele.
     Processa cada PDF e retorna o relatório mensal, uma lista de registros e um DataFrame.
+    Cada registro inclui o nome do arquivo e os bytes do PDF.
     """
     relatorio_mensal = {}
     lista_calculos = []
@@ -176,7 +185,8 @@ def processar_pdfs_from_zip(zip_file):
         pdf_names = [name for name in z.namelist() if name.lower().endswith(".pdf")]
         for pdf_name in pdf_names:
             with z.open(pdf_name) as pdf_file:
-                pdf_stream = BytesIO(pdf_file.read())
+                pdf_bytes = pdf_file.read()
+                pdf_stream = BytesIO(pdf_bytes)
                 texto_completo = extrair_texto(pdf_stream)
                 cabecalho = extrair_informacoes(texto_completo)
                 sentencas = re.split(r'(?<=[.!?])\s+', texto_completo)
@@ -214,7 +224,11 @@ def processar_pdfs_from_zip(zip_file):
                         relatorio_mensal[key] = set()
                     relatorio_mensal[key].add(cabecalho["Paciente"])
                     for tamanho in ocorrencias_validas:
-                        lista_calculos.append({**cabecalho, "Tamanho": tamanho})
+                        record = {**cabecalho,
+                                  "Tamanho": tamanho,
+                                  "Arquivo": pdf_name,
+                                  "pdf_bytes": pdf_bytes}
+                        lista_calculos.append(record)
     for key in relatorio_mensal:
         relatorio_mensal[key] = len(relatorio_mensal[key])
     pacientes_minerados_df = pd.DataFrame(lista_calculos)
@@ -262,7 +276,7 @@ def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
 # ARMAZENAMENTO EM CACHE (st.session_state)
 # -------------------------------
 if "pacientes_minerados_df" not in st.session_state:
-    st.session_state["pacientes_minerados_df"] = pd.DataFrame(columns=["Paciente", "Idade", "Same", "Data do Exame", "Tamanho"])
+    st.session_state["pacientes_minerados_df"] = pd.DataFrame(columns=["Paciente", "Idade", "Same", "Data do Exame", "Tamanho", "Arquivo", "pdf_bytes"])
     st.session_state["relatorio_mensal"] = {}
     st.session_state["lista_calculos"] = []
 
@@ -342,14 +356,14 @@ if st.sidebar.button("Processar"):
     st.dataframe(st.session_state["pacientes_minerados_df"])
     
     # -------------------------------
-    # RELATÓRIO DIÁRIO: Quantidade de pacientes minerados por dia
+    # RELATÓRIO DIÁRIO: Quantidade de pacientes minerados por dia (exibição com tabela HTML)
     # -------------------------------
     relatorio_diario = {}
     for idx, row in st.session_state["pacientes_minerados_df"].iterrows():
         data = row["Data do Exame"]
         partes = data.split("/")
         if len(partes) == 3:
-            dia = partes[0].zfill(2)  # Garante dois dígitos para o dia
+            dia = partes[0].zfill(2)
             try:
                 mes = int(partes[1])
             except:
@@ -360,7 +374,6 @@ if st.sidebar.button("Processar"):
                 relatorio_diario[key] = set()
             relatorio_diario[key].add(row["Paciente"])
     
-    # Agrupa os dados por mês (ano, mes)
     grouped_by_month = {}
     for (ano, mes, dia), pacientes in relatorio_diario.items():
         month_key = (ano, mes)
@@ -368,7 +381,6 @@ if st.sidebar.button("Processar"):
             grouped_by_month[month_key] = {}
         grouped_by_month[month_key][dia] = len(pacientes)
     
-    # Monta o relatório diário usando uma tabela HTML para cada mês
     daily_report_md = "<h3>Pacientes minerados por dia</h3>"
     for (ano, mes) in sorted(grouped_by_month.keys(), key=lambda x: (x[0], x[1])):
         nome_mes = calendar.month_name[mes] if 1 <= mes <= 12 else "Desconhecido"
@@ -392,6 +404,16 @@ if st.sidebar.button("Processar"):
     st.markdown(daily_report_md, unsafe_allow_html=True)
     
     # -------------------------------
+    # SEÇÃO: Lista de Pacientes Minerados com Acesso ao PDF
+    # -------------------------------
+    st.markdown("### Lista de Pacientes Minerados com Acesso ao PDF:")
+    for record in st.session_state["lista_calculos"]:
+        col1, col2 = st.columns([3, 1])
+        col1.markdown(f"**Paciente:** {record['Paciente']} | **Idade:** {record['Idade']} | **SAME:** {record['Same']} | **Data:** {record['Data do Exame']} | **Tamanho:** {record['Tamanho']}")
+        # Cada botão de download utiliza a chave composta do nome do arquivo e do paciente para evitar duplicatas
+        col2.download_button("Download PDF", data=record["pdf_bytes"], file_name=record["Arquivo"], key=record["Arquivo"] + record["Paciente"])
+    
+    # -------------------------------
     # DOWNLOAD DO ARQUIVO EXCEL (Pacientes Minerados)
     # -------------------------------
     towrite = BytesIO()
@@ -404,11 +426,13 @@ if st.sidebar.button("Processar"):
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     
-    # Se o arquivo de internados for carregado, realiza a correlação
+    # -------------------------------
+    # Correlação com Internados (se arquivo fornecido)
+    # -------------------------------
     if internados_file:
         internados_df = pd.read_excel(internados_file)
         correlated_df = correlacionar_pacientes_fuzzy(st.session_state["pacientes_minerados_df"].copy(), internados_df, threshold=70)
-        st.markdown(f"### Correlação com Internados:\nForam encontrados {len(correlated_df)} pacientes minerados internados.")
+        st.markdown(f"### Correlação com Internados:\nForam encontrados <strong>{len(correlated_df)}</strong> pacientes minerados internados.")
         st.dataframe(correlated_df)
         towrite_corr = BytesIO()
         correlated_df.to_excel(towrite_corr, index=False, engine='openpyxl')
