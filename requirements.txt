@@ -11,3 +11,4 @@ streamlit-aggrid
 pdfplumber
 thefuzz
 fuzzywuzzy
+pytesseract
