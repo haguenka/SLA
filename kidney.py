@@ -239,7 +239,7 @@ def processar_pdfs_from_zip(zip_file):
         pacientes_minerados_df = pacientes_minerados_df.sort_values('has_measure', ascending=False)
         pacientes_minerados_df = pacientes_minerados_df.drop_duplicates(subset=['Paciente', 'Same'], keep='first')
         pacientes_minerados_df.drop(columns=['has_measure'], inplace=True)
-        #pacientes_minerados_df = pacientes_minerados_df.drop(columns=["Arquivo", "pdf_bytes"], errors="ignore")
+        pacientes_minerados_df = pacientes_minerados_df.drop(columns=["Arquivo", "pdf_bytes"], errors="ignore")
     return relatorio_mensal, lista_calculos, pacientes_minerados_df
 
 def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
