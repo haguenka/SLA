@@ -414,8 +414,17 @@ if st.sidebar.button("Processar"):
         # Garante que o dado seja do tipo bytes
         pdf_data = record["pdf_bytes"]
         if not isinstance(pdf_data, bytes):
-            # Se for um objeto file-like, obtemos os bytes com getvalue()
-            pdf_data = pdf_data.getvalue() if hasattr(pdf_data, "getvalue") else bytes(pdf_data)
+            if hasattr(pdf_data, "getvalue"):
+                pdf_data = pdf_data.getvalue()
+            elif isinstance(pdf_data, memoryview):
+                pdf_data = pdf_data.tobytes()
+            elif isinstance(pdf_data, str):
+                pdf_data = pdf_data.encode("utf-8")
+            else:
+                try:
+                    pdf_data = bytes(pdf_data)
+                except Exception as e:
+                    st.error(f"Erro convertendo pdf_data para bytes: {e}")
         
         col2.download_button(
             "Download PDF",
