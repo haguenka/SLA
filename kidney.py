@@ -411,13 +411,19 @@ if st.sidebar.button("Processar"):
         col1, col2 = st.columns([3, 1])
         col1.markdown(f"**Paciente:** {record['Paciente']} | **Idade:** {record['Idade']} | **SAME:** {record['Same']} | **Data:** {record['Data do Exame']} | **Tamanho:** {record['Tamanho']}")
         # Cada botão de download utiliza a chave composta do nome do arquivo e do paciente para evitar duplicatas
-        #col2.download_button("Download PDF", data=record["pdf_bytes"], file_name=record["Arquivo"], key=record["Arquivo"] + record["Paciente"])
+        # Garante que o dado seja do tipo bytes
+        pdf_data = record["pdf_bytes"]
+        if not isinstance(pdf_data, bytes):
+            # Se for um objeto file-like, obtemos os bytes com getvalue()
+            pdf_data = pdf_data.getvalue() if hasattr(pdf_data, "getvalue") else bytes(pdf_data)
+        
         col2.download_button(
             "Download PDF",
-            data=record["pdf_bytes"],
+            data=pdf_data,
             file_name=record["Arquivo"],
-            key=str(record["Arquivo"]) + str(record["Paciente"])
+            key=str(record["Arquivo"]) + "_" + str(record["Paciente"])
         )
+
     
     # -------------------------------
     # DOWNLOAD DO ARQUIVO EXCEL (Pacientes Minerados)
