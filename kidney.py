@@ -9,6 +9,21 @@ import streamlit as st
 from io import BytesIO
 from fuzzywuzzy import fuzz, process
 import zipfile
+import requests  # Necessário para carregar a logo a partir da URL
+
+# -------------------------------
+# FUNÇÃO PARA CARREGAR A LOGO COM CACHE
+# -------------------------------
+@st.cache_data(show_spinner=False)
+def load_logo(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        return Image.open(BytesIO(response.content))
+    else:
+        return None
+
+url_logo = 'https://raw.githubusercontent.com/haguenka/SLA/main/sj.png'
+logo = load_logo(url_logo)
 
 # -------------------------------
 # CONFIGURAÇÃO DE CSS (DARK MODE)
@@ -37,16 +52,9 @@ st.markdown("""
 # -------------------------------
 # TÍTULO E LOGO NA SIDEBAR
 # -------------------------------
-# Streamlit app
-@st.cache_data
-def load_logo(url):
-    response = requests.get(url)
-    return Image.open(BytesIO(response.content))
-# Load and display logo from GitHub
-url_logo = 'https://raw.githubusercontent.com/haguenka/SLA/main/sj.png'
-logo = load_logo(url_logo)
 st.title("Rastreador de Cálculo Renal CSSJ")
-    
+if logo is not None:
+    st.sidebar.image(logo, use_column_width=True)
 st.sidebar.header("Selecione os Arquivos")
 
 # -------------------------------
@@ -105,11 +113,9 @@ def processar_pdfs_streamlit(pdf_files):
     relatorio_mensal = {}
     lista_calculos = []
     for uploaded_file in pdf_files:
-        # Cria um objeto BytesIO para cada PDF
         pdf_stream = BytesIO(uploaded_file.read())
         texto_completo = extrair_texto(pdf_stream)
         cabecalho = extrair_informacoes(texto_completo)
-        # Divide o texto em sentenças (usando pontuação como delimitador)
         sentencas = re.split(r'(?<=[.!?])\s+', texto_completo)
         ocorrencias_validas = []
         for sentenca in sentencas:
@@ -129,7 +135,6 @@ def processar_pdfs_streamlit(pdf_files):
                 else:
                     ocorrencias_validas.append("Não informado")
         if ocorrencias_validas:
-            # Processa a data para o relatório mensal
             data_exame = cabecalho["Data do Exame"]
             partes_data = data_exame.split("/")
             if len(partes_data) == 3:
@@ -161,7 +166,7 @@ def processar_pdfs_streamlit(pdf_files):
 
 def processar_pdfs_from_zip(zip_file):
     """
-    Recebe um arquivo ZIP (upload) e extrai todos os PDFs contidos nele.
+    Recebe um arquivo ZIP e extrai todos os PDFs contidos nele.
     Processa cada PDF e retorna o relatório mensal, uma lista de registros e um DataFrame.
     """
     relatorio_mensal = {}
@@ -245,7 +250,7 @@ def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
     return correlated_df
 
 # -------------------------------
-# Armazenamento em cache via session_state
+# ARMAZENAMENTO EM CACHE (st.session_state)
 # -------------------------------
 if "pacientes_minerados_df" not in st.session_state:
     st.session_state["pacientes_minerados_df"] = pd.DataFrame(columns=["Paciente", "Idade", "Same", "Data do Exame", "Tamanho"])
@@ -270,7 +275,6 @@ internados_file = st.sidebar.file_uploader("Arquivo internados.xlsx (opcional)",
 # BOTÃO DE PROCESSAMENTO
 # -------------------------------
 if st.sidebar.button("Processar"):
-    # Processamento dos novos arquivos
     if upload_method == "Upload de PDFs" and pdf_files:
         with st.spinner("Processando PDFs..."):
             new_relatorio, new_lista_calculos, new_df = processar_pdfs_streamlit(pdf_files)
@@ -286,14 +290,13 @@ if st.sidebar.button("Processar"):
     # Combina os dados novos com os já armazenados em cache
     if not new_df.empty:
         combined_df = pd.concat([st.session_state["pacientes_minerados_df"], new_df], ignore_index=True)
-        # Reaplica a deduplicação, dando preferência a registros com medida extraída
         combined_df['has_measure'] = combined_df['Tamanho'].apply(lambda x: 0 if x.strip().lower() == "não informado" else 1)
         combined_df = combined_df.sort_values('has_measure', ascending=False)
         combined_df = combined_df.drop_duplicates(subset=['Paciente', 'Same'], keep='first')
         combined_df.drop(columns=['has_measure'], inplace=True)
         st.session_state["pacientes_minerados_df"] = combined_df
 
-        # Recalcula o relatório mensal a partir do DataFrame combinado
+        # Recalcula o relatório mensal
         combined_relatorio = {}
         for idx, row in combined_df.iterrows():
             data_exame = row["Data do Exame"]
@@ -314,8 +317,6 @@ if st.sidebar.button("Processar"):
         for key in combined_relatorio:
             combined_relatorio[key] = len(combined_relatorio[key])
         st.session_state["relatorio_mensal"] = combined_relatorio
-
-        # Atualiza a lista de cálculos
         st.session_state["lista_calculos"] = combined_df.to_dict(orient="records")
 
     # -------------------------------
