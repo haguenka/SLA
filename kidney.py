@@ -9,7 +9,7 @@ import streamlit as st
 from io import BytesIO
 from fuzzywuzzy import fuzz, process
 import zipfile
-import requests  # Necessário para carregar a logo a partir da URL
+import requests  # Para carregar a logo a partir de uma URL
 
 # -------------------------------
 # FUNÇÃO PARA CARREGAR A LOGO COM CACHE
@@ -54,7 +54,7 @@ st.markdown("""
 # -------------------------------
 st.title("Rastreador de Cálculo Renal CSSJ")
 if logo is not None:
-    st.sidebar.image(logo, use_container_width=True)
+    st.sidebar.image(logo, use_column_width=True)
 st.sidebar.header("Selecione os Arquivos")
 
 # -------------------------------
@@ -86,7 +86,7 @@ def extrair_texto(pdf_input):
         doc = fitz.open(pdf_input)
     for page_num in range(len(doc)):
         texto = doc[page_num].get_text("text")
-        if not texto.strip():  # Se não houver texto, aplica OCR
+        if not texto.strip():
             pix = doc[page_num].get_pixmap()
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
             texto = pytesseract.image_to_string(img, lang="por")
@@ -141,7 +141,7 @@ def processar_pdfs_streamlit(pdf_files):
                 try:
                     dia, mes, ano = partes_data
                     mes = int(mes)
-                    ano = int(ano)
+                    ano = int(ano)  # Converte para inteiro se possível
                 except ValueError:
                     mes, ano = 0, 0
             else:
@@ -230,45 +230,32 @@ def processar_pdfs_from_zip(zip_file):
 def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
     """
     Correlaciona os pacientes minerados com os internados usando fuzzy matching.
-    Retorna um DataFrame com os pacientes que tiveram correspondência com pontuação >= threshold,
+    Retorna um DataFrame com os pacientes que tiveram correspondência com pontuação >= threshold
     e inclui a coluna 'convenio' extraída do dataframe dos internados.
     """
-    # Garante que as colunas 'Paciente' estejam preenchidas e sejam strings
     pacientes_df['Paciente'] = pacientes_df['Paciente'].fillna("").astype(str)
     internados_df['Paciente'] = internados_df['Paciente'].fillna("").astype(str)
-    
-    # Verifica se a coluna 'convenio' existe no internados_df; caso não exista, cria-a com valores None
-    if 'Convenio' not in internados_df.columns:
+    if 'convenio' not in internados_df.columns:
         st.warning("A coluna 'convenio' não foi encontrada no dataframe de internados. Será criada com valores vazios.")
         internados_df['convenio'] = None
-
-    # Cria colunas auxiliares em minúsculas para facilitar a comparação
     pacientes_df['Paciente_lower'] = pacientes_df['Paciente'].str.lower()
     internados_df['Paciente_lower'] = internados_df['Paciente'].str.lower()
-    
-    # Converte a coluna de internados em uma lista para o fuzzy matching
     internados_list = internados_df['Paciente_lower'].tolist()
     matched_indices = []
-    convenios = []  # Lista para armazenar o valor de 'convenio' correspondente a cada match
-    
+    convenios = []
     for idx, row in pacientes_df.iterrows():
         nome = row['Paciente_lower']
         if not nome:
             continue
-        # Retorna o melhor match e a pontuação usando fuzz.ratio
         best_match, score = process.extractOne(nome, internados_list, scorer=fuzz.ratio)
         if score >= threshold:
             matched_indices.append(idx)
-            # Localiza o primeiro registro em internados_df cujo nome corresponde ao best_match
             match_idx = internados_df[internados_df['Paciente_lower'] == best_match].index[0]
-            convenio_value = internados_df.loc[match_idx, 'Convenio']
+            convenio_value = internados_df.loc[match_idx, 'convenio']
             convenios.append(convenio_value)
-    
-    # Cria o dataframe de pacientes correlacionados a partir dos índices encontrados
     correlated_df = pacientes_df.loc[matched_indices].copy()
     correlated_df.drop(columns=['Paciente_lower'], inplace=True)
-    # Adiciona a coluna 'convenio' com os valores extraídos
-    correlated_df['Convenio'] = convenios
+    correlated_df['convenio'] = convenios
     return correlated_df
 
 # -------------------------------
@@ -318,7 +305,7 @@ if st.sidebar.button("Processar"):
         combined_df.drop(columns=['has_measure'], inplace=True)
         st.session_state["pacientes_minerados_df"] = combined_df
 
-        # Recalcula o relatório mensal
+        # Recalcula o relatório mensal a partir do DataFrame combinado
         combined_relatorio = {}
         for idx, row in combined_df.iterrows():
             data_exame = row["Data do Exame"]
@@ -342,19 +329,57 @@ if st.sidebar.button("Processar"):
         st.session_state["lista_calculos"] = combined_df.to_dict(orient="records")
 
     # -------------------------------
-    # MONTAGEM DO RELATÓRIO
+    # MONTAGEM DO RELATÓRIO AGREGADO POR MÊS
     # -------------------------------
     report_md = "### Pacientes encontrados com cálculos por mês:\n"
     for key in sorted(st.session_state["relatorio_mensal"].keys(), key=lambda x: (x[0], x[1]) if isinstance(x, tuple) and len(x)==2 else (0,0)):
         ano, mes = key if isinstance(key, tuple) and len(key)==2 else (0, 0)
         nome_mes = calendar.month_name[mes] if 1 <= mes <= 12 else "Desconhecido"
-        # Utiliza uma tag <span> com estilo inline para definir a cor amarela e aumentar a fonte
         report_md += f"- <span style='color: yellow; font-size: 20px;'>{nome_mes}/{ano}</span>: {st.session_state['relatorio_mensal'].get((ano, mes), 0)} paciente(s)<br>"
-    report_md += "<br>Dados dos pacientes minerados:<br>"
+    report_md += "<br>### Dados dos pacientes minerados:<br>"
+    for item in st.session_state["lista_calculos"]:
+        report_md += (f"<strong>Paciente:</strong> {item['Paciente']} | <strong>Idade:</strong> {item['Idade']} | "
+                      f"<strong>SAME:</strong> {item['Same']} | <strong>Data:</strong> {item['Data do Exame']} | "
+                      f"<strong>Tamanho:</strong> {item['Tamanho']}<br><br>")
     
     st.markdown(report_md, unsafe_allow_html=True)
     st.dataframe(st.session_state["pacientes_minerados_df"])
-
+    
+    # -------------------------------
+    # RELATÓRIO DIÁRIO: Quantidade de pacientes minerados por dia
+    # -------------------------------
+    relatorio_diario = {}
+    for idx, row in st.session_state["pacientes_minerados_df"].iterrows():
+        data = row["Data do Exame"]
+        partes = data.split("/")
+        if len(partes) == 3:
+            dia = partes[0].zfill(2)  # Garante que o dia tenha dois dígitos
+            try:
+                mes = int(partes[1])
+            except:
+                mes = 0
+            ano = partes[2]
+            key = (ano, mes, dia)
+            if key not in relatorio_diario:
+                relatorio_diario[key] = set()
+            relatorio_diario[key].add(row["Paciente"])
+    
+    grouped_by_month = {}
+    for (ano, mes, dia), pacientes in relatorio_diario.items():
+        month_key = (ano, mes)
+        if month_key not in grouped_by_month:
+            grouped_by_month[month_key] = {}
+        grouped_by_month[month_key][dia] = len(pacientes)
+    
+    daily_report_md = "\n### Pacientes minerados por dia:\n"
+    for (ano, mes) in sorted(grouped_by_month.keys(), key=lambda x: (x[0], x[1])):
+        nome_mes = calendar.month_name[mes] if 1 <= mes <= 12 else "Desconhecido"
+        daily_report_md += f"\n<strong>{nome_mes}/{ano}:</strong><br>"
+        for dia in sorted(grouped_by_month[(ano, mes)].keys()):
+            count = grouped_by_month[(ano, mes)][dia]
+            daily_report_md += f"- Dia {dia}: {count} paciente(s)<br>"
+    st.markdown(daily_report_md, unsafe_allow_html=True)
+    
     # -------------------------------
     # DOWNLOAD DO ARQUIVO EXCEL (Pacientes Minerados)
     # -------------------------------
@@ -372,7 +397,7 @@ if st.sidebar.button("Processar"):
     if internados_file:
         internados_df = pd.read_excel(internados_file)
         correlated_df = correlacionar_pacientes_fuzzy(st.session_state["pacientes_minerados_df"].copy(), internados_df, threshold=70)
-        st.markdown(f"### Correlação com Internados:\nForam encontrados **{len(correlated_df)}** pacientes minerados internados.")
+        st.markdown(f"### Correlação com Internados:\nForam encontrados <strong>{len(correlated_df)}</strong> pacientes minerados internados.")
         st.dataframe(correlated_df)
         towrite_corr = BytesIO()
         correlated_df.to_excel(towrite_corr, index=False, engine='openpyxl')
