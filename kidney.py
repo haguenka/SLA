@@ -1,0 +1,231 @@
+import os
+import re
+import fitz  # PyMuPDF
+import pytesseract
+from PIL import Image
+import calendar
+import pandas as pd
+import streamlit as st
+from io import BytesIO
+from fuzzywuzzy import fuzz, process
+
+# -------------------------------
+# CONFIGURAÇÃO DE CSS (DARK MODE)
+# -------------------------------
+st.markdown("""
+    <style>
+    /* Estilo para o corpo (modo escuro) */
+    body {
+        background-color: #121212;
+        color: #ffffff;
+    }
+    /* Estilo para a sidebar */
+    .css-1d391kg, .css-1d391kg div {
+        background-color: #1e1e1e;
+    }
+    /* Ajuste de fonte e espaçamento para um visual clean/fancy */
+    .reportview-container .main .block-container{
+        padding-top: 2rem;
+        padding-right: 2rem;
+        padding-left: 2rem;
+        padding-bottom: 2rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# -------------------------------
+# TÍTULO DA APLICAÇÃO
+# -------------------------------
+st.title("Rastreador de Cálculo Renal CSSJ")
+
+# -------------------------------
+# FUNÇÕES DE PROCESSAMENTO
+# -------------------------------
+def extrair_texto(pdf_input):
+    """
+    Extrai o texto do PDF. Se não houver texto, aplica OCR.
+    Aceita tanto um caminho (string) quanto um objeto file-like (BytesIO).
+    """
+    texto_completo = ""
+    if isinstance(pdf_input, str):
+        doc = fitz.open(pdf_input)
+    elif hasattr(pdf_input, "read"):
+        pdf_input.seek(0)
+        pdf_bytes = pdf_input.read()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    else:
+        doc = fitz.open(pdf_input)
+    for page_num in range(len(doc)):
+        texto = doc[page_num].get_text("text")
+        if not texto.strip():  # Se não houver texto, aplica OCR
+            pix = doc[page_num].get_pixmap()
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            texto = pytesseract.image_to_string(img, lang="por")
+        texto_completo += texto + "\n"
+    doc.close()
+    return texto_completo
+
+def extrair_informacoes(texto_completo):
+    """
+    Extrai informações do cabeçalho do laudo a partir do texto completo.
+    """
+    dados_cabecalho = {}
+    dados_cabecalho["Paciente"] = regex_nome.search(texto_completo).group(1).strip() if regex_nome.search(texto_completo) else "N/D"
+    dados_cabecalho["Idade"] = regex_idade.search(texto_completo).group(1).strip() if regex_idade.search(texto_completo) else "N/D"
+    dados_cabecalho["Same"] = regex_same.search(texto_completo).group(1).strip() if regex_same.search(texto_completo) else "N/D"
+    dados_cabecalho["Data do Exame"] = regex_data.search(texto_completo).group(1).strip() if regex_data.search(texto_completo) else "N/D"
+    return dados_cabecalho
+
+# Expressões regulares globais
+regex_calculo = re.compile(r"c\s*[áa]\s*l\s*[cç]\s*[úu]\s*l\s*[oa]s?", re.IGNORECASE)
+regex_tamanho = re.compile(r"\b\d+[.,]?\d*\s?(?:mm|cm)\b", re.IGNORECASE)
+regex_nome = re.compile(r"(?i)paciente\s*:\s*(.+)")
+regex_idade = re.compile(r"(?i)idade\s*:\s*(\d+[Aa]?\s*\d*[Mm]?)")
+regex_same = re.compile(r"(?i)same\s*:\s*(\S+)")
+regex_data = re.compile(r"(?i)data\s*do\s*exame\s*:\s*([\d/]+)")
+
+def processar_pdfs_streamlit(uploaded_files):
+    """
+    Processa os PDFs carregados e extrai os dados dos laudos.
+    Retorna o relatório mensal, uma lista de registros e um DataFrame com os pacientes minerados.
+    """
+    relatorio_mensal = {}
+    lista_calculos = []
+    for uploaded_file in uploaded_files:
+        # Cria um objeto BytesIO para cada PDF
+        pdf_stream = BytesIO(uploaded_file.read())
+        texto_completo = extrair_texto(pdf_stream)
+        cabecalho = extrair_informacoes(texto_completo)
+        # Divide o texto em sentenças (usando pontuação como delimitador)
+        sentencas = re.split(r'(?<=[.!?])\s+', texto_completo)
+        ocorrencias_validas = []
+        for sentenca in sentencas:
+            linhas = sentenca.splitlines()
+            valido = False
+            for linha in linhas:
+                if re.search(regex_calculo, linha):
+                    if re.search(r'\bbiliar(?:es)?\b', linha, re.IGNORECASE):
+                        continue
+                    else:
+                        valido = True
+                        break
+            if valido and re.search(regex_calculo, sentenca):
+                tamanho_match = re.search(regex_tamanho, sentenca)
+                if tamanho_match:
+                    ocorrencias_validas.append(tamanho_match.group(0))
+                else:
+                    ocorrencias_validas.append("Não informado")
+        if ocorrencias_validas:
+            # Processa a data para o relatório mensal
+            data_exame = cabecalho["Data do Exame"]
+            partes_data = data_exame.split("/")
+            if len(partes_data) == 3:
+                try:
+                    dia, mes, ano = partes_data
+                    mes = int(mes)
+                    ano = int(ano)
+                except ValueError:
+                    mes, ano = 0, 0
+            else:
+                mes, ano = 0, 0
+            if (ano, mes) not in relatorio_mensal:
+                relatorio_mensal[(ano, mes)] = set()
+            relatorio_mensal[(ano, mes)].add(cabecalho["Paciente"])
+            for tamanho in ocorrencias_validas:
+                lista_calculos.append({**cabecalho, "Tamanho": tamanho})
+    for key in relatorio_mensal:
+        relatorio_mensal[key] = len(relatorio_mensal[key])
+    pacientes_minerados_df = pd.DataFrame(lista_calculos)
+    if not pacientes_minerados_df.empty:
+        pacientes_minerados_df['has_measure'] = pacientes_minerados_df['Tamanho'].apply(
+            lambda x: 0 if x.strip().lower() == "não informado" else 1
+        )
+        pacientes_minerados_df = pacientes_minerados_df.sort_values('has_measure', ascending=False)
+        pacientes_minerados_df = pacientes_minerados_df.drop_duplicates(subset=['Paciente', 'Same'], keep='first')
+        pacientes_minerados_df.drop(columns=['has_measure'], inplace=True)
+        lista_calculos = pacientes_minerados_df.to_dict(orient="records")
+    return relatorio_mensal, lista_calculos, pacientes_minerados_df
+
+def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
+    """
+    Correlaciona os pacientes minerados com os internados usando fuzzy matching.
+    Retorna um DataFrame apenas com os pacientes que tiveram correspondência com pontuação >= threshold.
+    """
+    pacientes_df['Paciente'] = pacientes_df['Paciente'].fillna("").astype(str)
+    internados_df['Paciente'] = internados_df['Paciente'].fillna("").astype(str)
+    pacientes_df['Paciente_lower'] = pacientes_df['Paciente'].str.lower()
+    internados_df['Paciente_lower'] = internados_df['Paciente'].str.lower()
+    internados_list = internados_df['Paciente_lower'].tolist()
+    matched_indices = []
+    for idx, row in pacientes_df.iterrows():
+        nome = row['Paciente_lower']
+        if not nome:
+            continue
+        best_match, score = process.extractOne(nome, internados_list, scorer=fuzz.ratio)
+        if score >= threshold:
+            matched_indices.append(idx)
+    correlated_df = pacientes_df.loc[matched_indices].copy()
+    correlated_df.drop(columns=['Paciente_lower'], inplace=True)
+    return correlated_df
+
+# -------------------------------
+# INTERFACE STREAMLIT (SIDEBAR)
+# -------------------------------
+st.sidebar.header("Selecione os Arquivos")
+
+# Upload dos arquivos PDF (entrada) – múltiplos
+pdf_files = st.sidebar.file_uploader("Arquivos PDF", type="pdf", accept_multiple_files=True)
+
+# Upload do arquivo internados.xlsx (opcional)
+internados_file = st.sidebar.file_uploader("Arquivo internados.xlsx (opcional)", type="xlsx")
+
+# Botão de processamento
+if st.sidebar.button("Processar PDFs"):
+    if pdf_files:
+        with st.spinner("Processando PDFs..."):
+            relatorio_mensal, lista_calculos, pacientes_minerados_df = processar_pdfs_streamlit(pdf_files)
+        st.success("Processamento concluído!")
+        
+        # Monta o relatório de forma formatada
+        report_md = "### Pacientes encontrados com cálculos por mês:\n"
+        for (ano, mes) in sorted(relatorio_mensal.keys(), key=lambda x: (x[0], x[1])):
+            nome_mes = calendar.month_name[mes]
+            report_md += f"- **{nome_mes}/{ano}**: {relatorio_mensal[(ano, mes)]} paciente(s)\n"
+        report_md += "\n### Dados dos pacientes minerados:\n"
+        for item in lista_calculos:
+            report_md += (f"**Paciente:** {item['Paciente']} | **Idade:** {item['Idade']} | "
+                          f"**SAME:** {item['Same']} | **Data:** {item['Data do Exame']} | "
+                          f"**Tamanho:** {item['Tamanho']}\n\n")
+        
+        # Exibe o relatório na view principal
+        st.markdown(report_md)
+        st.dataframe(pacientes_minerados_df)
+        
+        # Gera o arquivo Excel para download
+        towrite = BytesIO()
+        pacientes_minerados_df.to_excel(towrite, index=False, engine='openpyxl')
+        towrite.seek(0)
+        st.download_button(
+            label="Download Excel de Pacientes Minerados",
+            data=towrite,
+            file_name="pacientes_minerados.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        # Se o arquivo internados.xlsx for carregado, realiza a correlação
+        if internados_file:
+            internados_df = pd.read_excel(internados_file)
+            correlated_df = correlacionar_pacientes_fuzzy(pacientes_minerados_df.copy(), internados_df, threshold=70)
+            st.markdown(f"### Correlação com Internados:\nForam encontrados **{len(correlated_df)}** pacientes minerados internados.")
+            st.dataframe(correlated_df)
+            towrite_corr = BytesIO()
+            correlated_df.to_excel(towrite_corr, index=False, engine='openpyxl')
+            towrite_corr.seek(0)
+            st.download_button(
+                label="Download Excel de Pacientes Internados Correlacionados",
+                data=towrite_corr,
+                file_name="pacientes_internados_correlacionados.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+    else:
+        st.error("Por favor, carregue ao menos um arquivo PDF.")
