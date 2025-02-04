@@ -240,7 +240,7 @@ def processar_pdfs_from_zip(zip_file):
         pacientes_minerados_df = pacientes_minerados_df.sort_values('has_measure', ascending=False)
         pacientes_minerados_df = pacientes_minerados_df.drop_duplicates(subset=['Paciente', 'Same'], keep='first')
         pacientes_minerados_df.drop(columns=['has_measure'], inplace=True)
-        pacientes_minerados_df = pacientes_minerados_df.drop(columns=["Arquivo", "pdf_bytes"], errors="ignore")
+        #pacientes_minerados_df = pacientes_minerados_df.drop(columns=["Arquivo", "pdf_bytes"], errors="ignore")
     return relatorio_mensal, lista_calculos, pacientes_minerados_df
 
 def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
@@ -255,7 +255,6 @@ def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
         st.warning("A coluna 'convenio' não foi encontrada no dataframe de internados. Será criada com valores vazios.")
         internados_df['Convenio'] = None
     pacientes_df['Paciente_lower'] = pacientes_df['Paciente'].str.lower()
-    pacientes_df = pacientes_df.drop(columns=["Arquivo", "pdf_bytes"], errors="ignore")
     internados_df['Paciente_lower'] = internados_df['Paciente'].str.lower()
     internados_list = internados_df['Paciente_lower'].tolist()
     matched_indices = []
