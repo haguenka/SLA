@@ -136,9 +136,11 @@ def processar_pdfs_streamlit(pdf_files):
                     mes, ano = 0, 0
             else:
                 mes, ano = 0, 0
-            if (ano, mes) not in relatorio_mensal:
-                relatorio_mensal[(ano, mes)] = set()
-            relatorio_mensal[(ano, mes)].add(cabecalho["Paciente"])
+            # Garante que a chave seja sempre uma tupla (ano, mes)
+            key = (ano, mes)
+            if key not in relatorio_mensal:
+                relatorio_mensal[key] = set()
+            relatorio_mensal[key].add(cabecalho["Paciente"])
             for tamanho in ocorrencias_validas:
                 lista_calculos.append({**cabecalho, "Tamanho": tamanho})
     for key in relatorio_mensal:
@@ -151,7 +153,6 @@ def processar_pdfs_streamlit(pdf_files):
         pacientes_minerados_df = pacientes_minerados_df.sort_values('has_measure', ascending=False)
         pacientes_minerados_df = pacientes_minerados_df.drop_duplicates(subset=['Paciente', 'Same'], keep='first')
         pacientes_minerados_df.drop(columns=['has_measure'], inplace=True)
-        lista_calculos = pacientes_minerados_df.to_dict(orient="records")
     return relatorio_mensal, lista_calculos, pacientes_minerados_df
 
 def processar_pdfs_from_zip(zip_file):
@@ -199,9 +200,10 @@ def processar_pdfs_from_zip(zip_file):
                             mes, ano = 0, 0
                     else:
                         mes, ano = 0, 0
-                    if (ano, mes) not in relatorio_mensal:
-                        relatorio_mensal[(ano, mes)] = set()
-                    relatorio_mensal[(ano, mes)].add(cabecalho["Paciente"])
+                    key = (ano, mes)
+                    if key not in relatorio_mensal:
+                        relatorio_mensal[key] = set()
+                    relatorio_mensal[key].add(cabecalho["Paciente"])
                     for tamanho in ocorrencias_validas:
                         lista_calculos.append({**cabecalho, "Tamanho": tamanho})
     for key in relatorio_mensal:
@@ -214,7 +216,6 @@ def processar_pdfs_from_zip(zip_file):
         pacientes_minerados_df = pacientes_minerados_df.sort_values('has_measure', ascending=False)
         pacientes_minerados_df = pacientes_minerados_df.drop_duplicates(subset=['Paciente', 'Same'], keep='first')
         pacientes_minerados_df.drop(columns=['has_measure'], inplace=True)
-        lista_calculos = pacientes_minerados_df.to_dict(orient="records")
     return relatorio_mensal, lista_calculos, pacientes_minerados_df
 
 def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
@@ -242,7 +243,6 @@ def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
 # -------------------------------
 # INTERFACE STREAMLIT (SIDEBAR)
 # -------------------------------
-# Opção para escolher o método de upload:
 upload_method = st.sidebar.radio("Selecione o método de upload:", 
                                  ("Upload de PDFs", "Upload de ZIP contendo PDFs"))
 
@@ -254,7 +254,9 @@ else:
 # Upload do arquivo de internados (opcional)
 internados_file = st.sidebar.file_uploader("Arquivo internados.xlsx (opcional)", type="xlsx")
 
-# Botão de processamento
+# -------------------------------
+# BOTÃO DE PROCESSAMENTO
+# -------------------------------
 if st.sidebar.button("Processar"):
     if upload_method == "Upload de PDFs" and pdf_files:
         with st.spinner("Processando PDFs..."):
@@ -266,12 +268,16 @@ if st.sidebar.button("Processar"):
         st.success("Processamento concluído!")
     else:
         st.error("Por favor, selecione os arquivos PDF ou o arquivo ZIP.")
-
-    # Monta o relatório formatado
+    
+    # -------------------------------
+    # MONTAGEM DO RELATÓRIO
+    # -------------------------------
     report_md = "### Pacientes encontrados com cálculos por mês:\n"
-    for (ano, mes) in sorted(relatorio_mensal.keys(), key=lambda x: (x[0], x[1])):
-        nome_mes = calendar.month_name[mes]
-        report_md += f"- **{nome_mes}/{ano}**: {relatorio_mensal[(ano, mes)]} paciente(s)\n"
+    # Para evitar erro caso alguma chave não seja uma tupla de 2 elementos, usamos um lambda que verifica:
+    for key in sorted(relatorio_mensal.keys(), key=lambda x: (x[0], x[1]) if isinstance(x, tuple) and len(x) == 2 else (0, 0)):
+        ano, mes = key if isinstance(key, tuple) and len(key) == 2 else (0, 0)
+        nome_mes = calendar.month_name[mes] if 1 <= mes <= 12 else "Desconhecido"
+        report_md += f"- **{nome_mes}/{ano}**: {relatorio_mensal.get((ano, mes), 0)} paciente(s)\n"
     report_md += "\n### Dados dos pacientes minerados:\n"
     for item in lista_calculos:
         report_md += (f"**Paciente:** {item['Paciente']} | **Idade:** {item['Idade']} | "
@@ -281,7 +287,9 @@ if st.sidebar.button("Processar"):
     st.markdown(report_md)
     st.dataframe(pacientes_minerados_df)
     
-    # Geração do arquivo Excel para download (Pacientes Minerados)
+    # -------------------------------
+    # DOWNLOAD DO ARQUIVO EXCEL (Pacientes Minerados)
+    # -------------------------------
     towrite = BytesIO()
     pacientes_minerados_df.to_excel(towrite, index=False, engine='openpyxl')
     towrite.seek(0)
