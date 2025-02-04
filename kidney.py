@@ -253,6 +253,7 @@ def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
         st.warning("A coluna 'convenio' não foi encontrada no dataframe de internados. Será criada com valores vazios.")
         internados_df['Convenio'] = None
     pacientes_df['Paciente_lower'] = pacientes_df['Paciente'].str.lower()
+    pacientes_df = pacientes_df.drop(columns=["Arquivo", "pdf_bytes"], errors="ignore")
     internados_df['Paciente_lower'] = internados_df['Paciente'].str.lower()
     internados_list = internados_df['Paciente_lower'].tolist()
     matched_indices = []
@@ -346,12 +347,12 @@ if st.sidebar.button("Processar"):
     # -------------------------------
     # MONTAGEM DO RELATÓRIO AGREGADO POR MÊS
     # -------------------------------
-    report_md = "### Pacientes encontrados com cálculos por mês:\n"
+    report_md = "Pacientes encontrados com cálculos por mês:\n"
     for key in sorted(st.session_state["relatorio_mensal"].keys(), key=lambda x: (x[0], x[1]) if isinstance(x, tuple) and len(x)==2 else (0,0)):
         ano, mes = key if isinstance(key, tuple) and len(key)==2 else (0, 0)
         nome_mes = calendar.month_name[mes] if 1 <= mes <= 12 else "Desconhecido"
         report_md += f"- <span style='color: yellow; font-size: 20px;'>{nome_mes}/{ano}</span>: {st.session_state['relatorio_mensal'].get((ano, mes), 0)} paciente(s)<br>"
-    report_md += "<br>### Dados dos pacientes minerados:<br>"
+    report_md += "<br>Dados dos pacientes minerados:<br>"
     
     st.markdown(report_md, unsafe_allow_html=True)
     st.dataframe(st.session_state["pacientes_minerados_df"])
