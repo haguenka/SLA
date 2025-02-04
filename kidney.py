@@ -37,10 +37,15 @@ st.markdown("""
 # -------------------------------
 # TÍTULO E LOGO NA SIDEBAR
 # -------------------------------
+# Streamlit app
+@st.cache_data
+def load_logo(url):
+    response = requests.get(url)
+    return Image.open(BytesIO(response.content))
+# Load and display logo from GitHub
+url_logo = 'https://raw.githubusercontent.com/haguenka/SLA/main/sj.png'
+logo = load_logo(url_logo)
 st.title("Rastreador de Cálculo Renal CSSJ")
-# Exiba uma logo (coloque o arquivo 'logo.png' na mesma pasta ou ajuste o caminho)
-if os.path.exists("logo.png"):
-    st.sidebar.image("logo.png", use_column_width=True)
     
 st.sidebar.header("Selecione os Arquivos")
 
