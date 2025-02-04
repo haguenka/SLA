@@ -284,7 +284,7 @@ if st.sidebar.button("Processar"):
                       f"**SAME:** {item['Same']} | **Data:** {item['Data do Exame']} | "
                       f"**Tamanho:** {item['Tamanho']}\n\n")
     
-    st.markdown(report_md)
+    #st.markdown(report_md)
     st.dataframe(pacientes_minerados_df)
     
     # -------------------------------
