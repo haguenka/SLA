@@ -230,23 +230,45 @@ def processar_pdfs_from_zip(zip_file):
 def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
     """
     Correlaciona os pacientes minerados com os internados usando fuzzy matching.
-    Retorna um DataFrame com os pacientes que tiveram correspondência com pontuação >= threshold.
+    Retorna um DataFrame com os pacientes que tiveram correspondência com pontuação >= threshold,
+    e inclui a coluna 'convenio' extraída do dataframe dos internados.
     """
+    # Garante que as colunas 'Paciente' estejam preenchidas e sejam strings
     pacientes_df['Paciente'] = pacientes_df['Paciente'].fillna("").astype(str)
     internados_df['Paciente'] = internados_df['Paciente'].fillna("").astype(str)
+    
+    # Verifica se a coluna 'convenio' existe no internados_df; caso não exista, cria-a com valores None
+    if 'convenio' not in internados_df.columns:
+        st.warning("A coluna 'convenio' não foi encontrada no dataframe de internados. Será criada com valores vazios.")
+        internados_df['convenio'] = None
+
+    # Cria colunas auxiliares em minúsculas para facilitar a comparação
     pacientes_df['Paciente_lower'] = pacientes_df['Paciente'].str.lower()
     internados_df['Paciente_lower'] = internados_df['Paciente'].str.lower()
+    
+    # Converte a coluna de internados em uma lista para o fuzzy matching
     internados_list = internados_df['Paciente_lower'].tolist()
     matched_indices = []
+    convenios = []  # Lista para armazenar o valor de 'convenio' correspondente a cada match
+    
     for idx, row in pacientes_df.iterrows():
         nome = row['Paciente_lower']
         if not nome:
             continue
+        # Retorna o melhor match e a pontuação usando fuzz.ratio
         best_match, score = process.extractOne(nome, internados_list, scorer=fuzz.ratio)
         if score >= threshold:
             matched_indices.append(idx)
+            # Localiza o primeiro registro em internados_df cujo nome corresponde ao best_match
+            match_idx = internados_df[internados_df['Paciente_lower'] == best_match].index[0]
+            convenio_value = internados_df.loc[match_idx, 'convenio']
+            convenios.append(convenio_value)
+    
+    # Cria o dataframe de pacientes correlacionados a partir dos índices encontrados
     correlated_df = pacientes_df.loc[matched_indices].copy()
     correlated_df.drop(columns=['Paciente_lower'], inplace=True)
+    # Adiciona a coluna 'convenio' com os valores extraídos
+    correlated_df['convenio'] = convenios
     return correlated_df
 
 # -------------------------------
