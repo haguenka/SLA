@@ -444,23 +444,20 @@ with tab1:
 # ------------------------------------------------------------------------------
 with tab2:
     st.subheader("Worst & Best Doctors by Value per Approved Exam (and Value per Point)")
-
     try:
-        # 1) Focus on the entire dataset for the selected month/year 
-        #    (only rows that actually have a 'STATUS_APROVADO')
+        # 1) Focar no dataset completo para o mês/ano selecionado 
+        #    (apenas linhas com 'STATUS_APROVADO')
         month_df = excel_df[
             (excel_df['MONTH'] == selected_month) & 
             (excel_df['YEAR'] == selected_year)
         ].dropna(subset=['STATUS_APROVADO']).copy()
 
-        # 2) Merge with csv_df to get MULTIPLIER, compute total points
-        #    Because we already did uppercase merges above, 
-        #    we can safely join on DESCRICAO_PROCEDIMENTO
+        # 2) Fazer merge com csv_df para obter MULTIPLIER e calcular os pontos
         points_merged = pd.merge(month_df, csv_df, on="DESCRICAO_PROCEDIMENTO", how="left")
         points_merged['MULTIPLIER'] = pd.to_numeric(points_merged['MULTIPLIER'], errors='coerce').fillna(0)
-        points_merged['POINTS'] = points_merged['MULTIPLIER']  # 1 exam => "MULTIPLIER" points
+        points_merged['POINTS'] = points_merged['MULTIPLIER']  # cada exame => "MULTIPLIER" pontos
 
-        # 3) Sum total points by doctor
+        # 3) Somar os pontos totais por médico
         points_sum = (
             points_merged
             .groupby("MEDICO_LAUDO_DEFINITIVO")['POINTS']
@@ -469,7 +466,7 @@ with tab2:
         )
         points_sum["NORMALIZED_MEDICO"] = points_sum["MEDICO_LAUDO_DEFINITIVO"].apply(normalize_name)
 
-        # 4) Count how many approved exams each doctor has
+        # 4) Contar quantos exames aprovados cada médico possui
         approved_counts = (
             month_df
             .groupby("MEDICO_LAUDO_DEFINITIVO")
@@ -478,8 +475,8 @@ with tab2:
         )
         approved_counts["NORMALIZED_MEDICO"] = approved_counts["MEDICO_LAUDO_DEFINITIVO"].apply(normalize_name)
 
-        # 5) Sum total payments for the same month in 'payment_data'
-        pay_month = payment_data.copy()  # already filtered by month
+        # 5) Somar os pagamentos totais para o mesmo mês em payment_data
+        pay_month = payment_data.copy()  # já está filtrado pelo mês
         pay_month["NORMALIZED_MEDICO"] = pay_month["MEDICO"].apply(normalize_name)
         pay_sums = (
             pay_month
@@ -488,25 +485,29 @@ with tab2:
             .reset_index(name="TOTAL_PAYMENT")
         )
 
-        # 6) Merge to get: APPROVED_COUNT, TOTAL_POINTS, TOTAL_PAYMENT
+        # 6) Fazer merge para obter: APPROVED_COUNT, TOTAL_POINTS, TOTAL_PAYMENT
         merged_doctors = pd.merge(approved_counts, points_sum, on="NORMALIZED_MEDICO", how="inner")
         merged_doctors = pd.merge(merged_doctors, pay_sums, on="NORMALIZED_MEDICO", how="inner")
 
-        # 7) Filter only doctors with > 0 payment and > 0 approved exams
+        # 7) Filtrar apenas médicos com pagamento > 0 e exames aprovados > 0
         merged_doctors = merged_doctors[
             (merged_doctors["TOTAL_PAYMENT"] > 0) & 
             (merged_doctors["APPROVED_COUNT"] > 0)
         ]
-
-        # 8) Compute both metrics
+        
+        # Excluir os médicos específicos
+        exclude_doctors = ["HENRIQUE ARUME GUENKA", "AUGUSTO GUIMARAES ALTOE", "MATHEUS WAITMAN"]
+        merged_doctors = merged_doctors[~merged_doctors["NORMALIZED_MEDICO"].isin(exclude_doctors)]
+        
+        # 8) Calcular os indicadores VALUE_PER_UNIT e VALUE_PER_POINT
         merged_doctors["VALUE_PER_UNIT"] = merged_doctors["TOTAL_PAYMENT"] / merged_doctors["APPROVED_COUNT"]
         merged_doctors["VALUE_PER_POINT"] = merged_doctors["TOTAL_PAYMENT"] / merged_doctors["TOTAL_POINTS"]
 
-        # 9) Sort for worst 10 (highest VALUE_PER_UNIT) and best 10 (lowest)
+        # 9) Ordenar para obter os 10 piores (maior VALUE_PER_UNIT) e 10 melhores (menor VALUE_PER_UNIT)
         worst_10 = merged_doctors.nlargest(10, "VALUE_PER_UNIT")
         best_10 = merged_doctors.nsmallest(10, "VALUE_PER_UNIT")
 
-        # 10) Display results
+        # 10) Exibir os resultados dos Top 10
         st.markdown("### Worst 10 Doctors by Value per Approved Exam")
         st.dataframe(
             worst_10[[
@@ -540,7 +541,27 @@ with tab2:
                 "VALUE_PER_POINT": "R$ {:.2f}"
             })
         )
-
+        
+        # 11) Exibir a lista com todos os médicos que têm pagamento (já excluindo os específicos)
+        st.markdown("### All Doctors with Payment (Excluding Specific Doctors)")
+        st.dataframe(
+            merged_doctors.sort_values("NORMALIZED_MEDICO")[
+                [
+                    "NORMALIZED_MEDICO",
+                    "APPROVED_COUNT",
+                    "TOTAL_POINTS",
+                    "TOTAL_PAYMENT",
+                    "VALUE_PER_UNIT",
+                    "VALUE_PER_POINT",
+                ]
+            ].style.format({
+                "TOTAL_POINTS": "{:.2f}",
+                "TOTAL_PAYMENT": "R$ {:.2f}",
+                "VALUE_PER_UNIT": "R$ {:.2f}",
+                "VALUE_PER_POINT": "R$ {:.2f}"
+            })
+        )
+        
     except Exception as e:
         st.error(f"An error occurred while creating the worst/best lists: {e}")
 
@@ -552,7 +573,7 @@ with tab3:
     st.subheader("Resumo de Exames por Modalidade e Unidade")
     try:
         # Filtrar o dataframe para o período selecionado com exames aprovados
-        period_exams_df = filtered_df[filtered_df['DATA_HORA_PRESCRICAO'].notna()].copy()
+        period_exams_df = filtered_df[filtered_df['STATUS_ALAUDAR'].notna()].copy()
         
         # Fazer o merge com a tabela de multiplicadores (multipliers.csv)
         merged_exams = pd.merge(period_exams_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
