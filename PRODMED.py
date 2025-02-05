@@ -552,7 +552,7 @@ with tab3:
     st.subheader("Resumo de Exames por Modalidade e Unidade")
     try:
         # Filtrar o dataframe para o período selecionado com exames aprovados
-        period_exams_df = filtered_df[filtered_df['STATUS_ALAUDAR'].notna()].copy()
+        period_exams_df = filtered_df[filtered_df['DATA_HORA_PRESCRICAO'].notna()].copy()
         
         # Fazer o merge com a tabela de multiplicadores (multipliers.csv)
         merged_exams = pd.merge(period_exams_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
