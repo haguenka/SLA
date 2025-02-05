@@ -162,7 +162,7 @@ except Exception as e:
 # -----------------------------
 # Create TABS for the two pages
 # -----------------------------
-tab1, tab2 = st.tabs(["Individual Doctor View", "Worst/Best Doctors"])
+tab1, tab2, tab3 = st.tabs(["Individual Doctor View", "Worst/Best Doctors", "Resumo de Exames por Modalidade"])
 
 # ------------------------------------------------------------------------------
 # TAB 1: Single-Doctor Analysis, but aggregated across all hospitals
@@ -543,6 +543,44 @@ with tab2:
 
     except Exception as e:
         st.error(f"An error occurred while creating the worst/best lists: {e}")
+
+
+# -------------------------------------------------------------------------------
+# ABA 3: Resumo de Exames por Modalidade
+# -------------------------------------------------------------------------------
+with tab3:
+    st.subheader("Resumo de Exames por Modalidade")
+    try:
+        # Filtrar o dataframe para o período selecionado com exames aprovados
+        # (usando o mesmo filtro de mês/ano; você pode optar por incluir também os laudos preliminares, se preferir)
+        period_exams_df = filtered_df[filtered_df['STATUS_APROVADO'].notna()].copy()
+        
+        # Fazer o merge com a tabela de multiplicadores (multipliers.csv)
+        merged_exams = pd.merge(period_exams_df, csv_df, on='DESCRICAO_PROCEDIMENTO', how='left')
+        merged_exams['MULTIPLIER'] = pd.to_numeric(merged_exams['MULTIPLIER'], errors='coerce').fillna(0)
+        # Para cada exame aprovado, os pontos são definidos pelo valor do MULTIPLIER
+        merged_exams['POINTS'] = merged_exams['MULTIPLIER']
+        
+        # Agrupar por modalidade (coluna 'GRUPO') e calcular:
+        # - total de exames (contagem de DESCRICAO_PROCEDIMENTO)
+        # - total de pontos (soma dos POINTS)
+        resumo_modalidade = merged_exams.groupby('GRUPO').agg(
+            total_exames=('DESCRICAO_PROCEDIMENTO', 'count'),
+            total_pontos=('POINTS', 'sum')
+        ).reset_index()
+        
+        # Calcular os totais gerais
+        total_exames_geral = resumo_modalidade['total_exames'].sum()
+        total_pontos_geral = resumo_modalidade['total_pontos'].sum()
+        
+        # Exibir o resumo por modalidade
+        st.dataframe(resumo_modalidade, width=800, height=400)
+        st.markdown(f"**Total de exames no período:** {total_exames_geral}")
+        st.markdown(f"**Total de pontos no período:** {total_pontos_geral:.2f}")
+        
+    except Exception as e:
+        st.error(f"Ocorreu um erro ao gerar o resumo por modalidade: {e}")
+
 
 # -----------------------------------------------------------------------------
 # EXPORT SUMMARY AND DOCTORS DATAFRAMES AS A COMBINED PDF REPORT
