@@ -68,12 +68,22 @@ def main():
         ]
         df = df[df['GRUPO'].isin(allowed_groups)]
 
+        # --------------------------------------------------------------
+        # Identifica células vazias na coluna STATUS_APROVADO e coloca NULL
+        # --------------------------------------------------------------
+        if 'STATUS_APROVADO' in df.columns:
+            df['STATUS_APROVADO'] = df['STATUS_APROVADO'].replace(r'^\s*$', None, regex=True)
+        else:
+            st.error("'STATUS_APROVADO' column not found in the data.")
+            return
+
         # Conversão das colunas de data/hora
         df['STATUS_ALAUDAR'] = pd.to_datetime(df['STATUS_ALAUDAR'], dayfirst=True, errors='coerce')
         df['STATUS_PRELIMINAR'] = pd.to_datetime(df['STATUS_PRELIMINAR'], dayfirst=True, errors='coerce')
+        # Aqui, células vazias ou inválidas em STATUS_APROVADO já se tornam NaT
         df['STATUS_APROVADO'] = pd.to_datetime(df['STATUS_APROVADO'], dayfirst=True, errors='coerce')
 
-        # Conversão da coluna DATA_HORA_PRESCRICAO (utilizada para a seleção do período)
+        # Conversão da coluna DATA_HORA_PRESCRICAO (utilizada para o filtro de período)
         if 'DATA_HORA_PRESCRICAO' in df.columns:
             df['DATA_HORA_PRESCRICAO'] = pd.to_datetime(df['DATA_HORA_PRESCRICAO'], dayfirst=True, errors='coerce')
         else:
@@ -114,9 +124,9 @@ def main():
         if 'OBSERVACAO' not in df.columns:
             df['OBSERVACAO'] = ''
 
-        # ---------------------------------------------------------------------- #
-        # 1) Criação da coluna PERIODO_DIA com base em STATUS_ALAUDAR           #
-        # ---------------------------------------------------------------------- #
+        # ----------------------------------------------------------------------
+        # 1) Criação da coluna PERIODO_DIA com base em STATUS_ALAUDAR
+        # ----------------------------------------------------------------------
         def calcular_periodo_dia(dt):
             """
             Retorna 'Manhã', 'Tarde', 'Noite' ou 'Madrugada'
@@ -136,22 +146,22 @@ def main():
 
         df['PERIODO_DIA'] = df['STATUS_ALAUDAR'].apply(calcular_periodo_dia)
 
-        # ---------------------------------------------------------------------- #
-        # Colunas selecionadas (incluindo DATA_HORA_PRESCRICAO para filtro)       #
-        # ---------------------------------------------------------------------- #
+        # ----------------------------------------------------------------------
+        # Colunas selecionadas (incluindo DATA_HORA_PRESCRICAO para filtro)
+        # ----------------------------------------------------------------------
         selected_columns = [
             'SAME', 'NOME_PACIENTE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO',
             'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE', 'TIPO_ATENDIMENTO',
-            'DATA_HORA_PRESCRICAO',  # Usada para o filtro de data
+            'DATA_HORA_PRESCRICAO',  # Utilizada para o filtro de data
             'STATUS_ALAUDAR', 'STATUS_PRELIMINAR', 'STATUS_APROVADO',
             'MEDICO_SOLICITANTE', 'DELTA_TIME', 'SLA_STATUS', 'OBSERVACAO',
             'PERIODO_DIA'
         ]
         df_selected = df[selected_columns]
 
-        # ---------------------------------------------------------------------- #
-        # 2) Filtros na barra lateral                                           #
-        # ---------------------------------------------------------------------- #
+        # ----------------------------------------------------------------------
+        # 2) Filtros na barra lateral
+        # ----------------------------------------------------------------------
         unidade_options = df['UNIDADE'].unique()
         selected_unidade = st.sidebar.selectbox("Selecione a UNIDADE", sorted(unidade_options))
 
@@ -166,9 +176,9 @@ def main():
         max_date = df['DATA_HORA_PRESCRICAO'].max()
         start_date, end_date = st.sidebar.date_input("Selecione o período", [min_date, max_date])
 
-        # ---------------------------------------------------------------------- #
-        # 3) Filtro do DataFrame principal                                      #
-        # ---------------------------------------------------------------------- #
+        # ----------------------------------------------------------------------
+        # 3) Filtro do DataFrame principal
+        # ----------------------------------------------------------------------
         df_filtered = df_selected[
             (df_selected['UNIDADE'] == selected_unidade) &
             (df_selected['GRUPO'] == selected_grupo) &
@@ -177,9 +187,9 @@ def main():
             (df_selected['DATA_HORA_PRESCRICAO'] <= pd.Timestamp(end_date))
         ]
 
-        # ---------------------------------------------------------------------- #
-        # Criação das abas para visualização dos dados                           #
-        # ---------------------------------------------------------------------- #
+        # ----------------------------------------------------------------------
+        # Criação das abas para visualização dos dados
+        # ----------------------------------------------------------------------
         tab1, tab2 = st.tabs(["Exames com Laudo", "Exames sem Laudo"])
 
         # Aba 1: Exames com laudo (todos os registros filtrados)
@@ -239,13 +249,11 @@ def main():
             else:
                 st.warning("Nenhum registro encontrado para este filtro.")
 
-        # Aba 2: Exames sem Laudo (STATUS_APROVADO nulo ou vazio)
+        # Aba 2: Exames sem Laudo (STATUS_APROVADO nulo/NULL)
         with tab2:
             st.subheader("Exames sem Laudo")
-            df_sem_laudo = df_filtered[
-                (df_filtered['STATUS_APROVADO'].isna()) |
-                (df_filtered['STATUS_APROVADO'].astype(str).str.strip() == '')
-            ]
+            # Filtra os registros onde STATUS_APROVADO é nulo
+            df_sem_laudo = df_filtered[df_filtered['STATUS_APROVADO'].isna()]
             st.dataframe(df_sem_laudo)
             st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
 
