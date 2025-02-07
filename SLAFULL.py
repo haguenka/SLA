@@ -69,10 +69,11 @@ def main():
         df = df[df['GRUPO'].isin(allowed_groups)]
 
         # --------------------------------------------------------------
-        # Identifica células vazias na coluna STATUS_APROVADO e coloca NULL
+        # Substitui células vazias ou contendo somente espaços por np.nan
+        # e converte STATUS_APROVADO para datetime (valores inválidos viram NaT)
         # --------------------------------------------------------------
         if 'STATUS_APROVADO' in df.columns:
-            df['STATUS_APROVADO'] = df['STATUS_APROVADO'].replace(r'^\s*$', None, regex=True)
+            df['STATUS_APROVADO'] = df['STATUS_APROVADO'].replace(r'^\s*$', np.nan, regex=True)
         else:
             st.error("'STATUS_APROVADO' column not found in the data.")
             return
@@ -80,17 +81,16 @@ def main():
         # Conversão das colunas de data/hora
         df['STATUS_ALAUDAR'] = pd.to_datetime(df['STATUS_ALAUDAR'], dayfirst=True, errors='coerce')
         df['STATUS_PRELIMINAR'] = pd.to_datetime(df['STATUS_PRELIMINAR'], dayfirst=True, errors='coerce')
-        # Aqui, células vazias ou inválidas em STATUS_APROVADO já se tornam NaT
         df['STATUS_APROVADO'] = pd.to_datetime(df['STATUS_APROVADO'], dayfirst=True, errors='coerce')
 
-        # Conversão da coluna DATA_HORA_PRESCRICAO (utilizada para o filtro de período)
+        # Conversão da coluna DATA_HORA_PRESCRICAO (usada para o filtro de período)
         if 'DATA_HORA_PRESCRICAO' in df.columns:
             df['DATA_HORA_PRESCRICAO'] = pd.to_datetime(df['DATA_HORA_PRESCRICAO'], dayfirst=True, errors='coerce')
         else:
             st.error("'DATA_HORA_PRESCRICAO' column not found in the data.")
             return
 
-        # Remove linhas que não possuam STATUS_PRELIMINAR e STATUS_APROVADO ao mesmo tempo
+        # Remove as linhas em que ambas STATUS_PRELIMINAR e STATUS_APROVADO estão ausentes
         df = df.dropna(subset=['STATUS_PRELIMINAR', 'STATUS_APROVADO'], how='all')
 
         # Cálculo do DELTA_TIME
@@ -252,7 +252,7 @@ def main():
         # Aba 2: Exames sem Laudo (STATUS_APROVADO nulo/NULL)
         with tab2:
             st.subheader("Exames sem Laudo")
-            # Filtra os registros onde STATUS_APROVADO é nulo
+            # Aqui filtramos registros onde STATUS_APROVADO é nulo (NaT)
             df_sem_laudo = df_filtered[df_filtered['STATUS_APROVADO'].isna()]
             st.dataframe(df_sem_laudo)
             st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
