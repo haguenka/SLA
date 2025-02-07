@@ -56,7 +56,7 @@ def main():
             return
 
         if 'UNIDADE' not in df.columns or 'TIPO_ATENDIMENTO' not in df.columns:
-            st.error("'UNIDADE' or 'TIPO_ATENDIMENTO' column not found.")
+            st.error("'UNIDADE' ou 'TIPO_ATENDIMENTO' column not found.")
             return
 
         # Padroniza 'MEDICO_SOLICITANTE'
@@ -138,9 +138,8 @@ def main():
             'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE', 'TIPO_ATENDIMENTO',
             'STATUS_ALAUDAR', 'STATUS_PRELIMINAR', 'STATUS_APROVADO',
             'MEDICO_SOLICITANTE', 'DELTA_TIME', 'SLA_STATUS', 'OBSERVACAO',
-            'PERIODO_DIA'  
+            'PERIODO_DIA'
         ]
-
         df_selected = df[selected_columns]
 
         # ----------------------------------------------------------- #
@@ -157,7 +156,7 @@ def main():
 
         min_date = df['STATUS_ALAUDAR'].min()
         max_date = df['STATUS_ALAUDAR'].max()
-        start_date, end_date = st.sidebar.date_input("Selecione o periodo", [min_date, max_date])
+        start_date, end_date = st.sidebar.date_input("Selecione o período", [min_date, max_date])
 
         # ----------------------------------------------------------- #
         # 3) Filtro do DataFrame principal                           #
@@ -170,84 +169,82 @@ def main():
             (df_selected['STATUS_ALAUDAR'] <= pd.Timestamp(end_date))
         ]
 
-        # Exibe o 1º DataFrame (todos os registros filtrados)
-        st.dataframe(df_filtered)
-
-        # Exibição do total de exames
-        total_exams = len(df_filtered)
-        st.write(f"Total number of exams: {total_exams}")
-
         # ----------------------------------------------------------- #
-        # 4) Somente SLA FORA e ordenado pelo PERIODO_DIA            #
+        # Criação das abas (tabs) para visualização dos dados         #
         # ----------------------------------------------------------- #
-        # Filtra os registros FORA DO PERÍODO
-        df_fora = df_filtered[df_filtered['SLA_STATUS'] == 'SLA FORA DO PERÍODO'].copy()
+        tab1, tab2 = st.tabs(["Exames com Laudo", "Exames sem Laudo"])
 
-        # Dicionário para ordenação personalizada
-        periodo_order = {
-            "Madrugada": 1,
-            "Manhã": 2,
-            "Tarde": 3,
-            "Noite": 4
-        }
-        df_fora['PERIODO_ORDER'] = df_fora['PERIODO_DIA'].map(periodo_order)
+        # Aba 1: Exames com laudo (todos os registros filtrados)
+        with tab1:
+            st.subheader("Dados dos Exames (com laudo)")
+            st.dataframe(df_filtered)
+            total_exams = len(df_filtered)
+            st.write(f"Total de exames: {total_exams}")
 
-        # Ordena e exibe
-        df_fora = df_fora.sort_values(by='PERIODO_ORDER', ascending=True)
+            # Exibição do subconjunto SLA FORA DO PERÍODO
+            df_fora = df_filtered[df_filtered['SLA_STATUS'] == 'SLA FORA DO PERÍODO'].copy()
+            periodo_order = {
+                "Madrugada": 1,
+                "Manhã": 2,
+                "Tarde": 3,
+                "Noite": 4
+            }
+            df_fora['PERIODO_ORDER'] = df_fora['PERIODO_DIA'].map(periodo_order)
+            df_fora = df_fora.sort_values(by='PERIODO_ORDER', ascending=True)
 
-        st.subheader("Exames SLA FORA DO PRAZO (ordenados por período do dia)")
-        st.dataframe(df_fora.drop(columns=['PERIODO_ORDER']))
+            st.subheader("Exames SLA FORA DO PRAZO (ordenados por período do dia)")
+            st.dataframe(df_fora.drop(columns=['PERIODO_ORDER']))
 
-        # 4.1) Contagem total de cada período
-        # value_counts() retorna um Series com PERIODO_DIA -> contagem
-        contagem_periodo = df_fora['PERIODO_DIA'].value_counts()
-        # Transformar em DataFrame para exibir
-        contagem_periodo_df = pd.DataFrame({
-            'PERIODO_DIA': contagem_periodo.index,
-            'Contagem': contagem_periodo.values
-        })
+            # Contagens por período (apenas exames SLA FORA DO PRAZO)
+            contagem_periodo = df_fora['PERIODO_DIA'].value_counts()
+            contagem_periodo_df = pd.DataFrame({
+                'PERIODO_DIA': contagem_periodo.index,
+                'Contagem': contagem_periodo.values
+            })
+            st.subheader("Contagem por período (apenas exames SLA FORA DO PRAZO)")
+            st.dataframe(contagem_periodo_df)
 
-        st.subheader("Contagem total de cada período (somente exames SLA FORA DO PRAZO):")
-        st.dataframe(contagem_periodo_df)
+            # Contagem total por período (todos os exames)
+            contagem_periodo_total = df_filtered['PERIODO_DIA'].value_counts()
+            contagem_periodo_total_df = pd.DataFrame({
+                'PERIODO_DIA': contagem_periodo_total.index,
+                'Contagem': contagem_periodo_total.values
+            })
+            st.subheader("Contagem total por período (todos os exames)")
+            st.dataframe(contagem_periodo_total_df)
 
-        # 4.2) Contagem total de cada período (total)
-        # value_counts() retorna um Series com PERIODO_DIA -> contagem
-        contagem_periodo_total = df_filtered['PERIODO_DIA'].value_counts()
-        # Transformar em DataFrame para exibir
-        contagem_periodo_total_df = pd.DataFrame({
-            'PERIODO_DIA': contagem_periodo_total.index,
-            'Contagem': contagem_periodo_total.values
-        })
+            # Gráfico de Pizza (SLA Status)
+            if not df_filtered.empty:
+                sla_status_counts = df_filtered['SLA_STATUS'].value_counts()
+                colors = [
+                    'lightcoral' if status == 'SLA FORA DO PERÍODO' else 'lightgreen'
+                    for status in sla_status_counts.index
+                ]
+                fig, ax = plt.subplots()
+                ax.pie(
+                    sla_status_counts,
+                    labels=sla_status_counts.index,
+                    autopct='%1.1f%%',
+                    colors=colors
+                )
+                ax.set_title(f'SLA Status - {selected_unidade} - {selected_grupo} - {selected_tipo_atendimento}')
 
-        st.subheader("Contagem total de cada período (todos os exames):")
-        st.dataframe(contagem_periodo_total_df)
+                # Adiciona o logo no gráfico
+                logo_img = Image.open(BytesIO(requests.get(url).content))
+                logo_img.thumbnail((400, 400))
+                fig.figimage(logo_img, 10, 10, zorder=1, alpha=0.7)
 
-        # ----------------------------------------------------------- #
-        # 5) Gráfico de Pizza (SLA Status)                           #
-        # ----------------------------------------------------------- #
-        if not df_filtered.empty:
-            sla_status_counts = df_filtered['SLA_STATUS'].value_counts()
-            colors = [
-                'lightcoral' if status == 'SLA FORA DO PERÍODO' else 'lightgreen'
-                for status in sla_status_counts.index
-            ]
-            fig, ax = plt.subplots()
-            ax.pie(
-                sla_status_counts,
-                labels=sla_status_counts.index,
-                autopct='%1.1f%%',
-                colors=colors
-            )
-            ax.set_title(f'SLA Status - {selected_unidade} - {selected_grupo} - {selected_tipo_atendimento}')
+                st.pyplot(fig)
+            else:
+                st.warning("Nenhum registro encontrado para este filtro.")
 
-            # Adiciona o logo no gráfico
-            logo = Image.open(BytesIO(requests.get(url).content))
-            logo.thumbnail((400, 400))
-            fig.figimage(logo, 10, 10, zorder=1, alpha=0.7)
-
-            st.pyplot(fig)
-        else:
-            st.warning("Nenhum registro encontrado para este filtro.")
+        # Aba 2: Exames sem laudo (STATUS_APROVADO vazio)
+        with tab2:
+            st.subheader("Exames sem Laudo")
+            # Filtra os exames que não possuem laudo final (STATUS_APROVADO vazio)
+            df_sem_laudo = df_filtered[df_filtered['STATUS_APROVADO'].isna()]
+            st.dataframe(df_sem_laudo)
+            st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
 
     except Exception as e:
         st.error(f"Erro ao processar o arquivo: {e}")
