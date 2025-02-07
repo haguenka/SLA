@@ -8,7 +8,7 @@ import numpy as np
 import os
 import re
 
-# Streamlit app
+# Funções com cache do Streamlit
 @st.cache_data
 def load_logo(url):
     response = requests.get(url)
@@ -31,15 +31,13 @@ def load_excel_from_github():
 def main():
     st.title("Análise de SLA Dashboard")
 
-    # Load and display logo from GitHub
+    # Carrega e exibe o logo na barra lateral
     url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
     logo = load_logo(url)
     st.sidebar.image(logo, use_container_width=True)
 
-    # Load Excel file from GitHub if available
+    # Tenta carregar a planilha do GitHub; se não conseguir, permite upload
     df = load_excel_from_github()
-
-    # File upload if GitHub file is not available
     if df is None:
         st.sidebar.header("Carregar arquivo")
         uploaded_file = st.sidebar.file_uploader("Escolher um arquivo Excel", type=['xlsx'])
@@ -62,7 +60,7 @@ def main():
         # Padroniza 'MEDICO_SOLICITANTE'
         df['MEDICO_SOLICITANTE'] = df['MEDICO_SOLICITANTE'].astype(str).str.strip().str.lower()
 
-        # Filtro de grupos
+        # Filtra os grupos permitidos
         allowed_groups = [
             'GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA',
             'GRUPO RAIO-X', 'GRUPO MAMOGRAFIA',
@@ -70,15 +68,22 @@ def main():
         ]
         df = df[df['GRUPO'].isin(allowed_groups)]
 
-        # Conversão de colunas em datetime
+        # Conversão das colunas de data/hora
         df['STATUS_ALAUDAR'] = pd.to_datetime(df['STATUS_ALAUDAR'], dayfirst=True, errors='coerce')
         df['STATUS_PRELIMINAR'] = pd.to_datetime(df['STATUS_PRELIMINAR'], dayfirst=True, errors='coerce')
         df['STATUS_APROVADO'] = pd.to_datetime(df['STATUS_APROVADO'], dayfirst=True, errors='coerce')
 
-        # Remove linhas sem STATUS_PRELIMINAR e STATUS_APROVADO (ambos vazios)
+        # Conversão da coluna DATA_HORA_PRESCRICAO (utilizada para a seleção do período)
+        if 'DATA_HORA_PRESCRICAO' in df.columns:
+            df['DATA_HORA_PRESCRICAO'] = pd.to_datetime(df['DATA_HORA_PRESCRICAO'], dayfirst=True, errors='coerce')
+        else:
+            st.error("'DATA_HORA_PRESCRICAO' column not found in the data.")
+            return
+
+        # Remove linhas que não possuam STATUS_PRELIMINAR e STATUS_APROVADO ao mesmo tempo
         df = df.dropna(subset=['STATUS_PRELIMINAR', 'STATUS_APROVADO'], how='all')
 
-        # Calcula DELTA_TIME (considerando fins de semana ou não)
+        # Cálculo do DELTA_TIME
         df['END_DATE'] = df['STATUS_PRELIMINAR'].fillna(df['STATUS_APROVADO'])
         df['DELTA_TIME'] = df.apply(
             lambda row: (
@@ -101,18 +106,17 @@ def main():
         condition_6 = (df['TIPO_ATENDIMENTO'] == 'Internado') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 24)
         condition_7 = (df['TIPO_ATENDIMENTO'] == 'Externo') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 96)
 
-        # Assinala SLA DENTRO ou FORA
         df['SLA_STATUS'] = 'SLA DENTRO DO PERÍODO'
         df.loc[condition_1 | condition_2 | condition_3 | condition_4 | condition_5 | condition_6 | condition_7,
                'SLA_STATUS'] = 'SLA FORA DO PERÍODO'
 
-        # Coluna de observação (caso não exista)
+        # Cria a coluna OBSERVACAO se não existir
         if 'OBSERVACAO' not in df.columns:
             df['OBSERVACAO'] = ''
 
-        # ----------------------------------------------------------- #
-        # 1) Criação da coluna PERIODO_DIA com base em STATUS_ALAUDAR #
-        # ----------------------------------------------------------- #
+        # ---------------------------------------------------------------------- #
+        # 1) Criação da coluna PERIODO_DIA com base em STATUS_ALAUDAR           #
+        # ---------------------------------------------------------------------- #
         def calcular_periodo_dia(dt):
             """
             Retorna 'Manhã', 'Tarde', 'Noite' ou 'Madrugada'
@@ -132,19 +136,22 @@ def main():
 
         df['PERIODO_DIA'] = df['STATUS_ALAUDAR'].apply(calcular_periodo_dia)
 
-        # Colunas selecionadas
+        # ---------------------------------------------------------------------- #
+        # Colunas selecionadas (incluindo DATA_HORA_PRESCRICAO para filtro)       #
+        # ---------------------------------------------------------------------- #
         selected_columns = [
             'SAME', 'NOME_PACIENTE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO',
             'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE', 'TIPO_ATENDIMENTO',
+            'DATA_HORA_PRESCRICAO',  # Usada para o filtro de data
             'STATUS_ALAUDAR', 'STATUS_PRELIMINAR', 'STATUS_APROVADO',
             'MEDICO_SOLICITANTE', 'DELTA_TIME', 'SLA_STATUS', 'OBSERVACAO',
             'PERIODO_DIA'
         ]
         df_selected = df[selected_columns]
 
-        # ----------------------------------------------------------- #
-        # 2) Filtros na barra lateral                                #
-        # ----------------------------------------------------------- #
+        # ---------------------------------------------------------------------- #
+        # 2) Filtros na barra lateral                                           #
+        # ---------------------------------------------------------------------- #
         unidade_options = df['UNIDADE'].unique()
         selected_unidade = st.sidebar.selectbox("Selecione a UNIDADE", sorted(unidade_options))
 
@@ -154,24 +161,25 @@ def main():
         tipo_atendimento_options = df['TIPO_ATENDIMENTO'].unique()
         selected_tipo_atendimento = st.sidebar.selectbox("Selecione o Tipo de Atendimento", sorted(tipo_atendimento_options))
 
-        min_date = df['STATUS_ALAUDAR'].min()
-        max_date = df['STATUS_ALAUDAR'].max()
+        # Utiliza DATA_HORA_PRESCRICAO para selecionar o período
+        min_date = df['DATA_HORA_PRESCRICAO'].min()
+        max_date = df['DATA_HORA_PRESCRICAO'].max()
         start_date, end_date = st.sidebar.date_input("Selecione o período", [min_date, max_date])
 
-        # ----------------------------------------------------------- #
-        # 3) Filtro do DataFrame principal                           #
-        # ----------------------------------------------------------- #
+        # ---------------------------------------------------------------------- #
+        # 3) Filtro do DataFrame principal                                      #
+        # ---------------------------------------------------------------------- #
         df_filtered = df_selected[
             (df_selected['UNIDADE'] == selected_unidade) &
             (df_selected['GRUPO'] == selected_grupo) &
             (df_selected['TIPO_ATENDIMENTO'] == selected_tipo_atendimento) &
-            (df_selected['STATUS_ALAUDAR'] >= pd.Timestamp(start_date)) &
-            (df_selected['STATUS_ALAUDAR'] <= pd.Timestamp(end_date))
+            (df_selected['DATA_HORA_PRESCRICAO'] >= pd.Timestamp(start_date)) &
+            (df_selected['DATA_HORA_PRESCRICAO'] <= pd.Timestamp(end_date))
         ]
 
-        # ----------------------------------------------------------- #
-        # Criação das abas (tabs) para visualização dos dados         #
-        # ----------------------------------------------------------- #
+        # ---------------------------------------------------------------------- #
+        # Criação das abas para visualização dos dados                           #
+        # ---------------------------------------------------------------------- #
         tab1, tab2 = st.tabs(["Exames com Laudo", "Exames sem Laudo"])
 
         # Aba 1: Exames com laudo (todos os registros filtrados)
@@ -181,27 +189,22 @@ def main():
             total_exams = len(df_filtered)
             st.write(f"Total de exames: {total_exams}")
 
-            # Exibição do subconjunto SLA FORA DO PERÍODO
+            # Exibe exames com SLA FORA DO PERÍODO, ordenados por período do dia
             df_fora = df_filtered[df_filtered['SLA_STATUS'] == 'SLA FORA DO PERÍODO'].copy()
-            periodo_order = {
-                "Madrugada": 1,
-                "Manhã": 2,
-                "Tarde": 3,
-                "Noite": 4
-            }
+            periodo_order = {"Madrugada": 1, "Manhã": 2, "Tarde": 3, "Noite": 4}
             df_fora['PERIODO_ORDER'] = df_fora['PERIODO_DIA'].map(periodo_order)
             df_fora = df_fora.sort_values(by='PERIODO_ORDER', ascending=True)
 
             st.subheader("Exames SLA FORA DO PRAZO (ordenados por período do dia)")
             st.dataframe(df_fora.drop(columns=['PERIODO_ORDER']))
 
-            # Contagens por período (apenas exames SLA FORA DO PRAZO)
+            # Contagem por período (apenas exames com SLA FORA DO PERÍODO)
             contagem_periodo = df_fora['PERIODO_DIA'].value_counts()
             contagem_periodo_df = pd.DataFrame({
                 'PERIODO_DIA': contagem_periodo.index,
                 'Contagem': contagem_periodo.values
             })
-            st.subheader("Contagem por período (apenas exames SLA FORA DO PRAZO)")
+            st.subheader("Contagem por período (exames SLA FORA DO PRAZO)")
             st.dataframe(contagem_periodo_df)
 
             # Contagem total por período (todos os exames)
@@ -213,13 +216,11 @@ def main():
             st.subheader("Contagem total por período (todos os exames)")
             st.dataframe(contagem_periodo_total_df)
 
-            # Gráfico de Pizza (SLA Status)
+            # Gráfico de Pizza para o SLA Status
             if not df_filtered.empty:
                 sla_status_counts = df_filtered['SLA_STATUS'].value_counts()
-                colors = [
-                    'lightcoral' if status == 'SLA FORA DO PERÍODO' else 'lightgreen'
-                    for status in sla_status_counts.index
-                ]
+                colors = ['lightcoral' if status == 'SLA FORA DO PERÍODO' else 'lightgreen'
+                          for status in sla_status_counts.index]
                 fig, ax = plt.subplots()
                 ax.pie(
                     sla_status_counts,
@@ -238,11 +239,13 @@ def main():
             else:
                 st.warning("Nenhum registro encontrado para este filtro.")
 
-        # Aba 2: Exames sem laudo (STATUS_APROVADO vazio)
+        # Aba 2: Exames sem Laudo (STATUS_APROVADO nulo ou vazio)
         with tab2:
             st.subheader("Exames sem Laudo")
-            # Filtra os exames que não possuem laudo final (STATUS_APROVADO vazio)
-            df_sem_laudo = df_filtered[df_filtered['STATUS_APROVADO'].isna()]
+            df_sem_laudo = df_filtered[
+                (df_filtered['STATUS_APROVADO'].isna()) |
+                (df_filtered['STATUS_APROVADO'].astype(str).str.strip() == '')
+            ]
             st.dataframe(df_sem_laudo)
             st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
 
