@@ -147,7 +147,7 @@ def processar_pdfs_streamlit(pdf_files):
                 if re.search(r"\bsem\b", sentenca, re.IGNORECASE):
                     continue
                 # A sentença precisa conter uma das palavras obrigatórias:
-                if not re.search(r"\b(renal(?:es)?|caliciano(?:s)?|calicinal(?:s)?)\b", sentenca, re.IGNORECASE):
+                if not re.search(r"\b(renal(?:es)?|caliciano(?:s)?|calicinal(?:s)?)|ureter(?:es)?|ureteral(?:ais)\b", sentenca, re.IGNORECASE):
                     continue
                 # Destaca a ocorrência de "calculo" na frase
                 sentenca_destacada = highlight_calculo(sentenca)
@@ -215,7 +215,7 @@ def processar_pdfs_from_zip(zip_file):
                     if regex_calculo.search(sentenca):
                         if re.search(r"\bsem\b", sentenca, re.IGNORECASE):
                             continue
-                        if not re.search(r"\b(renal(?:es)?|caliciano(?:s)?|calicinal(?:s)?)\b", sentenca, re.IGNORECASE):
+                        if not re.search(r"\b(renal(?:es)?|caliciano(?:s)?|calicinal(?:s)?)|ureter(?:es)?|ureteral(?:ais)\b", sentenca, re.IGNORECASE):
                             continue
                         sentenca_destacada = highlight_calculo(sentenca)
                         tamanho_match = re.search(regex_tamanho, sentenca)
