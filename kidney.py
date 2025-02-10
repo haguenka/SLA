@@ -362,7 +362,7 @@ if st.sidebar.button("Processar"):
         st.session_state["lista_calculos"] = combined_df.to_dict(orient="records")
 
     # -------------------------------
-    # MONTAGEM DO RELATÓRIO AGREGADO POR MÊS
+    # MONTAGEM DO RELATÓRIO E DA LISTA (EM ABAS)
     # -------------------------------
     report_md = "Pacientes encontrados com cálculos por mês:\n"
     for key in sorted(st.session_state["relatorio_mensal"].keys(), key=lambda x: (x[0], x[1]) if isinstance(x, tuple) and len(x)==2 else (0,0)):
@@ -371,14 +371,9 @@ if st.sidebar.button("Processar"):
         report_md += f"- <span style='color: yellow; font-size: 20px;'>{nome_mes}/{ano}</span>: {st.session_state['relatorio_mensal'].get((ano, mes), 0)} paciente(s)<br>"
     report_md += "<br>Dados dos pacientes minerados:<br>"
     
-    st.markdown(report_md, unsafe_allow_html=True)
-    # Cria uma cópia do DataFrame sem os dados do PDF
     df_para_exibicao = st.session_state["pacientes_minerados_df"].drop(columns=["pdf_bytes"], errors="ignore")
-    st.dataframe(df_para_exibicao)
     
-    # -------------------------------
-    # RELATÓRIO DIÁRIO: Quantidade de pacientes minerados por dia (exibição com tabela HTML)
-    # -------------------------------
+    # Prepara o relatório diário
     relatorio_diario = {}
     for idx, row in st.session_state["pacientes_minerados_df"].iterrows():
         data = row["Data do Exame"]
@@ -422,12 +417,18 @@ if st.sidebar.button("Processar"):
                 f"</tr>"
             )
         daily_report_md += "</table><br>"
-    st.markdown(daily_report_md, unsafe_allow_html=True)
+    
+    # Cria os dois tabs: um para o relatório e outro para a lista com acesso ao PDF
+    tab1, tab2 = st.tabs(["Relatório", "Lista de Pacientes Minerados com Acesso ao PDF"])
+    
+    with tab1:
+        st.markdown(report_md, unsafe_allow_html=True)
+        st.dataframe(df_para_exibicao)
+        st.markdown(daily_report_md, unsafe_allow_html=True)
     
     # -------------------------------
-    # SEÇÃO: Lista de Pacientes Minerados com Acesso ao PDF
+    # SEÇÃO: Lista de Pacientes Minerados com Acesso ao PDF (segunda aba)
     # -------------------------------
-    # Agora, adicione a coluna com o link para download do PDF
     def create_download_link(pdf_bytes, file_name):
         try:
             b64 = base64.b64encode(pdf_bytes).decode()
@@ -439,9 +440,9 @@ if st.sidebar.button("Processar"):
     df_display["Acesso PDF"] = df_display.apply(lambda row: create_download_link(row["pdf_bytes"], row["Arquivo"]), axis=1)
     df_display = df_display.drop(columns=["pdf_bytes"], errors="ignore")
     
-    st.markdown("### Lista de Pacientes Minerados com Acesso ao PDF:")
-    # Aqui, se houver a coluna "Sentenca", ela exibirá o texto com o destaque em HTML
-    st.markdown(df_display.to_html(escape=False, index=False), unsafe_allow_html=True)
+    with tab2:
+        st.markdown("### Lista de Pacientes Minerados com Acesso ao PDF:")
+        st.markdown(df_display.to_html(escape=False, index=False), unsafe_allow_html=True)
     
     # -------------------------------
     # DOWNLOAD DO ARQUIVO EXCEL (Pacientes Minerados)
