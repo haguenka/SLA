@@ -10,7 +10,6 @@ from io import BytesIO
 from fuzzywuzzy import fuzz, process
 import zipfile
 import requests  # Para carregar a logo a partir de uma URL
-import base64  # Para conversão dos bytes do PDF em base64 para download
 
 # -------------------------------
 # FUNÇÃO PARA CARREGAR A LOGO COM CACHE
@@ -115,7 +114,6 @@ def processar_pdfs_streamlit(pdf_files):
     relatorio_mensal = {}
     lista_calculos = []
     for uploaded_file in pdf_files:
-        # Armazena o nome e os bytes do PDF
         file_name = uploaded_file.name
         pdf_bytes = uploaded_file.read()
         pdf_stream = BytesIO(pdf_bytes)
@@ -124,21 +122,21 @@ def processar_pdfs_streamlit(pdf_files):
         sentencas = re.split(r'(?<=[.!?])\s+', texto_completo)
         ocorrencias_validas = []
         for sentenca in sentencas:
-            linhas = sentenca.splitlines()
-            valido = False
-            for linha in linhas:
-                if re.search(regex_calculo, linha):
-                    if re.search(r'\bbiliar(?:es)?\b', linha, re.IGNORECASE):
-                        continue
-                    else:
-                        valido = True
-                        break
-            if valido and re.search(regex_calculo, sentenca):
+            # Verifica se a sentença contém a palavra "calculo" (usando o regex já definido)
+            if re.search(regex_calculo, sentenca, re.IGNORECASE):
+                # Se a sentença também conter "sem", ela é ignorada
+                if re.search(r"\bsem\b", sentenca, re.IGNORECASE):
+                    continue
+                # A sentença precisa conter uma das palavras indicadas:
+                if not re.search(r"\b(renal(?:es)?|caliciano(?:s)?|calicinal(?:s)?)\b", sentenca, re.IGNORECASE):
+                    continue
+                # Se passou nos filtros, extrai o tamanho (medida)
                 tamanho_match = re.search(regex_tamanho, sentenca)
                 if tamanho_match:
                     ocorrencias_validas.append(tamanho_match.group(0))
                 else:
                     ocorrencias_validas.append("Não informado")
+        
         if ocorrencias_validas:
             data_exame = cabecalho["Data do Exame"]
             partes_data = data_exame.split("/")
@@ -193,16 +191,11 @@ def processar_pdfs_from_zip(zip_file):
                 sentencas = re.split(r'(?<=[.!?])\s+', texto_completo)
                 ocorrencias_validas = []
                 for sentenca in sentencas:
-                    linhas = sentenca.splitlines()
-                    valido = False
-                    for linha in linhas:
-                        if re.search(regex_calculo, linha):
-                            if re.search(r'\bbiliar(?:es)?\b', linha, re.IGNORECASE):
-                                continue
-                            else:
-                                valido = True
-                                break
-                    if valido and re.search(regex_calculo, sentenca):
+                    if re.search(regex_calculo, sentenca, re.IGNORECASE):
+                        if re.search(r"\bsem\b", sentenca, re.IGNORECASE):
+                            continue
+                        if not re.search(r"\b(renal(?:es)?|caliciano(?:s)?|calicinal(?:s)?)\b", sentenca, re.IGNORECASE):
+                            continue
                         tamanho_match = re.search(regex_tamanho, sentenca)
                         if tamanho_match:
                             ocorrencias_validas.append(tamanho_match.group(0))
@@ -346,16 +339,23 @@ if st.sidebar.button("Processar"):
         st.session_state["lista_calculos"] = combined_df.to_dict(orient="records")
 
     # -------------------------------
-    # MONTAGEM DO RELATÓRIO AGREGADO POR MÊS E EXIBIÇÃO EM ABAS
+    # MONTAGEM DO RELATÓRIO AGREGADO POR MÊS
     # -------------------------------
-    report_md = "Pacientes encontrados com cálculos por mês:<br>"
+    report_md = "Pacientes encontrados com cálculos por mês:\n"
     for key in sorted(st.session_state["relatorio_mensal"].keys(), key=lambda x: (x[0], x[1]) if isinstance(x, tuple) and len(x)==2 else (0,0)):
         ano, mes = key if isinstance(key, tuple) and len(key)==2 else (0, 0)
         nome_mes = calendar.month_name[mes] if 1 <= mes <= 12 else "Desconhecido"
         report_md += f"- <span style='color: yellow; font-size: 20px;'>{nome_mes}/{ano}</span>: {st.session_state['relatorio_mensal'].get((ano, mes), 0)} paciente(s)<br>"
     report_md += "<br>Dados dos pacientes minerados:<br>"
-
-    # Monta o relatório diário
+    
+    st.markdown(report_md, unsafe_allow_html=True)
+    # Cria uma cópia do DataFrame sem os dados do PDF
+    df_para_exibicao = st.session_state["pacientes_minerados_df"].drop(columns=["pdf_bytes"], errors="ignore")
+    st.dataframe(df_para_exibicao)
+    
+    # -------------------------------
+    # RELATÓRIO DIÁRIO: Quantidade de pacientes minerados por dia (exibição com tabela HTML)
+    # -------------------------------
     relatorio_diario = {}
     for idx, row in st.session_state["pacientes_minerados_df"].iterrows():
         data = row["Data do Exame"]
@@ -399,31 +399,32 @@ if st.sidebar.button("Processar"):
                 f"</tr>"
             )
         daily_report_md += "</table><br>"
+    st.markdown(daily_report_md, unsafe_allow_html=True)
+    
+    # -------------------------------
+    # SEÇÃO: Lista de Pacientes Minerados com Acesso ao PDF
+    # -------------------------------
+    # (Após montar os relatórios e combinar os dados em st.session_state)
+    #st.markdown(report_md, unsafe_allow_html=True)
+    #st.dataframe(st.session_state["pacientes_minerados_df"])  # (Opcional, se quiser exibir o DataFrame padrão)
+    
+    # Agora, adicione a coluna com o link para download do PDF
+    import base64  # Já importado anteriormente
+    
+    def create_download_link(pdf_bytes, file_name):
+        try:
+            b64 = base64.b64encode(pdf_bytes).decode()
+        except Exception as e:
+            return "Erro na conversão"
+        return f'<a href="data:application/octet-stream;base64,{b64}" download="{file_name}">Download PDF</a>'
+    
+    df_display = st.session_state["pacientes_minerados_df"].copy()
+    df_display["Acesso PDF"] = df_display.apply(lambda row: create_download_link(row["pdf_bytes"], row["Arquivo"]), axis=1)
+    df_display = df_display.drop(columns=["pdf_bytes"], errors="ignore")
+    
+    st.markdown("### Lista de Pacientes Minerados com Acesso ao PDF:")
+    st.markdown(df_display.to_html(escape=False, index=False), unsafe_allow_html=True)
 
-    # Cria as abas para exibição dos relatórios
-    tab1, tab2 = st.tabs(["Relatório Geral", "Pacientes com Acesso ao PDF"])
-    
-    with tab1:
-        st.markdown(report_md, unsafe_allow_html=True)
-        # Exibe o DataFrame sem os dados dos PDFs
-        df_para_exibicao = st.session_state["pacientes_minerados_df"].drop(columns=["pdf_bytes"], errors="ignore")
-        st.dataframe(df_para_exibicao)
-        st.markdown(daily_report_md, unsafe_allow_html=True)
-    
-    with tab2:
-        st.markdown("### Lista de Pacientes Minerados com Acesso ao PDF:")
-        # Função para criar o link de download do PDF
-        def create_download_link(pdf_bytes, file_name):
-            try:
-                b64 = base64.b64encode(pdf_bytes).decode()
-            except Exception as e:
-                return "Erro na conversão"
-            return f'<a href="data:application/octet-stream;base64,{b64}" download="{file_name}">Download PDF</a>'
-        
-        df_display = st.session_state["pacientes_minerados_df"].copy()
-        df_display["Acesso PDF"] = df_display.apply(lambda row: create_download_link(row["pdf_bytes"], row["Arquivo"]), axis=1)
-        df_display = df_display.drop(columns=["pdf_bytes"], errors="ignore")
-        st.markdown(df_display.to_html(escape=False, index=False), unsafe_allow_html=True)
     
     # -------------------------------
     # DOWNLOAD DO ARQUIVO EXCEL (Pacientes Minerados)
