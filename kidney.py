@@ -371,7 +371,7 @@ if st.sidebar.button("Processar"):
         report_md += f"- <span style='color: yellow; font-size: 20px;'>{nome_mes}/{ano}</span>: {st.session_state['relatorio_mensal'].get((ano, mes), 0)} paciente(s)<br>"
     report_md += "<br>Dados dos pacientes minerados:<br>"
     
-    df_para_exibicao = st.session_state["pacientes_minerados_df"].drop(columns=["pdf_bytes"], errors="ignore")
+    df_para_exibicao = st.session_state["pacientes_minerados_df"].drop(columns=["pdf_bytes", "Arquivo"], errors="ignore")
     
     # Prepara o relatório diário
     relatorio_diario = {}
