@@ -123,7 +123,7 @@ def processar_pdfs_streamlit(pdf_files):
         ocorrencias_validas = []
         for sentenca in sentencas:
             # Verifica se a sentença contém a palavra "calculo" (usando o regex já definido)
-            if re.search(regex_calculo, sentenca, re.IGNORECASE):
+            if regex_calculo.search(sentenca):
                 # Se a sentença também conter "sem", ela é ignorada
                 if re.search(r"\bsem\b", sentenca, re.IGNORECASE):
                     continue
