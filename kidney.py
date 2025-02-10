@@ -10,6 +10,7 @@ from io import BytesIO
 from fuzzywuzzy import fuzz, process
 import zipfile
 import requests  # Para carregar a logo a partir de uma URL
+import base64  # Já utilizado para download do PDF
 
 # -------------------------------
 # FUNÇÃO PARA CARREGAR A LOGO COM CACHE
@@ -68,6 +69,24 @@ regex_same = re.compile(r"(?i)same\s*:\s*(\S+)")
 regex_data = re.compile(r"(?i)data\s*do\s*exame\s*:\s*([\d/]+)")
 
 # -------------------------------
+# FUNÇÃO PARA DESTACAR A PALAVRA-CHAVE "CALCULO" EM AMARELO
+# -------------------------------
+def highlight_calculo(sentence):
+    """
+    Recebe uma frase e retorna a mesma frase com todas as ocorrências
+    do termo 'calculo' (considerando variações com acentuação e espaçamentos)
+    envolvidas em uma tag <span> com fundo amarelo.
+    """
+    pattern = r"(c\s*[áa]\s*l\s*[cç]\s*[úu]\s*l\s*[oa]s?)"
+    highlighted = re.sub(
+        pattern,
+        r"<span style='background-color: yellow;'>\1</span>",
+        sentence,
+        flags=re.IGNORECASE
+    )
+    return highlighted
+
+# -------------------------------
 # FUNÇÕES DE PROCESSAMENTO
 # -------------------------------
 def extrair_texto(pdf_input):
@@ -109,7 +128,7 @@ def processar_pdfs_streamlit(pdf_files):
     """
     Processa os PDFs carregados via file uploader.
     Retorna o relatório mensal, uma lista de registros e um DataFrame com os pacientes minerados.
-    Cada registro inclui o nome do arquivo e os bytes do PDF.
+    Cada registro inclui o nome do arquivo, os bytes do PDF e a sentença destacada com a palavra-chave.
     """
     relatorio_mensal = {}
     lista_calculos = []
@@ -122,20 +141,21 @@ def processar_pdfs_streamlit(pdf_files):
         sentencas = re.split(r'(?<=[.!?])\s+', texto_completo)
         ocorrencias_validas = []
         for sentenca in sentencas:
-            # Verifica se a sentença contém a palavra "calculo" (usando o regex já definido)
+            # Usa o método search do padrão compilado (não repassando flags)
             if regex_calculo.search(sentenca):
-                # Se a sentença também conter "sem", ela é ignorada
+                # Se a sentença contém "sem", ignora
                 if re.search(r"\bsem\b", sentenca, re.IGNORECASE):
                     continue
-                # A sentença precisa conter uma das palavras indicadas:
+                # A sentença precisa conter uma das palavras obrigatórias:
                 if not re.search(r"\b(renal(?:es)?|caliciano(?:s)?|calicinal(?:s)?)\b", sentenca, re.IGNORECASE):
                     continue
-                # Se passou nos filtros, extrai o tamanho (medida)
+                # Destaca a ocorrência de "calculo" na frase
+                sentenca_destacada = highlight_calculo(sentenca)
                 tamanho_match = re.search(regex_tamanho, sentenca)
                 if tamanho_match:
-                    ocorrencias_validas.append(tamanho_match.group(0))
+                    ocorrencias_validas.append((tamanho_match.group(0), sentenca_destacada))
                 else:
-                    ocorrencias_validas.append("Não informado")
+                    ocorrencias_validas.append(("Não informado", sentenca_destacada))
         
         if ocorrencias_validas:
             data_exame = cabecalho["Data do Exame"]
@@ -153,9 +173,10 @@ def processar_pdfs_streamlit(pdf_files):
             if key not in relatorio_mensal:
                 relatorio_mensal[key] = set()
             relatorio_mensal[key].add(cabecalho["Paciente"])
-            for tamanho in ocorrencias_validas:
+            for tamanho, sentenca_destacada in ocorrencias_validas:
                 record = {**cabecalho,
                           "Tamanho": tamanho,
+                          "Sentenca": sentenca_destacada,
                           "Arquivo": file_name,
                           "pdf_bytes": pdf_bytes}
                 lista_calculos.append(record)
@@ -175,7 +196,7 @@ def processar_pdfs_from_zip(zip_file):
     """
     Recebe um arquivo ZIP e extrai todos os PDFs contidos nele.
     Processa cada PDF e retorna o relatório mensal, uma lista de registros e um DataFrame.
-    Cada registro inclui o nome do arquivo e os bytes do PDF.
+    Cada registro inclui o nome do arquivo, os bytes do PDF e a sentença destacada com a palavra-chave.
     """
     relatorio_mensal = {}
     lista_calculos = []
@@ -191,16 +212,17 @@ def processar_pdfs_from_zip(zip_file):
                 sentencas = re.split(r'(?<=[.!?])\s+', texto_completo)
                 ocorrencias_validas = []
                 for sentenca in sentencas:
-                    if re.search(regex_calculo, sentenca, re.IGNORECASE):
+                    if regex_calculo.search(sentenca):
                         if re.search(r"\bsem\b", sentenca, re.IGNORECASE):
                             continue
                         if not re.search(r"\b(renal(?:es)?|caliciano(?:s)?|calicinal(?:s)?)\b", sentenca, re.IGNORECASE):
                             continue
+                        sentenca_destacada = highlight_calculo(sentenca)
                         tamanho_match = re.search(regex_tamanho, sentenca)
                         if tamanho_match:
-                            ocorrencias_validas.append(tamanho_match.group(0))
+                            ocorrencias_validas.append((tamanho_match.group(0), sentenca_destacada))
                         else:
-                            ocorrencias_validas.append("Não informado")
+                            ocorrencias_validas.append(("Não informado", sentenca_destacada))
                 if ocorrencias_validas:
                     data_exame = cabecalho["Data do Exame"]
                     partes_data = data_exame.split("/")
@@ -217,9 +239,10 @@ def processar_pdfs_from_zip(zip_file):
                     if key not in relatorio_mensal:
                         relatorio_mensal[key] = set()
                     relatorio_mensal[key].add(cabecalho["Paciente"])
-                    for tamanho in ocorrencias_validas:
+                    for tamanho, sentenca_destacada in ocorrencias_validas:
                         record = {**cabecalho,
                                   "Tamanho": tamanho,
+                                  "Sentenca": sentenca_destacada,
                                   "Arquivo": pdf_name,
                                   "pdf_bytes": pdf_bytes}
                         lista_calculos.append(record)
@@ -272,7 +295,7 @@ def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
 # ARMAZENAMENTO EM CACHE (st.session_state)
 # -------------------------------
 if "pacientes_minerados_df" not in st.session_state:
-    st.session_state["pacientes_minerados_df"] = pd.DataFrame(columns=["Paciente", "Idade", "Same", "Data do Exame", "Tamanho", "Arquivo", "pdf_bytes"])
+    st.session_state["pacientes_minerados_df"] = pd.DataFrame(columns=["Paciente", "Idade", "Same", "Data do Exame", "Tamanho", "Sentenca", "Arquivo", "pdf_bytes"])
     st.session_state["relatorio_mensal"] = {}
     st.session_state["lista_calculos"] = []
 
@@ -404,13 +427,7 @@ if st.sidebar.button("Processar"):
     # -------------------------------
     # SEÇÃO: Lista de Pacientes Minerados com Acesso ao PDF
     # -------------------------------
-    # (Após montar os relatórios e combinar os dados em st.session_state)
-    #st.markdown(report_md, unsafe_allow_html=True)
-    #st.dataframe(st.session_state["pacientes_minerados_df"])  # (Opcional, se quiser exibir o DataFrame padrão)
-    
     # Agora, adicione a coluna com o link para download do PDF
-    import base64  # Já importado anteriormente
-    
     def create_download_link(pdf_bytes, file_name):
         try:
             b64 = base64.b64encode(pdf_bytes).decode()
@@ -423,8 +440,8 @@ if st.sidebar.button("Processar"):
     df_display = df_display.drop(columns=["pdf_bytes"], errors="ignore")
     
     st.markdown("### Lista de Pacientes Minerados com Acesso ao PDF:")
+    # Aqui, se houver a coluna "Sentenca", ela exibirá o texto com o destaque em HTML
     st.markdown(df_display.to_html(escape=False, index=False), unsafe_allow_html=True)
-
     
     # -------------------------------
     # DOWNLOAD DO ARQUIVO EXCEL (Pacientes Minerados)
