@@ -80,7 +80,7 @@ def highlight_calculo(sentence):
     pattern = r"(c\s*[áa]\s*l\s*[cç]\s*[úu]\s*l\s*[oa]s?)"
     highlighted = re.sub(
         pattern,
-        r"<span style='background-color: yellow;'>\1</span>",
+        r"<span style='background-color: green;'>\1</span>",
         sentence,
         flags=re.IGNORECASE
     )
