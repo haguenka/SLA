@@ -64,11 +64,15 @@ def load_data():
     xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/baseslaM.xlsx'
     df = load_excel_data(xlsx_url)
     if df is not None:
-        # Converter DATA_HORA_PRESCRICAO para datetime
-        df["DATA_HORA_PRESCRICAO"] = pd.to_datetime(df["DATA_HORA_PRESCRICAO"], errors='coerce')
-        # Converter STATUS_ALAUDAR para datetime (caso a coluna exista)
+        # Converter DATA_HORA_PRESCRICAO para datetime com dayfirst=True
+        df["DATA_HORA_PRESCRICAO"] = pd.to_datetime(
+            df["DATA_HORA_PRESCRICAO"], errors='coerce', dayfirst=True
+        )
+        # Converter STATUS_ALAUDAR para datetime (caso a coluna exista) com dayfirst=True
         if "STATUS_ALAUDAR" in df.columns:
-            df["STATUS_ALAUDAR"] = pd.to_datetime(df["STATUS_ALAUDAR"], errors='coerce')
+            df["STATUS_ALAUDAR"] = pd.to_datetime(
+                df["STATUS_ALAUDAR"], errors='coerce', dayfirst=True
+            )
     return df
 
 df = load_data()
