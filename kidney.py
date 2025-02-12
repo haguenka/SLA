@@ -80,7 +80,7 @@ def highlight_calculo(sentence):
     pattern = r"(c\s*[áa]\s*l\s*[cç]\s*[úu]\s*l\s*[oa]s?)"
     highlighted = re.sub(
         pattern,
-        r"<span style='background-color: green;'>\1</span>",
+        r"<span style='background-color: yellow;'>\1</span>",
         sentence,
         flags=re.IGNORECASE
     )
@@ -141,13 +141,16 @@ def processar_pdfs_streamlit(pdf_files):
         sentencas = re.split(r'(?<=[.!?])\s+', texto_completo)
         ocorrencias_validas = []
         for sentenca in sentencas:
-            # Usa o método search do padrão compilado (não repassando flags)
+            # Verifica se a sentença contém o termo "calculo"
             if regex_calculo.search(sentenca):
-                # Se a sentença contém "sem", ignora
+                # Exclui se a sentença conter "sem"
                 if re.search(r"\bsem\b", sentenca, re.IGNORECASE):
                     continue
-                # A sentença precisa conter uma das palavras obrigatórias:
-                if not re.search(r"\b(renal(?:es)?|caliciano(?:s)?|calicinal(?:s)?)|ureter(?:es)?|ureteral(?:ais)\b", sentenca, re.IGNORECASE):
+                # NOVO: Exclui se a sentença indicar negação (ex.: "não há", "não apresenta", etc.)
+                if re.search(r"\b(não\s+há|não\s+apresenta|não\s+possui|nenhum)\b", sentenca, re.IGNORECASE):
+                    continue
+                # Verifica se a sentença contém alguma das palavras obrigatórias
+                if not re.search(r"\b(?:renal(?:es)?|caliciano(?:s)?|calicinal(?:s)?|ureter(?:es)?|ureteral(?:ais))\b", sentenca, re.IGNORECASE):
                     continue
                 # Destaca a ocorrência de "calculo" na frase
                 sentenca_destacada = highlight_calculo(sentenca)
@@ -192,6 +195,7 @@ def processar_pdfs_streamlit(pdf_files):
         pacientes_minerados_df.drop(columns=['has_measure'], inplace=True)
     return relatorio_mensal, lista_calculos, pacientes_minerados_df
 
+
 def processar_pdfs_from_zip(zip_file):
     """
     Recebe um arquivo ZIP e extrai todos os PDFs contidos nele.
@@ -215,7 +219,9 @@ def processar_pdfs_from_zip(zip_file):
                     if regex_calculo.search(sentenca):
                         if re.search(r"\bsem\b", sentenca, re.IGNORECASE):
                             continue
-                        if not re.search(r"\b(renal(?:es)?|caliciano(?:s)?|calicinal(?:s)?)|ureter(?:es)?|ureteral(?:ais)\b", sentenca, re.IGNORECASE):
+                        if re.search(r"\b(não\s+há|não\s+apresenta|não\s+possui|nenhum)\b", sentenca, re.IGNORECASE):
+                            continue
+                        if not re.search(r"\b(?:renal(?:es)?|caliciano(?:s)?|calicinal(?:s)?|ureter(?:es)?|ureteral(?:ais))\b", sentenca, re.IGNORECASE):
                             continue
                         sentenca_destacada = highlight_calculo(sentenca)
                         tamanho_match = re.search(regex_tamanho, sentenca)
