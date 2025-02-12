@@ -64,7 +64,11 @@ def load_data():
     xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/baseslaM.xlsx'
     df = load_excel_data(xlsx_url)
     if df is not None:
+        # Converter DATA_HORA_PRESCRICAO para datetime
         df["DATA_HORA_PRESCRICAO"] = pd.to_datetime(df["DATA_HORA_PRESCRICAO"], errors='coerce')
+        # Converter STATUS_ALAUDAR para datetime (caso a coluna exista)
+        if "STATUS_ALAUDAR" in df.columns:
+            df["STATUS_ALAUDAR"] = pd.to_datetime(df["STATUS_ALAUDAR"], errors='coerce')
     return df
 
 df = load_data()
@@ -81,8 +85,8 @@ unidade_selecionada = st.sidebar.selectbox("Selecione a unidade:", unidades)
 # Filtrar por unidade
 df = df[df["UNIDADE"] == unidade_selecionada]
 
-# Converter DATA_HORA_PRESCRICAO para período mensal
-df["MES"] = df["DATA_HORA_PRESCRICAO"].dt.to_period("M")
+# Converter STATUS_ALAUDAR para período mensal para o filtro
+df["MES"] = df["STATUS_ALAUDAR"].dt.to_period("M")
 
 # Dicionário para mapear número do mês para o nome em português
 meses_portugues = {
@@ -114,7 +118,8 @@ tab1, tab2 = st.tabs(["Análise por Médico", "Top 10 Prescritores"])
 
 with tab1:
     st.header(f"Exames de {medico_selecionado}")
-    st.dataframe(df_medico[["NOME_PACIENTE", "DATA_HORA_PRESCRICAO", "DESCRICAO_PROCEDIMENTO"]])
+    # Incluímos também a coluna STATUS_ALAUDAR para visualização
+    st.dataframe(df_medico[["NOME_PACIENTE", "DATA_HORA_PRESCRICAO", "STATUS_ALAUDAR", "DESCRICAO_PROCEDIMENTO"]])
     
     # Exibição dos exames por modalidade com DataFrame para cada modalidade
     st.subheader("Exames por Modalidade")
