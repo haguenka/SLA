@@ -64,15 +64,10 @@ def load_data():
     xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/baseslaM.xlsx'
     df = load_excel_data(xlsx_url)
     if df is not None:
-        # Converter DATA_HORA_PRESCRICAO para datetime com dayfirst=True
-        df["DATA_HORA_PRESCRICAO"] = pd.to_datetime(
-            df["DATA_HORA_PRESCRICAO"], errors='coerce', dayfirst=True
-        )
-        # Converter STATUS_ALAUDAR para datetime (caso a coluna exista) com dayfirst=True
+        # Converter as datas com dayfirst=True para interpretar corretamente o formato (dia/mês/ano)
+        df["DATA_HORA_PRESCRICAO"] = pd.to_datetime(df["DATA_HORA_PRESCRICAO"], errors='coerce', dayfirst=True)
         if "STATUS_ALAUDAR" in df.columns:
-            df["STATUS_ALAUDAR"] = pd.to_datetime(
-                df["STATUS_ALAUDAR"], errors='coerce', dayfirst=True
-            )
+            df["STATUS_ALAUDAR"] = pd.to_datetime(df["STATUS_ALAUDAR"], errors='coerce', dayfirst=True)
     return df
 
 df = load_data()
@@ -89,40 +84,30 @@ unidade_selecionada = st.sidebar.selectbox("Selecione a unidade:", unidades)
 # Filtrar por unidade
 df = df[df["UNIDADE"] == unidade_selecionada]
 
-# Converter STATUS_ALAUDAR para período mensal para o filtro
-df["MES"] = df["STATUS_ALAUDAR"].dt.to_period("M")
+# Filtro de período específico utilizando STATUS_ALAUDAR
+if df["STATUS_ALAUDAR"].notnull().any():
+    min_date = df["STATUS_ALAUDAR"].min().date()
+    max_date = df["STATUS_ALAUDAR"].max().date()
+    periodo = st.sidebar.date_input("Selecione o período:", [min_date, max_date])
+    # Verifica se o usuário selecionou duas datas
+    if isinstance(periodo, list) and len(periodo) == 2:
+        start_date, end_date = periodo
+        df = df[(df["STATUS_ALAUDAR"].dt.date >= start_date) & (df["STATUS_ALAUDAR"].dt.date <= end_date)]
+else:
+    st.sidebar.warning("A coluna STATUS_ALAUDAR não possui datas válidas.")
 
-# Dicionário para mapear número do mês para o nome em português
-meses_portugues = {
-    1: "JANEIRO", 2: "FEVEREIRO", 3: "MARÇO", 4: "ABRIL",
-    5: "MAIO", 6: "JUNHO", 7: "JULHO", 8: "AGOSTO",
-    9: "SETEMBRO", 10: "OUTUBRO", 11: "NOVEMBRO", 12: "DEZEMBRO"
-}
-
-# Criar a lista de períodos disponíveis e ordenar
-meses_disponiveis = sorted(df["MES"].dropna().unique())
-
-# Selectbox customizado para exibir MÊS/ANO (ex.: JANEIRO/25)
-mes_selecionado = st.sidebar.selectbox(
-    "Selecione o mês:",
-    meses_disponiveis,
-    format_func=lambda p: f"{meses_portugues[p.month]}/{str(p.year)[-2:]}"
-)
-
-# Filtro de médico (após filtrar por mês)
-df_filtrado = df[df["MES"] == mes_selecionado]
-medicos = df_filtrado["MEDICO_SOLICITANTE"].dropna().unique()
+# Filtro de médico (após filtrar por período)
+medicos = df["MEDICO_SOLICITANTE"].dropna().unique()
 medico_selecionado = st.sidebar.selectbox("Selecione o médico:", medicos)
 
 # Dados filtrados
-df_medico = df_filtrado[df_filtrado["MEDICO_SOLICITANTE"] == medico_selecionado]
+df_medico = df[df["MEDICO_SOLICITANTE"] == medico_selecionado]
 
-# Exibição de dados
-tab1, tab2 = st.tabs(["Análise por Médico", "Top 10 Prescritores"])
+# Exibição de dados em abas
+tab1, tab2 = st.tabs(["Análise por Médico", "Top 10 Médicos Prescritores de RM"])
 
 with tab1:
     st.header(f"Exames de {medico_selecionado}")
-    # Incluímos também a coluna STATUS_ALAUDAR para visualização
     st.dataframe(df_medico[["NOME_PACIENTE", "DATA_HORA_PRESCRICAO", "STATUS_ALAUDAR", "DESCRICAO_PROCEDIMENTO"]])
     
     # Exibição dos exames por modalidade com DataFrame para cada modalidade
@@ -136,6 +121,7 @@ with tab1:
         procedimento_counts = df_mod["DESCRICAO_PROCEDIMENTO"].value_counts().reset_index()
         procedimento_counts.columns = ["DESCRICAO_PROCEDIMENTO", "QUANTITATIVO"]
         st.dataframe(procedimento_counts)
+
 
 with tab2:
     st.header("Top 10 Médicos Prescritores")
