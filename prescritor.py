@@ -125,12 +125,12 @@ with tab1:
 
 with tab2:
     st.header("Top 10 Médicos Prescritores")
-    top_medicos = df_filtrado["MEDICO_SOLICITANTE"].value_counts().head(10)
+    top_medicos = df["MEDICO_SOLICITANTE"].value_counts().head(10)
     st.bar_chart(top_medicos)
 
     st.header("Top 10 Médicos Prescritores de RM")
     # Filtrar registros cuja coluna MODALIDADE contenha "RM"
-    df_rm = df_filtrado[df_filtrado["MODALIDADE"].str.contains("MR", case=False, na=False)]
+    df_rm = df[df["MODALIDADE"].str.contains("MR", case=False, na=False)]
     # Calcular o top 10 de médicos prescritores para exames de RM
     top_medicos_rm = df_rm["MEDICO_SOLICITANTE"].value_counts().head(10)
     st.bar_chart(top_medicos_rm)
