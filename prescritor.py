@@ -108,7 +108,12 @@ tab1, tab2 = st.tabs(["Análise por Médico", "Top 10 Médicos Prescritores de R
 
 with tab1:
     st.header(f"Exames de {medico_selecionado}")
-    st.dataframe(df_medico[["NOME_PACIENTE", "DATA_HORA_PRESCRICAO", "STATUS_ALAUDAR", "DESCRICAO_PROCEDIMENTO"]])
+    # Criar uma cópia para formatar as datas
+    df_display = df_medico.copy()
+    # Formatar as datas para o formato dd/mm/yyyy
+    df_display["DATA_HORA_PRESCRICAO"] = df_display["DATA_HORA_PRESCRICAO"].dt.strftime("%d/%m/%Y")
+    df_display["STATUS_ALAUDAR"] = df_display["STATUS_ALAUDAR"].dt.strftime("%d/%m/%Y")
+    st.dataframe(df_display[["NOME_PACIENTE", "DATA_HORA_PRESCRICAO", "STATUS_ALAUDAR", "DESCRICAO_PROCEDIMENTO"]])
     
     # Exibição dos exames por modalidade com DataFrame para cada modalidade
     st.subheader("Exames por Modalidade")
@@ -122,7 +127,6 @@ with tab1:
         procedimento_counts.columns = ["DESCRICAO_PROCEDIMENTO", "QUANTITATIVO"]
         st.dataframe(procedimento_counts)
 
-
 with tab2:
     st.header("Top 10 Médicos Prescritores")
     top_medicos = df["MEDICO_SOLICITANTE"].value_counts().head(10)
@@ -130,7 +134,6 @@ with tab2:
 
     st.header("Top 10 Médicos Prescritores de RM")
     # Filtrar registros cuja coluna MODALIDADE contenha "RM"
-    df_rm = df[df["MODALIDADE"].str.contains("MR", case=False, na=False)]
-    # Calcular o top 10 de médicos prescritores para exames de RM
+    df_rm = df[df["MODALIDADE"].str.contains("RM", case=False, na=False)]
     top_medicos_rm = df_rm["MEDICO_SOLICITANTE"].value_counts().head(10)
     st.bar_chart(top_medicos_rm)
