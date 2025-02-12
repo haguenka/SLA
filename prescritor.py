@@ -69,6 +69,9 @@ def load_data():
 
 df = load_data()
 
+# Filtrar somente os exames externos
+df = df[df["TIPO_ATENDIMENTO"] == "EXTERNOS"]
+
 # Sidebar - Filtros
 st.sidebar.header("Filtros")
 
