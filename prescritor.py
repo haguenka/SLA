@@ -64,10 +64,14 @@ def load_data():
     xlsx_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/baseslaM.xlsx'
     df = load_excel_data(xlsx_url)
     if df is not None:
-        # Converter as datas com dayfirst=True para interpretar corretamente o formato (dia/mês/ano)
-        df["DATA_HORA_PRESCRICAO"] = pd.to_datetime(df["DATA_HORA_PRESCRICAO"], errors='coerce', dayfirst=True)
+        # Converter as datas especificando o formato dd/mm/yyyy
+        df["DATA_HORA_PRESCRICAO"] = pd.to_datetime(
+            df["DATA_HORA_PRESCRICAO"], format="%d/%m/%Y", errors='coerce'
+        )
         if "STATUS_ALAUDAR" in df.columns:
-            df["STATUS_ALAUDAR"] = pd.to_datetime(df["STATUS_ALAUDAR"], errors='coerce', dayfirst=True)
+            df["STATUS_ALAUDAR"] = pd.to_datetime(
+                df["STATUS_ALAUDAR"], format="%d/%m/%Y", errors='coerce'
+            )
     return df
 
 df = load_data()
@@ -86,10 +90,8 @@ df = df[df["UNIDADE"] == unidade_selecionada]
 
 # Filtro de período específico utilizando STATUS_ALAUDAR
 if df["STATUS_ALAUDAR"].notnull().any():
-    # Define as datas mínima e máxima dos dados
     min_date = df["STATUS_ALAUDAR"].min().date()
     max_date = df["STATUS_ALAUDAR"].max().date()
-    
     # O widget restringe a seleção entre min_date e max_date
     periodo = st.sidebar.date_input(
         "Selecione o período:",
@@ -97,18 +99,18 @@ if df["STATUS_ALAUDAR"].notnull().any():
         min_value=min_date,
         max_value=max_date
     )
-    
     # Verifica se o usuário selecionou duas datas
     if isinstance(periodo, list) and len(periodo) == 2:
         start_date, end_date = periodo
+        # Converter as datas selecionadas para datetime (com horário 00:00:00)
         start_dt = pd.to_datetime(start_date)
-        # Ajusta o final do período para incluir todo o dia final
+        # Ajustar end_dt para incluir todo o dia final (23:59:59)
         end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
         df = df[(df["STATUS_ALAUDAR"] >= start_dt) & (df["STATUS_ALAUDAR"] <= end_dt)]
 else:
     st.sidebar.warning("A coluna STATUS_ALAUDAR não possui datas válidas.")
 
-# Verifica se a filtragem por período resultou em registros
+# Verifica se após a filtragem há registros
 if df.empty:
     st.warning("Nenhum registro encontrado para o período selecionado.")
 
@@ -124,9 +126,8 @@ tab1, tab2 = st.tabs(["Análise por Médico", "Top 10 Médicos Prescritores de R
 
 with tab1:
     st.header(f"Exames de {medico_selecionado}")
-    # Criar uma cópia para formatar as datas
+    # Formatação das datas para exibição (dd/mm/yyyy)
     df_display = df_medico.copy()
-    # Formatar as datas para o formato dd/mm/yyyy
     df_display["DATA_HORA_PRESCRICAO"] = df_display["DATA_HORA_PRESCRICAO"].dt.strftime("%d/%m/%Y")
     df_display["STATUS_ALAUDAR"] = df_display["STATUS_ALAUDAR"].dt.strftime("%d/%m/%Y")
     st.dataframe(df_display[["NOME_PACIENTE", "DATA_HORA_PRESCRICAO", "STATUS_ALAUDAR", "DESCRICAO_PROCEDIMENTO"]])
@@ -150,6 +151,6 @@ with tab2:
 
     st.header("Top 10 Médicos Prescritores de RM")
     # Filtrar registros cuja coluna MODALIDADE contenha "RM"
-    df_rm = df[df["MODALIDADE"].str.contains("MR", case=False, na=False)]
+    df_rm = df[df["MODALIDADE"].str.contains("RM", case=False, na=False)]
     top_medicos_rm = df_rm["MEDICO_SOLICITANTE"].value_counts().head(10)
     st.bar_chart(top_medicos_rm)
