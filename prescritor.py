@@ -85,6 +85,7 @@ unidade_selecionada = st.sidebar.selectbox("Selecione a unidade:", unidades)
 df = df[df["UNIDADE"] == unidade_selecionada]
 
 # Filtro de período específico utilizando STATUS_ALAUDAR
+# Filtro de período específico utilizando STATUS_ALAUDAR
 if df["STATUS_ALAUDAR"].notnull().any():
     min_date = df["STATUS_ALAUDAR"].min().date()
     max_date = df["STATUS_ALAUDAR"].max().date()
@@ -92,7 +93,11 @@ if df["STATUS_ALAUDAR"].notnull().any():
     # Verifica se o usuário selecionou duas datas
     if isinstance(periodo, list) and len(periodo) == 2:
         start_date, end_date = periodo
-        df = df[(df["STATUS_ALAUDAR"].dt.date >= start_date) & (df["STATUS_ALAUDAR"].dt.date <= end_date)]
+        # Converter as datas selecionadas para datetime
+        start_dt = pd.to_datetime(start_date)
+        # Ajustar o final do período para incluir todo o dia final
+        end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+        df = df[(df["STATUS_ALAUDAR"] >= start_dt) & (df["STATUS_ALAUDAR"] <= end_dt)]
 else:
     st.sidebar.warning("A coluna STATUS_ALAUDAR não possui datas válidas.")
 
