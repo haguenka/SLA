@@ -102,11 +102,11 @@ with tab1:
     
     # Exibição dos exames por modalidade com DataFrame para cada modalidade
     st.subheader("Exames por Modalidade")
-    modalidades = df_medico["MODALIDADE"].dropna().unique()
+    modalidades = df_medico["GRUPO"].dropna().unique()
     
     for mod in modalidades:
         st.markdown(f"### Modalidade: {mod}")
-        df_mod = df_medico[df_medico["MODALIDADE"] == mod]
+        df_mod = df_medico[df_medico["GRUPO"] == mod]
         # Contagem dos procedimentos para a modalidade atual
         procedimento_counts = df_mod["DESCRICAO_PROCEDIMENTO"].value_counts().reset_index()
         procedimento_counts.columns = ["DESCRICAO_PROCEDIMENTO", "QUANTITATIVO"]
