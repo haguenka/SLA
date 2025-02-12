@@ -54,10 +54,10 @@ st.markdown("""
 # -------------------------------
 # TÍTULO E LOGO NA SIDEBAR
 # -------------------------------
-st.title("Rastreador de Cálculo Renal CSSJ")
+st.title("Análise CDI - Médico Prescritor")
 if logo is not None:
     st.sidebar.image(logo, use_container_width=True)
-st.sidebar.header("Selecione os Arquivos")
+st.sidebar.header("Selecione os filtros")
 
 # Função para carregar os dados do repositório Git
 def load_data():
@@ -84,11 +84,11 @@ mes_selecionado = st.sidebar.selectbox("Selecione o mês:", meses_disponiveis)
 
 # Filtro de médico
 df_filtrado = df[df["MES"] == mes_selecionado]
-medicos = df_filtrado["MEDICO_LAUDO_DEFINITIVO"].dropna().unique()
+medicos = df_filtrado["MEDICO_SOLICITANTE"].dropna().unique()
 medico_selecionado = st.sidebar.selectbox("Selecione o médico:", medicos)
 
 # Dados filtrados
-df_medico = df_filtrado[df_filtrado["MEDICO_LAUDO_DEFINITIVO"] == medico_selecionado]
+df_medico = df_filtrado[df_filtrado["MEDICO_SOLICITANTE"] == medico_selecionado]
 
 # Exibição de dados
 tab1, tab2 = st.tabs(["Análise por Médico", "Top 10 Prescritores"])
@@ -104,5 +104,5 @@ with tab1:
 
 with tab2:
     st.header("Top 10 Médicos Prescritores")
-    top_medicos = df_filtrado["MEDICO_LAUDO_DEFINITIVO"].value_counts().head(10)
+    top_medicos = df_filtrado["MEDICO_SOLICITANTE"].value_counts().head(10)
     st.bar_chart(top_medicos)
