@@ -97,10 +97,17 @@ with tab1:
     st.header(f"Exames de {medico_selecionado}")
     st.dataframe(df_medico[["NOME_PACIENTE", "DATA_HORA_PRESCRICAO", "DESCRICAO_PROCEDIMENTO"]])
     
-    # Contagem por modalidade
-    st.subheader("Quantidade de Exames por Modalidade")
-    modalidade_counts = df_medico["MODALIDADE"].value_counts()
-    st.bar_chart(modalidade_counts)
+    # Exibição dos exames por modalidade com DataFrame para cada modalidade
+    st.subheader("Exames por Modalidade")
+    modalidades = df_medico["MODALIDADE"].dropna().unique()
+    
+    for mod in modalidades:
+        st.markdown(f"### Modalidade: {mod}")
+        df_mod = df_medico[df_medico["MODALIDADE"] == mod]
+        # Contagem dos procedimentos para a modalidade atual
+        procedimento_counts = df_mod["DESCRICAO_PROCEDIMENTO"].value_counts().reset_index()
+        procedimento_counts.columns = ["DESCRICAO_PROCEDIMENTO", "QUANTITATIVO"]
+        st.dataframe(procedimento_counts)
 
 with tab2:
     st.header("Top 10 Médicos Prescritores")
