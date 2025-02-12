@@ -70,22 +70,38 @@ def load_data():
 df = load_data()
 
 # Filtrar somente os exames externos
-df = df[df["TIPO_ATENDIMENTO"] == "Externo"]
+df = df[df["TIPO_ATENDIMENTO"] == "EXTERNOS"]
 
 # Sidebar - Filtros
-st.sidebar.header("Filtros")
 
 # Filtro de unidade
 unidades = df["UNIDADE"].dropna().unique()
 unidade_selecionada = st.sidebar.selectbox("Selecione a unidade:", unidades)
 
-# Filtro de mês
+# Filtrar por unidade
 df = df[df["UNIDADE"] == unidade_selecionada]
-df["MES"] = df["DATA_HORA_PRESCRICAO"].dt.to_period("M")
-meses_disponiveis = df["MES"].dropna().unique()
-mes_selecionado = st.sidebar.selectbox("Selecione o mês:", meses_disponiveis)
 
-# Filtro de médico
+# Converter DATA_HORA_PRESCRICAO para período mensal
+df["MES"] = df["DATA_HORA_PRESCRICAO"].dt.to_period("M")
+
+# Dicionário para mapear número do mês para o nome em português
+meses_portugues = {
+    1: "JANEIRO", 2: "FEVEREIRO", 3: "MARÇO", 4: "ABRIL",
+    5: "MAIO", 6: "JUNHO", 7: "JULHO", 8: "AGOSTO",
+    9: "SETEMBRO", 10: "OUTUBRO", 11: "NOVEMBRO", 12: "DEZEMBRO"
+}
+
+# Criar a lista de períodos disponíveis e ordenar
+meses_disponiveis = sorted(df["MES"].dropna().unique())
+
+# Selectbox customizado para exibir MÊS/ANO (ex.: JANEIRO/25)
+mes_selecionado = st.sidebar.selectbox(
+    "Selecione o mês:",
+    meses_disponiveis,
+    format_func=lambda p: f"{meses_portugues[p.month]}/{str(p.year)[-2:]}"
+)
+
+# Filtro de médico (após filtrar por mês)
 df_filtrado = df[df["MES"] == mes_selecionado]
 medicos = df_filtrado["MEDICO_SOLICITANTE"].dropna().unique()
 medico_selecionado = st.sidebar.selectbox("Selecione o médico:", medicos)
@@ -102,11 +118,11 @@ with tab1:
     
     # Exibição dos exames por modalidade com DataFrame para cada modalidade
     st.subheader("Exames por Modalidade")
-    modalidades = df_medico["GRUPO"].dropna().unique()
+    modalidades = df_medico["MODALIDADE"].dropna().unique()
     
     for mod in modalidades:
         st.markdown(f"### Modalidade: {mod}")
-        df_mod = df_medico[df_medico["GRUPO"] == mod]
+        df_mod = df_medico[df_medico["MODALIDADE"] == mod]
         # Contagem dos procedimentos para a modalidade atual
         procedimento_counts = df_mod["DESCRICAO_PROCEDIMENTO"].value_counts().reset_index()
         procedimento_counts.columns = ["DESCRICAO_PROCEDIMENTO", "QUANTITATIVO"]
