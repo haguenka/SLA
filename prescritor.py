@@ -85,21 +85,32 @@ unidade_selecionada = st.sidebar.selectbox("Selecione a unidade:", unidades)
 df = df[df["UNIDADE"] == unidade_selecionada]
 
 # Filtro de período específico utilizando STATUS_ALAUDAR
-# Filtro de período específico utilizando STATUS_ALAUDAR
 if df["STATUS_ALAUDAR"].notnull().any():
+    # Define as datas mínima e máxima dos dados
     min_date = df["STATUS_ALAUDAR"].min().date()
     max_date = df["STATUS_ALAUDAR"].max().date()
-    periodo = st.sidebar.date_input("Selecione o período:", [min_date, max_date])
+    
+    # O widget restringe a seleção entre min_date e max_date
+    periodo = st.sidebar.date_input(
+        "Selecione o período:",
+        value=[min_date, max_date],
+        min_value=min_date,
+        max_value=max_date
+    )
+    
     # Verifica se o usuário selecionou duas datas
     if isinstance(periodo, list) and len(periodo) == 2:
         start_date, end_date = periodo
-        # Converter as datas selecionadas para datetime
         start_dt = pd.to_datetime(start_date)
-        # Ajustar o final do período para incluir todo o dia final
+        # Ajusta o final do período para incluir todo o dia final
         end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
         df = df[(df["STATUS_ALAUDAR"] >= start_dt) & (df["STATUS_ALAUDAR"] <= end_dt)]
 else:
     st.sidebar.warning("A coluna STATUS_ALAUDAR não possui datas válidas.")
+
+# Verifica se a filtragem por período resultou em registros
+if df.empty:
+    st.warning("Nenhum registro encontrado para o período selecionado.")
 
 # Filtro de médico (após filtrar por período)
 medicos = df["MEDICO_SOLICITANTE"].dropna().unique()
