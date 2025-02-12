@@ -134,6 +134,6 @@ with tab2:
 
     st.header("Top 10 Médicos Prescritores de RM")
     # Filtrar registros cuja coluna MODALIDADE contenha "RM"
-    df_rm = df[df["MODALIDADE"].str.contains("RM", case=False, na=False)]
+    df_rm = df[df["MODALIDADE"].str.contains("MR", case=False, na=False)]
     top_medicos_rm = df_rm["MEDICO_SOLICITANTE"].value_counts().head(10)
     st.bar_chart(top_medicos_rm)
