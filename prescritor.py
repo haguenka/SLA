@@ -86,20 +86,20 @@ unidades = df["UNIDADE"].dropna().unique()
 unidade_selecionada = st.sidebar.selectbox("Selecione a unidade:", unidades)
 df = df[df["UNIDADE"] == unidade_selecionada]
 
-# Novo filtro: Selecionar exames cuja data STATUS_ALAUDAR seja superior a um período definido
-# Opções: Superior a 1 mês, 3 meses ou 6 meses
+# Novo Filtro: Selecionar exames realizados nos últimos 1/3/6 meses
 periodo_options = {
-    "Superior a 1 mês": 1,
-    "Superior a 3 meses": 3,
-    "Superior a 6 meses": 6,
+    "Últimos 1 mês": 1,
+    "Últimos 3 meses": 3,
+    "Últimos 6 meses": 6,
 }
 selected_period_label = st.sidebar.selectbox(
-    "Selecione o período de antiguidade dos exames:",
+    "Selecione o período:",
     list(periodo_options.keys())
 )
 meses_threshold = periodo_options[selected_period_label]
 threshold_date = pd.Timestamp.today() - pd.DateOffset(months=meses_threshold)
-df = df[df["STATUS_ALAUDAR"] <= threshold_date]
+# Manter apenas os exames realizados a partir de threshold_date (nos últimos X meses)
+df = df[df["STATUS_ALAUDAR"] >= threshold_date]
 
 if df.empty:
     st.warning("Nenhum registro encontrado para o período selecionado.")
