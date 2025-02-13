@@ -84,37 +84,32 @@ df = df[df["TIPO_ATENDIMENTO"] == "Externo"]
 # Filtro de unidade
 unidades = df["UNIDADE"].dropna().unique()
 unidade_selecionada = st.sidebar.selectbox("Selecione a unidade:", unidades)
-
-# Filtrar por unidade
 df = df[df["UNIDADE"] == unidade_selecionada]
 
-# Filtro de período específico utilizando STATUS_ALAUDAR
-if df["STATUS_ALAUDAR"].notnull().any():
-    min_date = df["STATUS_ALAUDAR"].min().date()
-    max_date = df["STATUS_ALAUDAR"].max().date()
-    
-    # O widget restringe a seleção entre min_date e max_date
-    periodo = st.sidebar.date_input(
-        "Selecione o período:",
-        value=[min_date, max_date],
-        min_value=min_date,
-        max_value=max_date
-    )
-    
-    if isinstance(periodo, list) and len(periodo) == 2:
-        start_date, end_date = periodo
-        # Converter as datas selecionadas para datetime (horário 00:00:00 para o início)
-        start_dt = pd.to_datetime(start_date)
-        # Ajustar o final para incluir todo o dia (até 23:59:59)
-        end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
-        df = df[(df["STATUS_ALAUDAR"] >= start_dt) & (df["STATUS_ALAUDAR"] <= end_dt)]
-else:
-    st.sidebar.warning("A coluna STATUS_ALAUDAR não possui datas válidas.")
+# Converter STATUS_ALAUDAR para período mensal (mês/ano)
+df["MES"] = df["STATUS_ALAUDAR"].dt.to_period("M")
 
-if df.empty:
-    st.warning("Nenhum registro encontrado para o período selecionado.")
+# Dicionário para mapear o número do mês para o nome em português
+meses_portugues = {
+    1: "JANEIRO", 2: "FEVEREIRO", 3: "MARÇO", 4: "ABRIL",
+    5: "MAIO", 6: "JUNHO", 7: "JULHO", 8: "AGOSTO",
+    9: "SETEMBRO", 10: "OUTUBRO", 11: "NOVEMBRO", 12: "DEZEMBRO"
+}
 
-# Filtro de médico (após filtrar por período)
+# Cria a lista de períodos disponíveis e ordena
+meses_disponiveis = sorted(df["MES"].dropna().unique())
+
+# Selectbox para selecionar o mês/ano com o formato "NOME_DO_MÊS/AA"
+mes_selecionado = st.sidebar.selectbox(
+    "Selecione o mês/ano:",
+    meses_disponiveis,
+    format_func=lambda p: f"{meses_portugues[p.month]}/{str(p.year)[-2:]}"
+)
+
+# Filtrar os dados pelo mês/ano selecionado
+df = df[df["MES"] == mes_selecionado]
+
+# Filtro de médico (após filtrar por mês/ano)
 medicos = df["MEDICO_SOLICITANTE"].dropna().unique()
 medico_selecionado = st.sidebar.selectbox("Selecione o médico:", medicos)
 
@@ -126,7 +121,7 @@ tab1, tab2 = st.tabs(["Análise por Médico", "Top 10 Médicos Prescritores de R
 
 with tab1:
     st.header(f"Exames de {medico_selecionado}")
-    # Criar uma cópia para formatação de datas para exibição (dd/mm/yyyy)
+    # Preparar o DataFrame para exibição formatando as datas para dd/mm/yyyy
     df_display = df_medico.copy()
     df_display["DATA_HORA_PRESCRICAO"] = df_display["DATA_HORA_PRESCRICAO"].dt.strftime("%d/%m/%Y")
     df_display["STATUS_ALAUDAR"] = df_display["STATUS_ALAUDAR"].dt.strftime("%d/%m/%Y")
@@ -148,6 +143,6 @@ with tab2:
     st.bar_chart(top_medicos)
 
     st.header("Top 10 Médicos Prescritores de RM")
-    df_rm = df[df["MODALIDADE"].str.contains("RM", case=False, na=False)]
+    df_rm = df[df["MODALIDADE"].str.contains("MR", case=False, na=False)]
     top_medicos_rm = df_rm["MEDICO_SOLICITANTE"].value_counts().head(10)
     st.bar_chart(top_medicos_rm)
