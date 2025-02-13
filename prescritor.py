@@ -105,7 +105,8 @@ if df.empty:
     st.warning("Nenhum registro encontrado para o período selecionado.")
 
 # Filtro de médico (após os filtros anteriores)
-medicos = df["MEDICO_SOLICITANTE"].dropna().unique()
+excluir_medicos = ["HENRIQUE ARUME GUENKA", "MARCELO JACOBINA DE ABREU"]
+medicos = [m for m in df["MEDICO_SOLICITANTE"].dropna().unique() if m not in excluir_medicos]
 medico_selecionado = st.sidebar.selectbox("Selecione o médico:", medicos)
 
 # Dados filtrados
