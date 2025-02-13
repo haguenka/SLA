@@ -86,30 +86,25 @@ unidades = df["UNIDADE"].dropna().unique()
 unidade_selecionada = st.sidebar.selectbox("Selecione a unidade:", unidades)
 df = df[df["UNIDADE"] == unidade_selecionada]
 
-# Converter STATUS_ALAUDAR para período mensal (mês/ano)
-df["MES"] = df["STATUS_ALAUDAR"].dt.to_period("M")
-
-# Dicionário para mapear o número do mês para o nome em português
-meses_portugues = {
-    1: "JANEIRO", 2: "FEVEREIRO", 3: "MARÇO", 4: "ABRIL",
-    5: "MAIO", 6: "JUNHO", 7: "JULHO", 8: "AGOSTO",
-    9: "SETEMBRO", 10: "OUTUBRO", 11: "NOVEMBRO", 12: "DEZEMBRO"
+# Novo filtro: Selecionar exames cuja data STATUS_ALAUDAR seja superior a um período definido
+# Opções: Superior a 1 mês, 3 meses ou 6 meses
+periodo_options = {
+    "Superior a 1 mês": 1,
+    "Superior a 3 meses": 3,
+    "Superior a 6 meses": 6,
 }
-
-# Cria a lista de períodos disponíveis e ordena
-meses_disponiveis = sorted(df["MES"].dropna().unique())
-
-# Selectbox para selecionar o mês/ano com o formato "NOME_DO_MÊS/AA"
-mes_selecionado = st.sidebar.selectbox(
-    "Selecione o mês/ano:",
-    meses_disponiveis,
-    format_func=lambda p: f"{meses_portugues[p.month]}/{str(p.year)[-2:]}"
+selected_period_label = st.sidebar.selectbox(
+    "Selecione o período de antiguidade dos exames:",
+    list(periodo_options.keys())
 )
+meses_threshold = periodo_options[selected_period_label]
+threshold_date = pd.Timestamp.today() - pd.DateOffset(months=meses_threshold)
+df = df[df["STATUS_ALAUDAR"] <= threshold_date]
 
-# Filtrar os dados pelo mês/ano selecionado
-df = df[df["MES"] == mes_selecionado]
+if df.empty:
+    st.warning("Nenhum registro encontrado para o período selecionado.")
 
-# Filtro de médico (após filtrar por mês/ano)
+# Filtro de médico (após os filtros anteriores)
 medicos = df["MEDICO_SOLICITANTE"].dropna().unique()
 medico_selecionado = st.sidebar.selectbox("Selecione o médico:", medicos)
 
@@ -121,7 +116,7 @@ tab1, tab2 = st.tabs(["Análise por Médico", "Top 10 Médicos Prescritores de R
 
 with tab1:
     st.header(f"Exames de {medico_selecionado}")
-    # Preparar o DataFrame para exibição formatando as datas para dd/mm/yyyy
+    # Preparar DataFrame para exibição formatando as datas para dd/mm/yyyy
     df_display = df_medico.copy()
     df_display["DATA_HORA_PRESCRICAO"] = df_display["DATA_HORA_PRESCRICAO"].dt.strftime("%d/%m/%Y")
     df_display["STATUS_ALAUDAR"] = df_display["STATUS_ALAUDAR"].dt.strftime("%d/%m/%Y")
@@ -129,7 +124,6 @@ with tab1:
     
     st.subheader("Exames por Modalidade")
     modalidades = df_medico["MODALIDADE"].dropna().unique()
-    
     for mod in modalidades:
         st.markdown(f"### Modalidade: {mod}")
         df_mod = df_medico[df_medico["MODALIDADE"] == mod]
