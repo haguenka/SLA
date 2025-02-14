@@ -91,7 +91,7 @@ def main():
             return
 
         # Remove as linhas em que ambas STATUS_PRELIMINAR e STATUS_APROVADO estão ausentes
-        df = df.dropna(subset=['STATUS_PRELIMINAR', 'STATUS_APROVADO'], how='all')
+        #df = df.dropna(subset=['STATUS_PRELIMINAR', 'STATUS_APROVADO'], how='all')
 
         # Cálculo do DELTA_TIME
         df['END_DATE'] = df['STATUS_PRELIMINAR'].fillna(df['STATUS_APROVADO'])
