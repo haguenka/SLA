@@ -187,6 +187,12 @@ def main():
             (df_selected['DATA_HORA_PRESCRICAO'] <= pd.Timestamp(end_date))
         ]
 
+        df_filtered_2 = df_selected[
+            (df_selected['UNIDADE'] == selected_unidade) &
+            (df_selected['DATA_HORA_PRESCRICAO'] >= pd.Timestamp(start_date)) &
+            (df_selected['DATA_HORA_PRESCRICAO'] <= pd.Timestamp(end_date))
+        ]
+
         # ----------------------------------------------------------------------
         # Criação das abas para visualização dos dados
         # ----------------------------------------------------------------------
@@ -256,7 +262,7 @@ def main():
         # Aba 2: Exames sem Laudo (filtrados por status_atual com as entradas desejadas)
         with tab2:
             st.subheader("Exames sem Laudo")
-            df_sem_laudo = df_filtered[df_filtered['STATUS_ATUAL'].isin(['A laudar', 'Liberado', 'Sem laudo', 'Preliminar', 'Em sala'])]
+            df_sem_laudo = df_filtered_2[df_filtered_2['STATUS_ATUAL'].isin(['A laudar', 'Sem laudo', 'Preliminar'])]
             st.dataframe(df_sem_laudo)
             st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
 
