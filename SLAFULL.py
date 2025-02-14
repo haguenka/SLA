@@ -155,7 +155,7 @@ def main():
             'DATA_HORA_PRESCRICAO',  # Utilizada para o filtro de data
             'STATUS_ALAUDAR', 'STATUS_PRELIMINAR', 'STATUS_APROVADO',
             'MEDICO_SOLICITANTE', 'DELTA_TIME', 'SLA_STATUS', 'OBSERVACAO',
-            'PERIODO_DIA'
+            'PERIODO_DIA', 'STATUS_ATUAL'
         ]
         df_selected = df[selected_columns]
 
