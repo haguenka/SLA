@@ -192,22 +192,26 @@ def main():
         # ----------------------------------------------------------------------
         tab1, tab2 = st.tabs(["Exames com Laudo", "Exames sem Laudo"])
 
-        # Aba 1: Exames com laudo (todos os registros filtrados)
+        # Aba 1: Exames com laudo (apenas registros onde pelo menos um status de laudo é válido)
         with tab1:
             st.subheader("Dados dos Exames (com laudo)")
-            st.dataframe(df_filtered)
-            total_exams = len(df_filtered)
+            # Filtra os exames onde pelo menos um dos campos de laudo possui uma data válida
+            df_com_laudo = df_filtered[
+                (df_filtered['STATUS_PRELIMINAR'].notna()) | (df_filtered['STATUS_APROVADO'].notna())
+            ]
+            st.dataframe(df_com_laudo)
+            total_exams = len(df_com_laudo)
             st.write(f"Total de exames: {total_exams}")
-
+        
             # Exibe exames com SLA FORA DO PERÍODO, ordenados por período do dia
-            df_fora = df_filtered[df_filtered['SLA_STATUS'] == 'SLA FORA DO PERÍODO'].copy()
+            df_fora = df_com_laudo[df_com_laudo['SLA_STATUS'] == 'SLA FORA DO PERÍODO'].copy()
             periodo_order = {"Madrugada": 1, "Manhã": 2, "Tarde": 3, "Noite": 4}
             df_fora['PERIODO_ORDER'] = df_fora['PERIODO_DIA'].map(periodo_order)
             df_fora = df_fora.sort_values(by='PERIODO_ORDER', ascending=True)
-
+        
             st.subheader("Exames SLA FORA DO PRAZO (ordenados por período do dia)")
             st.dataframe(df_fora.drop(columns=['PERIODO_ORDER']))
-
+        
             # Contagem por período (apenas exames com SLA FORA DO PERÍODO)
             contagem_periodo = df_fora['PERIODO_DIA'].value_counts()
             contagem_periodo_df = pd.DataFrame({
@@ -216,19 +220,19 @@ def main():
             })
             st.subheader("Contagem por período (exames SLA FORA DO PRAZO)")
             st.dataframe(contagem_periodo_df)
-
-            # Contagem total por período (todos os exames)
-            contagem_periodo_total = df_filtered['PERIODO_DIA'].value_counts()
+        
+            # Contagem total por período (todos os exames com laudo)
+            contagem_periodo_total = df_com_laudo['PERIODO_DIA'].value_counts()
             contagem_periodo_total_df = pd.DataFrame({
                 'PERIODO_DIA': contagem_periodo_total.index,
                 'Contagem': contagem_periodo_total.values
             })
             st.subheader("Contagem total por período (todos os exames)")
             st.dataframe(contagem_periodo_total_df)
-
+        
             # Gráfico de Pizza para o SLA Status
-            if not df_filtered.empty:
-                sla_status_counts = df_filtered['SLA_STATUS'].value_counts()
+            if not df_com_laudo.empty:
+                sla_status_counts = df_com_laudo['SLA_STATUS'].value_counts()
                 colors = ['lightcoral' if status == 'SLA FORA DO PERÍODO' else 'lightgreen'
                           for status in sla_status_counts.index]
                 fig, ax = plt.subplots()
@@ -239,12 +243,12 @@ def main():
                     colors=colors
                 )
                 ax.set_title(f'SLA Status - {selected_unidade} - {selected_grupo} - {selected_tipo_atendimento}')
-
+        
                 # Adiciona o logo no gráfico
                 logo_img = Image.open(BytesIO(requests.get(url).content))
                 logo_img.thumbnail((400, 400))
                 fig.figimage(logo_img, 10, 10, zorder=1, alpha=0.7)
-
+        
                 st.pyplot(fig)
             else:
                 st.warning("Nenhum registro encontrado para este filtro.")
