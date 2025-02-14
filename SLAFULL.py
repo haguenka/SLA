@@ -252,7 +252,7 @@ def main():
         # Aba 2: Exames sem Laudo (filtrados por status_atual == 'A laudar')
         with tab2:
             st.subheader("Exames sem Laudo")
-            df_sem_laudo = df[df['STATUS_ATUAL'] == 'Liberado']
+            df_sem_laudo = df_filtered[df['STATUS_ATUAL'] == 'Liberado']
             st.dataframe(df_sem_laudo)
             st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
 
