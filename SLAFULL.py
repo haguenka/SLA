@@ -249,11 +249,10 @@ def main():
             else:
                 st.warning("Nenhum registro encontrado para este filtro.")
 
-        # Aba 2: Exames sem Laudo (STATUS_APROVADO nulo/NULL)
+        # Aba 2: Exames sem Laudo (filtrados por status_atual == 'A laudar')
         with tab2:
             st.subheader("Exames sem Laudo")
-            # Aqui filtramos registros onde STATUS_APROVADO é nulo (NaT)
-            df_sem_laudo = df_filtered[df_filtered['STATUS_APROVADO'].isna()]
+            df_sem_laudo = df_filtered[df_filtered['status_atual'] == 'A laudar']
             st.dataframe(df_sem_laudo)
             st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
 
