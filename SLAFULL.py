@@ -189,6 +189,7 @@ def main():
 
         df_filtered_2 = df_selected[
             (df_selected['UNIDADE'] == selected_unidade) &
+            (df_selected['GRUPO'] == selected_grupo) &
             (df_selected['DATA_HORA_PRESCRICAO'] >= pd.Timestamp(start_date)) &
             (df_selected['DATA_HORA_PRESCRICAO'] <= pd.Timestamp(end_date))
         ]
