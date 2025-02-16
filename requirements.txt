@@ -12,3 +12,4 @@ pdfplumber
 thefuzz
 fuzzywuzzy
 pytesseract
+pandasai
