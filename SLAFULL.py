@@ -247,11 +247,11 @@ def main():
                     try:
                         # Importa as classes do PandasAI
                         from pandasai import PandasAI
-                        from pandasai.llm.openai import Openai
+                        from pandasai.llm.openai import OpenAI
 
                         # Recupera a chave de API da OpenAI a partir dos secrets
                         openai_api_key = st.secrets["openai"]["api_key"]
-                        llm = Openai(api_token=openai_api_key)
+                        llm = OpenAI(api_token=openai_api_key)
                         pandas_ai = PandasAI(llm)
                         
                         # Executa a consulta sobre o DataFrame filtrado
