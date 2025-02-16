@@ -5,8 +5,8 @@ from PIL import Image
 import requests
 from io import BytesIO
 import numpy as np
-import os
 import re
+from datetime import datetime
 
 # Funções com cache do Streamlit
 @st.cache_data
@@ -32,8 +32,8 @@ def main():
     st.title("Análise de SLA Dashboard")
 
     # Carrega e exibe o logo na barra lateral
-    url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
-    logo = load_logo(url)
+    logo_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
+    logo = load_logo(logo_url)
     st.sidebar.image(logo, use_container_width=True)
 
     # Tenta carregar a planilha do GitHub; se não conseguir, permite upload
@@ -52,7 +52,6 @@ def main():
         if 'MEDICO_SOLICITANTE' not in df.columns:
             st.error("'MEDICO_SOLICITANTE' column not found in the data.")
             return
-
         if 'UNIDADE' not in df.columns or 'TIPO_ATENDIMENTO' not in df.columns:
             st.error("'UNIDADE' ou 'TIPO_ATENDIMENTO' column not found.")
             return
@@ -68,10 +67,7 @@ def main():
         ]
         df = df[df['GRUPO'].isin(allowed_groups)]
 
-        # --------------------------------------------------------------
         # Substitui células vazias ou contendo somente espaços por np.nan
-        # e converte STATUS_APROVADO para datetime (valores inválidos viram NaT)
-        # --------------------------------------------------------------
         if 'STATUS_APROVADO' in df.columns:
             df['STATUS_APROVADO'] = df['STATUS_APROVADO'].replace(r'^\s*$', np.nan, regex=True)
         else:
@@ -83,15 +79,12 @@ def main():
         df['STATUS_PRELIMINAR'] = pd.to_datetime(df['STATUS_PRELIMINAR'], dayfirst=True, errors='coerce')
         df['STATUS_APROVADO'] = pd.to_datetime(df['STATUS_APROVADO'], dayfirst=True, errors='coerce')
 
-        # Conversão da coluna DATA_HORA_PRESCRICAO (usada para o filtro de período)
+        # Conversão da coluna DATA_HORA_PRESCRICAO
         if 'DATA_HORA_PRESCRICAO' in df.columns:
             df['DATA_HORA_PRESCRICAO'] = pd.to_datetime(df['DATA_HORA_PRESCRICAO'], dayfirst=True, errors='coerce')
         else:
             st.error("'DATA_HORA_PRESCRICAO' column not found in the data.")
             return
-
-        # Remove as linhas em que ambas STATUS_PRELIMINAR e STATUS_APROVADO estão ausentes
-        #df = df.dropna(subset=['STATUS_PRELIMINAR', 'STATUS_APROVADO'], how='all')
 
         # Cálculo do DELTA_TIME
         df['END_DATE'] = df['STATUS_PRELIMINAR'].fillna(df['STATUS_APROVADO'])
@@ -112,7 +105,7 @@ def main():
         condition_2 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (~df['MEDICO_SOLICITANTE'].isin(doctors_of_interest)) & (df['DELTA_TIME'] > 120)
         condition_3 = (df['GRUPO'] == 'GRUPO RAIO-X') & (df['DELTA_TIME'] > 72)
         condition_4 = (df['GRUPO'] == 'GRUPO MEDICINA NUCLEAR') & (df['DELTA_TIME'] > 120)
-        condition_5 = (df['TIPO_ATENDIMENTO'] == 'Pronto Atendimento') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 1.2)
+        condition_5 = (df['TIPO_ATENDIMENTO'] == 'Pronto Atendimento') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 1)
         condition_6 = (df['TIPO_ATENDIMENTO'] == 'Internado') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 24)
         condition_7 = (df['TIPO_ATENDIMENTO'] == 'Externo') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 96)
 
@@ -124,14 +117,8 @@ def main():
         if 'OBSERVACAO' not in df.columns:
             df['OBSERVACAO'] = ''
 
-        # ----------------------------------------------------------------------
-        # 1) Criação da coluna PERIODO_DIA com base em STATUS_ALAUDAR
-        # ----------------------------------------------------------------------
+        # Criação da coluna PERIODO_DIA com base em STATUS_ALAUDAR
         def calcular_periodo_dia(dt):
-            """
-            Retorna 'Manhã', 'Tarde', 'Noite' ou 'Madrugada'
-            de acordo com a hora de STATUS_ALAUDAR.
-            """
             if pd.isna(dt):
                 return None
             hora = dt.hour
@@ -141,27 +128,21 @@ def main():
                 return "Manhã"
             elif 13 <= hora < 19:
                 return "Tarde"
-            else:  # 19 <= hora < 24
+            else:
                 return "Noite"
-
         df['PERIODO_DIA'] = df['STATUS_ALAUDAR'].apply(calcular_periodo_dia)
 
-        # ----------------------------------------------------------------------
         # Colunas selecionadas (incluindo DATA_HORA_PRESCRICAO para filtro)
-        # ----------------------------------------------------------------------
         selected_columns = [
             'SAME', 'NOME_PACIENTE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO',
             'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE', 'TIPO_ATENDIMENTO',
-            'DATA_HORA_PRESCRICAO',  # Utilizada para o filtro de data
-            'STATUS_ALAUDAR', 'STATUS_PRELIMINAR', 'STATUS_APROVADO',
-            'MEDICO_SOLICITANTE', 'DELTA_TIME', 'SLA_STATUS', 'OBSERVACAO',
-            'PERIODO_DIA', 'STATUS_ATUAL'
+            'DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR', 'STATUS_PRELIMINAR',
+            'STATUS_APROVADO', 'MEDICO_SOLICITANTE', 'DELTA_TIME', 'SLA_STATUS',
+            'OBSERVACAO', 'PERIODO_DIA', 'STATUS_ATUAL'
         ]
         df_selected = df[selected_columns]
 
-        # ----------------------------------------------------------------------
-        # 2) Filtros na barra lateral
-        # ----------------------------------------------------------------------
+        # Filtros na barra lateral
         unidade_options = df['UNIDADE'].unique()
         selected_unidade = st.sidebar.selectbox("Selecione a UNIDADE", sorted(unidade_options))
 
@@ -171,14 +152,12 @@ def main():
         tipo_atendimento_options = df['TIPO_ATENDIMENTO'].unique()
         selected_tipo_atendimento = st.sidebar.selectbox("Selecione o Tipo de Atendimento", sorted(tipo_atendimento_options))
 
-        # Utiliza DATA_HORA_PRESCRICAO para selecionar o período
+        # Filtro pelo período utilizando DATA_HORA_PRESCRICAO
         min_date = df['DATA_HORA_PRESCRICAO'].min()
         max_date = df['DATA_HORA_PRESCRICAO'].max()
         start_date, end_date = st.sidebar.date_input("Selecione o período", [min_date, max_date])
 
-        # ----------------------------------------------------------------------
-        # 3) Filtro do DataFrame principal
-        # ----------------------------------------------------------------------
+        # Filtra o DataFrame principal
         df_filtered = df_selected[
             (df_selected['UNIDADE'] == selected_unidade) &
             (df_selected['GRUPO'] == selected_grupo) &
@@ -187,39 +166,31 @@ def main():
             (df_selected['DATA_HORA_PRESCRICAO'] <= pd.Timestamp(end_date))
         ]
 
-        df_filtered_2 = df_selected[
-            (df_selected['UNIDADE'] == selected_unidade) &
-            (df_selected['GRUPO'] == selected_grupo) &
-            (df_selected['DATA_HORA_PRESCRICAO'] >= pd.Timestamp(start_date)) &
-            (df_selected['DATA_HORA_PRESCRICAO'] <= pd.Timestamp(end_date))
-        ]
-
-        # ----------------------------------------------------------------------
         # Criação das abas para visualização dos dados
-        # ----------------------------------------------------------------------
-        tab1, tab2 = st.tabs(["Exames com Laudo", "Exames sem Laudo"])
+        tab1, tab2, tab3 = st.tabs(["Exames com Laudo", "Exames sem Laudo", "Agente de IA"])
 
-        # Aba 1: Exames com laudo (apenas registros onde pelo menos um status de laudo é válido)
+        # --- Aba 1: Exames com Laudo ---
+        # Considera o exame como "com laudo" se:
+        # - STATUS_PRELIMINAR estiver preenchido
+        # - OU, se STATUS_PRELIMINAR estiver nulo, STATUS_APROVADO deve conter uma data válida.
         with tab1:
             st.subheader("Dados dos Exames (com laudo)")
-            # Filtra os exames onde pelo menos um dos campos de laudo possui uma data válida
             df_com_laudo = df_filtered[
                 (df_filtered['STATUS_PRELIMINAR'].notna()) | (df_filtered['STATUS_APROVADO'].notna())
             ]
             st.dataframe(df_com_laudo)
             total_exams = len(df_com_laudo)
-            st.write(f"Total de exames: {total_exams}")
-        
-            # Exibe exames com SLA FORA DO PERÍODO, ordenados por período do dia
+            st.write(f"Total de exames com laudo: {total_exams}")
+
+            # Exibe exames com SLA FORA DO PERÍODO, ordenados por PERIODO_DIA
             df_fora = df_com_laudo[df_com_laudo['SLA_STATUS'] == 'SLA FORA DO PERÍODO'].copy()
             periodo_order = {"Madrugada": 1, "Manhã": 2, "Tarde": 3, "Noite": 4}
             df_fora['PERIODO_ORDER'] = df_fora['PERIODO_DIA'].map(periodo_order)
             df_fora = df_fora.sort_values(by='PERIODO_ORDER', ascending=True)
-        
             st.subheader("Exames SLA FORA DO PRAZO (ordenados por período do dia)")
             st.dataframe(df_fora.drop(columns=['PERIODO_ORDER']))
-        
-            # Contagem por período (apenas exames com SLA FORA DO PERÍODO)
+
+            # Contagens por período
             contagem_periodo = df_fora['PERIODO_DIA'].value_counts()
             contagem_periodo_df = pd.DataFrame({
                 'PERIODO_DIA': contagem_periodo.index,
@@ -227,16 +198,15 @@ def main():
             })
             st.subheader("Contagem por período (exames SLA FORA DO PRAZO)")
             st.dataframe(contagem_periodo_df)
-        
-            # Contagem total por período (todos os exames com laudo)
+
             contagem_periodo_total = df_com_laudo['PERIODO_DIA'].value_counts()
             contagem_periodo_total_df = pd.DataFrame({
                 'PERIODO_DIA': contagem_periodo_total.index,
                 'Contagem': contagem_periodo_total.values
             })
-            st.subheader("Contagem total por período (todos os exames)")
+            st.subheader("Contagem total por período (exames com laudo)")
             st.dataframe(contagem_periodo_total_df)
-        
+
             # Gráfico de Pizza para o SLA Status
             if not df_com_laudo.empty:
                 sla_status_counts = df_com_laudo['SLA_STATUS'].value_counts()
@@ -250,22 +220,48 @@ def main():
                     colors=colors
                 )
                 ax.set_title(f'SLA Status - {selected_unidade} - {selected_grupo} - {selected_tipo_atendimento}')
-        
+
                 # Adiciona o logo no gráfico
-                logo_img = Image.open(BytesIO(requests.get(url).content))
+                logo_img = Image.open(BytesIO(requests.get(logo_url).content))
                 logo_img.thumbnail((400, 400))
                 fig.figimage(logo_img, 10, 10, zorder=1, alpha=0.7)
-        
+
                 st.pyplot(fig)
             else:
                 st.warning("Nenhum registro encontrado para este filtro.")
 
-        # Aba 2: Exames sem Laudo (filtrados por status_atual com as entradas desejadas)
+        # --- Aba 2: Exames sem Laudo ---
         with tab2:
             st.subheader("Exames sem Laudo")
-            df_sem_laudo = df_filtered_2[df_filtered_2['STATUS_ATUAL'].isin(['A laudar', 'Sem laudo', 'Preliminar'])]
+            # Filtra de acordo com os status desejados
+            df_sem_laudo = df_filtered[df_filtered['STATUS_ATUAL'].isin(['A laudar', 'Liberado', 'Sem laudo'])]
             st.dataframe(df_sem_laudo)
             st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
+
+        # --- Aba 3: Agente de IA para Consultas em Linguagem Natural ---
+        with tab3:
+            st.subheader("Agente de IA - Faça sua pergunta sobre os dados")
+            query = st.text_input("Digite sua pergunta:")
+            if st.button("Enviar Consulta"):
+                if query:
+                    try:
+                        # Importa as classes do PandasAI
+                        from pandasai import PandasAI
+                        from pandasai.llm.openai import Openai
+
+                        # Recupera a chave de API da OpenAI a partir dos secrets
+                        openai_api_key = st.secrets["openai"]["api_key"]
+                        llm = Openai(api_token=openai_api_key)
+                        pandas_ai = PandasAI(llm)
+                        
+                        # Executa a consulta sobre o DataFrame filtrado
+                        resposta = pandas_ai.run(df_filtered, query)
+                        st.write("**Resposta:**")
+                        st.write(resposta)
+                    except Exception as e:
+                        st.error(f"Erro ao executar a consulta: {e}")
+                else:
+                    st.info("Por favor, digite uma pergunta para continuar.")
 
     except Exception as e:
         st.error(f"Erro ao processar o arquivo: {e}")
