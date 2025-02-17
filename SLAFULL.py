@@ -234,7 +234,7 @@ def main():
         with tab2:
             st.subheader("Exames sem Laudo")
             # Filtra de acordo com os status desejados
-            df_sem_laudo = df_filtered[df_filtered['STATUS_ATUAL'].isin(['A laudar', 'Liberado', 'Sem laudo'])]
+            df_sem_laudo = df_filtered[df_filtered['STATUS_ATUAL'].isin(['A laudar'])]
             st.dataframe(df_sem_laudo)
             st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
 
