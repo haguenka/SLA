@@ -251,25 +251,42 @@ def main():
         with tab3:
             st.subheader("Agente de IA - Faça sua pergunta sobre os dados")
             query = st.text_input("Digite sua pergunta:")
+            
             if st.button("Enviar Consulta"):
-                if query:
-                    try:
-                        # Importa as classes do PandasAI
-                        from pandasai import PandasAI
-                        from pandasai.llm.openai import OpenAI
-
-                        # Recupera a chave de API da OpenAI a partir dos secrets
-                        openai_api_key = st.secrets["openai"]["api_key"]
-                        llm = OpenAI(api_token=openai_api_key)
-                        pandas_ai = PandasAI(llm, verbose=True)
-                        
-                        resposta = pandas_ai.run(df, prompt=query)
-                        st.write("Resposta: ", resposta)
-                    except Exception as e:
-                            st.error(f"Erro: {e}")
-                
-                else:
+                if not query:
                     st.info("Por favor, digite uma pergunta para continuar.")
+                else:
+                    # Verifique se a chave de API existe
+                    openai_api_key = st.secrets["openai"]["api_key"]
+                    if not openai_api_key:
+                        st.error("Chave de API da OpenAI não encontrada!")
+                    else:
+                        # Teste rápido de conexão
+                        import openai
+                        openai.api_key = openai_api_key
+                        try:
+                            openai.Model.list()  # Verifica se consegue listar os modelos
+                        except Exception as e:
+                            st.error(f"Erro ao conectar na OpenAI: {e}")
+                            st.stop()
+                        
+                        # Tenta rodar o PandasAI
+                        try:
+                            from pandasai import PandasAI
+                            from pandasai.llm.openai import OpenAI
+        
+                            llm = OpenAI(api_token=openai_api_key, model_name="gpt-3.5-turbo")
+                            # verbose=True mostra logs no terminal e no app
+                            pandas_ai = PandasAI(llm, verbose=True, show_code=True)
+        
+                            st.write("Quantidade de linhas no df:", len(df))
+                            resposta = pandas_ai.run(df, prompt=query)
+                            
+                            st.write("**Resposta:**")
+                            st.write(resposta)
+        
+                        except Exception as e:
+                            st.error(f"Erro ao executar a consulta: {e}")
 
     except Exception as e:
         st.error(f"Erro ao processar o arquivo: {e}")
