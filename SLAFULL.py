@@ -261,7 +261,7 @@ def main():
                         # Recupera a chave de API da OpenAI a partir dos secrets
                         openai_api_key = st.secrets["openai"]["api_key"]
                         llm = OpenAI(api_token=openai_api_key)
-                        pandas_ai = PandasAI(llm)
+                        pandas_ai = PandasAI(llm, verbose=True)
                         
                         # Executa a consulta sobre o DataFrame filtrado
                         resposta = pandas_ai.run(df_filtered, query)
