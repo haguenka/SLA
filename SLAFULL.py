@@ -263,11 +263,11 @@ def main():
                         llm = OpenAI(api_token=openai_api_key)
                         pandas_ai = PandasAI(llm, verbose=True)
                         
-                    try:
-                        resposta = pandas_ai.run(df_filtered, prompt=query)
-                        st.write("Resposta: ", resposta)
-                    except Exception as e:
-                        st.error(f"Erro: {e}")
+                        try:
+                            resposta = pandas_ai.run(df_filtered, prompt=query)
+                            st.write("Resposta: ", resposta)
+                        except Exception as e:
+                            st.error(f"Erro: {e}")
                 
                 else:
                     st.info("Por favor, digite uma pergunta para continuar.")
