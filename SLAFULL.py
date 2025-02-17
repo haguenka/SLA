@@ -275,7 +275,7 @@ def main():
                             from pandasai import PandasAI
                             from pandasai.llm.openai import OpenAI
         
-                            llm = OpenAI(api_token=openai_api_key, model_name="gpt-3.5-turbo")
+                            llm = OpenAI(api_token=openai_api_key, model_name="gpt-4o")
                             # verbose=True mostra logs no terminal e no app
                             pandas_ai = PandasAI(llm, verbose=True)
         
