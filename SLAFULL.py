@@ -269,8 +269,8 @@ def main():
                         except Exception as e:
                             st.error(f"Erro: {e}")
                 
-                else:
-                    st.info("Por favor, digite uma pergunta para continuar.")
+                    else:
+                        st.info("Por favor, digite uma pergunta para continuar.")
 
     except Exception as e:
         st.error(f"Erro ao processar o arquivo: {e}")
