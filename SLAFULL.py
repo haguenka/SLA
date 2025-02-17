@@ -263,12 +263,12 @@ def main():
                         llm = OpenAI(api_token=openai_api_key)
                         pandas_ai = PandasAI(llm, verbose=True)
                         
-                        # Executa a consulta sobre o DataFrame filtrado
-                        resposta = pandas_ai.run(df_filtered, query)
-                        st.write("**Resposta:**")
-                        st.write(resposta)
+                    try:
+                        resposta = pandas_ai.run(df_filtered, prompt=query)
+                        st.write("Resposta: ", resposta)
                     except Exception as e:
-                        st.error(f"Erro ao executar a consulta: {e}")
+                        st.error(f"Erro: {e}")
+                
                 else:
                     st.info("Por favor, digite uma pergunta para continuar.")
 
