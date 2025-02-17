@@ -247,46 +247,46 @@ def main():
             st.dataframe(df_sem_laudo)
             st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
 
-        # --- Aba 3: Agente de IA para Consultas em Linguagem Natural ---
         with tab3:
-            st.subheader("Agente de IA - Faça sua pergunta sobre os dados")
-            query = st.text_input("Digite sua pergunta:")
+            st.subheader("Agente de IA – Conversa Interativa")
+            
+            # Inicializa o histórico da conversa na sessão, se ainda não existir
+            if "conversation_history" not in st.session_state:
+                st.session_state.conversation_history = ""
+            
+            # Campo para inserir a pergunta ou comentário
+            query = st.text_input("Digite sua pergunta ou comentário:")
             
             if st.button("Enviar Consulta"):
-                if not query:
-                    st.info("Por favor, digite uma pergunta para continuar.")
+                if not query.strip():
+                    st.info("Por favor, digite uma pergunta ou comentário para continuar.")
                 else:
-                    # Verifique se a chave de API existe
-                    openai_api_key = st.secrets["openai"]["api_key"]
-                    if not openai_api_key:
-                        st.error("Chave de API da OpenAI não encontrada!")
-                    else:
-                        # Teste rápido de conexão
-                        import openai
-                        openai.api_key = openai_api_key
-                        try:
-                            openai.Model.list()  # Verifica se consegue listar os modelos
-                        except Exception as e:
-                            st.error(f"Erro ao conectar na OpenAI: {e}")
-                            st.stop()
+                    # Atualiza o histórico com a mensagem do usuário
+                    conversation = st.session_state.conversation_history
+                    conversation += f"Usuário: {query}\n"
+                    
+                    # Cria o prompt com o histórico, instruindo o modelo a responder de forma intuitiva
+                    prompt = conversation + "\nResponda de forma intuitiva, explicando detalhadamente o processo e continue a conversa de forma lógica e coerente."
+                    
+                    try:
+                        from pandasai import PandasAI
+                        from pandasai.llm.openai import OpenAI
+        
+                        openai_api_key = st.secrets["openai"]["api_key"]
+                        # Utilizando o GPT-4; certifique-se de ter acesso a ele
+                        llm = OpenAI(api_token=openai_api_key, model_name="gpt-4o")
+                        pandas_ai = PandasAI(llm, verbose=True)
                         
-                        # Tenta rodar o PandasAI
-                        try:
-                            from pandasai import PandasAI
-                            from pandasai.llm.openai import OpenAI
-        
-                            llm = OpenAI(api_token=openai_api_key, model_name="gpt-4o")
-                            # verbose=True mostra logs no terminal e no app
-                            pandas_ai = PandasAI(llm, verbose=True)
-        
-                            st.write("Quantidade de linhas no df:", len(df))
-                            resposta = pandas_ai.run(df, prompt=query)
-                            
-                            st.write("**Resposta:**")
-                            st.write(resposta)
-        
-                        except Exception as e:
-                            st.error(f"Erro ao executar a consulta: {e}")
+                        # Executa a consulta sobre o DataFrame filtrado usando o prompt com contexto
+                        resposta = pandas_ai.run(df, prompt=prompt)
+                        st.write("**Resposta:**")
+                        st.write(resposta)
+                        
+                        # Atualiza o histórico com a resposta do agente
+                        conversation += f"Agente: {resposta}\n"
+                        st.session_state.conversation_history = conversation
+                    except Exception as e:
+                        st.error(f"Erro ao executar a consulta: {e}")
 
     except Exception as e:
         st.error(f"Erro ao processar o arquivo: {e}")
