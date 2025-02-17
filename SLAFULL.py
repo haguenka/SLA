@@ -157,11 +157,20 @@ def main():
         max_date = df['DATA_HORA_PRESCRICAO'].max()
         start_date, end_date = st.sidebar.date_input("Selecione o período", [min_date, max_date])
 
-        # Filtra o DataFrame principal
+        # ----------------------------------------------------------------------
+        # 3) Filtro do DataFrame principal
+        # ----------------------------------------------------------------------
         df_filtered = df_selected[
             (df_selected['UNIDADE'] == selected_unidade) &
             (df_selected['GRUPO'] == selected_grupo) &
             (df_selected['TIPO_ATENDIMENTO'] == selected_tipo_atendimento) &
+            (df_selected['DATA_HORA_PRESCRICAO'] >= pd.Timestamp(start_date)) &
+            (df_selected['DATA_HORA_PRESCRICAO'] <= pd.Timestamp(end_date))
+        ]
+
+        df_filtered_2 = df_selected[
+            (df_selected['UNIDADE'] == selected_unidade) &
+            (df_selected['GRUPO'] == selected_grupo) &
             (df_selected['DATA_HORA_PRESCRICAO'] >= pd.Timestamp(start_date)) &
             (df_selected['DATA_HORA_PRESCRICAO'] <= pd.Timestamp(end_date))
         ]
@@ -234,7 +243,7 @@ def main():
         with tab2:
             st.subheader("Exames sem Laudo")
             # Filtra de acordo com os status desejados
-            df_sem_laudo = df_filtered[df_filtered['STATUS_ATUAL'].isin(['A laudar'])]
+            df_sem_laudo = df_filtered_2[df_filtered_2['STATUS_ATUAL'].isin(['A laudar'])]
             st.dataframe(df_sem_laudo)
             st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
 
