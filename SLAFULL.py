@@ -277,7 +277,7 @@ def main():
         
                             llm = OpenAI(api_token=openai_api_key, model_name="gpt-3.5-turbo")
                             # verbose=True mostra logs no terminal e no app
-                            pandas_ai = PandasAI(llm, verbose=True, show_code=True)
+                            pandas_ai = PandasAI(llm, verbose=True)
         
                             st.write("Quantidade de linhas no df:", len(df))
                             resposta = pandas_ai.run(df, prompt=query)
