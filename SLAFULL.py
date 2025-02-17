@@ -248,43 +248,29 @@ def main():
             st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
 
         with tab3:
-            st.subheader("Agente de IA – Conversa Interativa")
-            
-            # Inicializa o histórico da conversa na sessão, se ainda não existir
-            if "conversation_history" not in st.session_state:
-                st.session_state.conversation_history = ""
-            
-            # Campo para inserir a pergunta ou comentário
-            query = st.text_input("Digite sua pergunta ou comentário:")
-            
+            st.subheader("Agente de IA - Perguntas sobre os Dados (Respostas Intuitivas)")
+            query = st.text_input("Digite sua pergunta:")
+        
             if st.button("Enviar Consulta"):
-                if not query.strip():
-                    st.info("Por favor, digite uma pergunta ou comentário para continuar.")
+                if not query:
+                    st.info("Por favor, digite uma pergunta para continuar.")
                 else:
-                    # Atualiza o histórico com a mensagem do usuário
-                    conversation = st.session_state.conversation_history
-                    conversation += f"Usuário: {query}\n"
-                    
-                    # Cria o prompt com o histórico, instruindo o modelo a responder de forma intuitiva
-                    prompt = conversation + "\nResponda de forma intuitiva, explicando detalhadamente o processo e continue a conversa de forma lógica e coerente."
-                    
                     try:
                         from pandasai import PandasAI
                         from pandasai.llm.openai import OpenAI
         
                         openai_api_key = st.secrets["openai"]["api_key"]
-                        # Utilizando o GPT-4; certifique-se de ter acesso a ele
-                        llm = OpenAI(api_token=openai_api_key, model_name="gpt-4o")
+                        # Utilizando o modelo GPT-4 (se disponível) ou outro de sua escolha
+                        llm = OpenAI(api_token=openai_api_key, model_name="gpt-4")
                         pandas_ai = PandasAI(llm, verbose=True)
-                        
-                        # Executa a consulta sobre o DataFrame filtrado usando o prompt com contexto
+        
+                        # Acrescenta instrução para que o modelo seja intuitivo e explique o processo
+                        prompt = query + "\n\nResponda de forma intuitiva e explique detalhadamente o processo utilizado para chegar à resposta."
+        
                         resposta = pandas_ai.run(df, prompt=prompt)
                         st.write("**Resposta:**")
                         st.write(resposta)
-                        
-                        # Atualiza o histórico com a resposta do agente
-                        conversation += f"Agente: {resposta}\n"
-                        st.session_state.conversation_history = conversation
+        
                     except Exception as e:
                         st.error(f"Erro ao executar a consulta: {e}")
 
