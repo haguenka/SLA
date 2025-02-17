@@ -263,7 +263,7 @@ def main():
                         llm = OpenAI(api_token=openai_api_key)
                         pandas_ai = PandasAI(llm, verbose=True)
                         
-                        resposta = pandas_ai.run(df_filtered, prompt=query)
+                        resposta = pandas_ai.run(df, prompt=query)
                         st.write("Resposta: ", resposta)
                     except Exception as e:
                             st.error(f"Erro: {e}")
