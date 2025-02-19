@@ -258,31 +258,28 @@ def main():
 
         with tab3:
             st.subheader("Agente de IA – Chat Interativo com OpenAI")
-            
+
             # Inicializa o histórico da conversa na sessão, se ainda não existir
             if "chat_history" not in st.session_state:
+                # Mensagem do sistema para definir o comportamento e fornecer contexto dos dados
+                data_context = (
+                    f"O DataFrame filtrado possui {len(df_filtered)} registros e as colunas: "
+                    f"{', '.join(df_filtered.columns)}.\n"
+                    "Aqui está uma prévia dos 5 primeiros registros:\n"
+                    f"{df_filtered.head(5).to_string()}"
+                )
                 st.session_state.chat_history = [
                     {"role": "system", "content": (
-                        "Você é um assistente de análise de dados especializado em responder de forma intuitiva e "
-                        "explicar detalhadamente o processo, utilizando os dados do DataFrame fornecido. "
-                        "Sempre que possível, explique seu raciocínio e detalhe os passos utilizados para chegar à resposta."
-                    )}
+                        "Você é um assistente de análise de dados. "
+                        "Utilize os dados fornecidos para responder de forma intuitiva, "
+                        "executando as funções necessárias e explicando detalhadamente seu processo."
+                    )},
+                    {"role": "system", "content": data_context}
                 ]
-            
-            # (Opcional) Inclua um resumo dos dados disponíveis para dar contexto ao assistente
-            # Por exemplo, podemos informar o número de registros e as colunas do DataFrame filtrado
-            data_context = (
-                f"O DataFrame filtrado possui {len(df_filtered)} registros e as colunas: "
-                f"{', '.join(df_filtered.columns)}."
-            )
-            if "data_context" not in st.session_state:
-                st.session_state.data_context = data_context
-                # Insere essa informação logo após a mensagem do sistema
-                st.session_state.chat_history.insert(1, {"role": "system", "content": data_context})
             
             # Campo para inserir a pergunta do usuário
             user_input = st.text_input("Digite sua pergunta ou comentário:")
-            
+
             if st.button("Enviar Consulta"):
                 if not user_input.strip():
                     st.info("Por favor, digite uma pergunta para continuar.")
@@ -290,10 +287,10 @@ def main():
                     # Adiciona a mensagem do usuário ao histórico
                     st.session_state.chat_history.append({"role": "user", "content": user_input})
                     
-                    # Chama a API do OpenAI para obter a resposta
+                    # Chama a API do OpenAI para obter a resposta, mantendo o histórico de conversas
                     try:
                         response = openai.ChatCompletion.create(
-                            model="gpt-4",  # ou outro modelo de sua escolha
+                            model="gpt-4",  # ou outro modelo disponível
                             messages=st.session_state.chat_history,
                             temperature=0.7
                         )
