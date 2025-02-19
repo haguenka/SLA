@@ -7,6 +7,8 @@ from io import BytesIO
 import numpy as np
 import re
 from datetime import datetime
+import openai
+import json
 
 # Funções com cache do Streamlit
 @st.cache_data
@@ -251,17 +253,56 @@ def main():
             st.dataframe(df_sem_laudo)
             st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
 
-        import openai
 
         # Certifique-se de que a chave de API esteja definida em st.secrets
         openai.api_key = st.secrets["openai"]["api_key"]
 
         with tab3:
-            st.subheader("Agente de IA – Chat Interativo com OpenAI")
+            st.subheader("Agente de IA – Chat Interativo com OpenAI e Funções")
 
-            # Inicializa o histórico da conversa na sessão, se ainda não existir
+            # 1) Defina a função que irá consultar o DataFrame
+            def query_dataframe(question: str, df: pd.DataFrame) -> str:
+                """
+                Recebe uma pergunta em linguagem natural e 'consulta' o DataFrame df.
+                Retorna uma string com a resposta. Aqui você pode expandir a lógica
+                para lidar com diversas perguntas e operações mais complexas.
+                """
+                q_lower = question.lower()
+
+                # Exemplo simples de lógica
+                if "quantas linhas" in q_lower:
+                    return f"O DataFrame tem {len(df)} linhas."
+                elif "colunas" in q_lower or "quais são as colunas" in q_lower:
+                    return f"As colunas do DataFrame são: {', '.join(df.columns)}."
+                else:
+                    return (
+                        "Não entendi a pergunta. "
+                        "Exemplos: 'Quantas linhas tem o dataframe?' ou 'Quais são as colunas?'"
+                    )
+
+            # 2) Defina o schema da função para o ChatCompletion
+            functions = [
+                {
+                    "name": "query_dataframe",
+                    "description": (
+                        "Consulta o DataFrame carregado no Python para obter informações."
+                    ),
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "question": {
+                                "type": "string",
+                                "description": "A pergunta que o usuário fez sobre o DataFrame."
+                            }
+                        },
+                        "required": ["question"]
+                    },
+                }
+            ]
+
+            # 3) Inicializa o histórico da conversa, se ainda não existir
             if "chat_history" not in st.session_state:
-                # Mensagem do sistema para definir o comportamento e fornecer contexto dos dados
+                # Você pode manter as mensagens de sistema que já tinha, incluindo um resumo do DataFrame
                 data_context = (
                     f"O DataFrame filtrado possui {len(df_filtered)} registros e as colunas: "
                     f"{', '.join(df_filtered.columns)}.\n"
@@ -269,15 +310,22 @@ def main():
                     f"{df_filtered.head(5).to_string()}"
                 )
                 st.session_state.chat_history = [
-                    {"role": "system", "content": (
-                        "Você é um assistente de análise de dados. "
-                        "Utilize os dados fornecidos para responder de forma intuitiva, "
-                        "executando as funções necessárias e explicando detalhadamente seu processo."
-                    )},
-                    {"role": "system", "content": data_context}
+                    {
+                        "role": "system",
+                        "content": (
+                            "Você é um assistente de análise de dados. "
+                            "Você tem acesso a uma função 'query_dataframe(question)', que permite "
+                            "consultar o DataFrame real em Python. Sempre que precisar de dados concretos, "
+                            "chame a função. Responda de forma intuitiva e explique seu raciocínio."
+                        )
+                    },
+                    {
+                        "role": "system",
+                        "content": data_context
+                    }
                 ]
-            
-            # Campo para inserir a pergunta do usuário
+
+            # 4) Campo para inserir a pergunta do usuário
             user_input = st.text_input("Digite sua pergunta ou comentário:")
 
             if st.button("Enviar Consulta"):
@@ -286,22 +334,67 @@ def main():
                 else:
                     # Adiciona a mensagem do usuário ao histórico
                     st.session_state.chat_history.append({"role": "user", "content": user_input})
-                    
-                    # Chama a API do OpenAI para obter a resposta, mantendo o histórico de conversas
+
                     try:
+                        # 5) Chama a API do ChatCompletion com suporte a function calling
                         response = openai.ChatCompletion.create(
-                            model="gpt-4",  # ou outro modelo disponível
+                            model="gpt-4",  # Use GPT-4 ou outro modelo com function calling
                             messages=st.session_state.chat_history,
+                            functions=functions,
+                            function_call="auto",  # Deixe o modelo decidir se chama a função
                             temperature=0.7
                         )
-                        assistant_reply = response.choices[0].message.content
-                        
-                        # Exibe a resposta
-                        st.write("**Resposta:**")
-                        st.write(assistant_reply)
-                        
-                        # Adiciona a resposta ao histórico da conversa
-                        st.session_state.chat_history.append({"role": "assistant", "content": assistant_reply})
+
+                        msg_content = response["choices"][0]["message"]
+
+                        # Verifica se o modelo chamou a função
+                        if msg_content.get("function_call"):
+                            # Extrai o nome da função e os argumentos
+                            function_name = msg_content["function_call"]["name"]
+                            arguments_json = msg_content["function_call"]["arguments"]
+                            arguments = json.loads(arguments_json)
+
+                            if function_name == "query_dataframe":
+                                # Executa a função localmente no Python
+                                answer = query_dataframe(arguments["question"], df_filtered)
+
+                                # Adiciona a resposta do "funcionário" (função) ao histórico
+                                st.session_state.chat_history.append({
+                                    "role": "function",
+                                    "name": function_name,
+                                    "content": answer
+                                })
+
+                                # 6) Agora chamamos a API novamente, incluindo a resposta da função
+                                second_response = openai.ChatCompletion.create(
+                                    model="gpt-4",
+                                    messages=st.session_state.chat_history,
+                                    temperature=0.7
+                                )
+                                final_reply = second_response["choices"][0]["message"]["content"]
+
+                                # Adiciona a resposta final do assistente ao histórico
+                                st.session_state.chat_history.append({
+                                    "role": "assistant",
+                                    "content": final_reply
+                                })
+
+                                # Exibe a resposta
+                                st.write("**Resposta:**")
+                                st.write(final_reply)
+
+                            else:
+                                st.error("Função desconhecida chamada pelo modelo.")
+                        else:
+                            # Se não chamou função, é uma resposta direta
+                            final_reply = msg_content["content"]
+                            st.session_state.chat_history.append({
+                                "role": "assistant",
+                                "content": final_reply
+                            })
+                            st.write("**Resposta:**")
+                            st.write(final_reply)
+
                     except Exception as e:
                         st.error(f"Erro ao executar a consulta: {e}")
 
