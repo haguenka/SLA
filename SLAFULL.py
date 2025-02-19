@@ -251,30 +251,60 @@ def main():
             st.dataframe(df_sem_laudo)
             st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
 
+        import openai
+
+        # Certifique-se de que a chave de API esteja definida em st.secrets
+        openai.api_key = st.secrets["openai"]["api_key"]
+
         with tab3:
-            st.subheader("Agente de IA - Perguntas sobre os Dados (Respostas Intuitivas)")
-            query = st.text_input("Digite sua pergunta:")
-        
+            st.subheader("Agente de IA – Chat Interativo com OpenAI")
+            
+            # Inicializa o histórico da conversa na sessão, se ainda não existir
+            if "chat_history" not in st.session_state:
+                st.session_state.chat_history = [
+                    {"role": "system", "content": (
+                        "Você é um assistente de análise de dados especializado em responder de forma intuitiva e "
+                        "explicar detalhadamente o processo, utilizando os dados do DataFrame fornecido. "
+                        "Sempre que possível, explique seu raciocínio e detalhe os passos utilizados para chegar à resposta."
+                    )}
+                ]
+            
+            # (Opcional) Inclua um resumo dos dados disponíveis para dar contexto ao assistente
+            # Por exemplo, podemos informar o número de registros e as colunas do DataFrame filtrado
+            data_context = (
+                f"O DataFrame filtrado possui {len(df_filtered)} registros e as colunas: "
+                f"{', '.join(df_filtered.columns)}."
+            )
+            if "data_context" not in st.session_state:
+                st.session_state.data_context = data_context
+                # Insere essa informação logo após a mensagem do sistema
+                st.session_state.chat_history.insert(1, {"role": "system", "content": data_context})
+            
+            # Campo para inserir a pergunta do usuário
+            user_input = st.text_input("Digite sua pergunta ou comentário:")
+            
             if st.button("Enviar Consulta"):
-                if not query:
+                if not user_input.strip():
                     st.info("Por favor, digite uma pergunta para continuar.")
                 else:
+                    # Adiciona a mensagem do usuário ao histórico
+                    st.session_state.chat_history.append({"role": "user", "content": user_input})
+                    
+                    # Chama a API do OpenAI para obter a resposta
                     try:
-                        from pandasai import PandasAI
-                        from pandasai.llm.openai import OpenAI
-        
-                        openai_api_key = st.secrets["openai"]["api_key"]
-                        # Utilizando o modelo GPT-4 (se disponível) ou outro de sua escolha
-                        llm = OpenAI(api_token=openai_api_key, model_name="gpt-4")
-                        pandas_ai = PandasAI(llm, verbose=True)
-        
-                        # Acrescenta instrução para que o modelo seja intuitivo e explique o processo
-                        prompt = query + "\n\nResponda de forma intuitiva e explique detalhadamente o processo utilizado para chegar à resposta."
-        
-                        resposta = pandas_ai.run(df, prompt=prompt)
+                        response = openai.ChatCompletion.create(
+                            model="gpt-4",  # ou outro modelo de sua escolha
+                            messages=st.session_state.chat_history,
+                            temperature=0.7
+                        )
+                        assistant_reply = response.choices[0].message.content
+                        
+                        # Exibe a resposta
                         st.write("**Resposta:**")
-                        st.write(resposta)
-        
+                        st.write(assistant_reply)
+                        
+                        # Adiciona a resposta ao histórico da conversa
+                        st.session_state.chat_history.append({"role": "assistant", "content": assistant_reply})
                     except Exception as e:
                         st.error(f"Erro ao executar a consulta: {e}")
 
