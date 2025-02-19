@@ -87,7 +87,11 @@ def main():
             return
 
         # Cálculo do DELTA_TIME
-        df['END_DATE'] = df['STATUS_PRELIMINAR'].fillna(df['STATUS_APROVADO'])
+        df['END_DATE'] = df.apply(
+            lambda row: row['STATUS_APROVADO'] if row['UNIDADE'] == 'Hospital Santa Catarina'
+            else (row['STATUS_PRELIMINAR'] if pd.notna(row['STATUS_PRELIMINAR']) else row['STATUS_APROVADO']),
+            axis=1
+        )
         df['DELTA_TIME'] = df.apply(
             lambda row: (
                 np.busday_count(row['STATUS_ALAUDAR'].date(), row['END_DATE'].date()) * 24
