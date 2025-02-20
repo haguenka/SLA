@@ -523,21 +523,22 @@ def main():
 
                     except Exception as e:
                         st.error(f"Erro ao executar a consulta: {e}")
+                        
+            # Em algum lugar da sua interface (por exemplo, logo abaixo da área de chat):
+            data = export_last_query_to_excel_bytes()
+            if data:
+                st.download_button(
+                    label="Baixar Excel",
+                    data=data,
+                    file_name="resultado.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            else:
+                st.info("Não há resultado para exportar no momento.")
+
 
     except Exception as e:
         st.error(f"Erro ao processar o arquivo: {e}")
-
-# Em algum lugar da sua interface (por exemplo, logo abaixo da área de chat):
-data = export_last_query_to_excel_bytes()
-if data:
-    st.download_button(
-        label="Baixar Excel",
-        data=data,
-        file_name="resultado.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-else:
-    st.info("Não há resultado para exportar no momento.")
 
 if __name__ == "__main__":
     main()
