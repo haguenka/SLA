@@ -256,29 +256,23 @@ def main():
         # -------------------------------------------------------------
         # Função para exportar o último resultado em Excel
         # -------------------------------------------------------------
-        def export_last_query_to_excel() -> str:
+        def export_last_query_to_excel_bytes() -> bytes:
             """
-            Gera um arquivo Excel (em memória) a partir do último DataFrame consultado
-            e retorna um link (base64) para download.
+            Gera o arquivo Excel em memória a partir do último resultado armazenado
+            e retorna o conteúdo em bytes.
             """
             if "last_query_result" not in st.session_state:
-                return "Não há resultado de consulta armazenado para exportar."
+                return None
 
             df_to_export = st.session_state["last_query_result"].copy()
             if df_to_export.empty:
-                return "O último resultado de consulta está vazio."
+                return None
 
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine="openpyxl") as writer:
                 df_to_export.to_excel(writer, index=False, sheet_name="Resultado")
             output.seek(0)
-
-            encoded = base64.b64encode(output.read()).decode("utf-8")
-            href = (
-                f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{encoded}" '
-                f'download="resultado.xlsx">Baixar Excel</a>'
-            )
-            return href
+            return output.getvalue()
 
         # -------------------------------------------------------------
         # Função principal de consulta ao DataFrame
@@ -375,7 +369,7 @@ def main():
 
             # 6) STATUS_ATUAL (sem laudo)
             if "sem laudo" in q_lower or "a laudar" in q_lower:
-                df_temp = df_temp[df_temp['STATUS_ATUAL'].str.lower().isin(["a laudar", "sem laudo"])]
+                df_temp = df_temp[df_temp['STATUS_ATUAL'].str.lower().isin(["A laudar", "Sem Laudo"])]
 
             # Armazena o resultado para exportação
             st.session_state["last_query_result"] = df_temp.copy()
@@ -532,6 +526,18 @@ def main():
 
     except Exception as e:
         st.error(f"Erro ao processar o arquivo: {e}")
+
+# Em algum lugar da sua interface (por exemplo, logo abaixo da área de chat):
+data = export_last_query_to_excel_bytes()
+if data:
+    st.download_button(
+        label="Baixar Excel",
+        data=data,
+        file_name="resultado.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+else:
+    st.info("Não há resultado para exportar no momento.")
 
 if __name__ == "__main__":
     main()
