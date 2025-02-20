@@ -259,19 +259,17 @@ def main():
         openai.api_key = st.secrets["openai"]["api_key"]
 
         with tab3:
-            st.subheader("Agente de IA – Chat Interativo com OpenAI e Funções")
-
-            # 1) Defina a função que irá consultar o DataFrame
             def query_dataframe(question: str, df: pd.DataFrame) -> str:
                 """
                 Recebe uma pergunta em linguagem natural e consulta o DataFrame df.
                 Retorna uma string com a resposta.
                 
-                Essa função filtra por:
+                A função filtra por:
                 - Modalidade (ex: tomografia, ultrassom)
-                - Intervalos de datas (ex: janeiro de 2023, 10/02/2025)
+                - Intervalos ou datas específicas (ex: janeiro de 2023, 10/02/2025)
                 - UNIDADE (hospital) se mencionado na pergunta
                 - TIPO_ATENDIMENTO (porta de entrada) se mencionado na pergunta
+                - STATUS_ATUAL para exames sem laudo, considerando "A laudar" e "Sem laudo"
                 """
                 q_lower = question.lower()
 
@@ -292,7 +290,7 @@ def main():
                         modalidade_detectada = grupo
                         break
 
-                # 2) Detectar datas na pergunta
+                # 2) Detectar datas na pergunta (ex.: "10/02/2025")
                 datas_encontradas = re.findall(r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", q_lower)
                 datas_convertidas = []
                 for d in datas_encontradas:
@@ -302,6 +300,7 @@ def main():
                     except Exception:
                         pass
 
+                # Detectar também datas por extenso (ex.: "janeiro de 2023")
                 mes_ano_match = re.findall(r"(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+de\s+(\d{4})", q_lower)
                 meses_map = {
                     "janeiro": 1, "fevereiro": 2, "março": 3, "marco": 3, "abril": 4, 
@@ -320,7 +319,7 @@ def main():
                             dt_fim = datetime(ano_num, mes_num + 1, 1).date()
                         datas_inferidas.append((dt_inicio, dt_fim))
 
-                # 3) Filtrar o DataFrame de acordo com modalidade e datas
+                # 3) Inicia o DataFrame temporário para filtragem
                 df_temp = df.copy()
                 if modalidade_detectada:
                     df_temp = df_temp[df_temp['GRUPO'] == modalidade_detectada]
@@ -340,7 +339,6 @@ def main():
                                     (df_temp['DATA_HORA_PRESCRICAO'].dt.date < dt_fim)]
 
                 # 4) Filtrar por UNIDADE (hospital) se mencionado na pergunta
-                # Percorre as unidades presentes no DataFrame e, se alguma for citada, filtra por ela
                 unidades = df['UNIDADE'].unique()
                 for unidade in unidades:
                     if unidade.lower() in q_lower:
@@ -354,7 +352,12 @@ def main():
                         df_temp = df_temp[df_temp['TIPO_ATENDIMENTO'] == tipo]
                         break
 
-                # 6) Montar a resposta com base na contagem dos registros filtrados
+                # 6) Filtrar por STATUS_ATUAL para exames sem laudo
+                # Se a pergunta mencionar "sem laudo" ou "a laudar", filtra os registros
+                if "sem laudo" in q_lower or "a laudar" in q_lower:
+                    df_temp = df_temp[df_temp['STATUS_ATUAL'].str.lower().isin(["a laudar", "sem laudo"])]
+
+                # 7) Montar a resposta com base na contagem dos registros filtrados
                 count = len(df_temp)
                 if any(x in q_lower for x in ["quantas", "quantos", "número", "numero"]):
                     mod_str = modalidade_detectada.replace("GRUPO ", "").lower() if modalidade_detectada else "exames (todas as modalidades)"
