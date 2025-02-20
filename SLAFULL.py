@@ -462,7 +462,7 @@ def main():
 
                             if function_name == "query_dataframe":
                                 # Executa a função localmente no Python
-                                answer = query_dataframe(arguments["question"], df_filtered)
+                                answer = query_dataframe(arguments["question"], df_selected)
 
                                 # Adiciona a resposta do "funcionário" (função) ao histórico
                                 st.session_state.chat_history.append({
