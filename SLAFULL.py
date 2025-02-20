@@ -11,6 +11,10 @@ from datetime import datetime
 import openai
 import json
 
+# Adicionamos importações para exportar Excel
+import io
+import base64
+
 # Funções com cache do Streamlit
 @st.cache_data
 def load_logo(url):
@@ -89,12 +93,14 @@ def main():
             st.error("'DATA_HORA_PRESCRICAO' column not found in the data.")
             return
 
-        # Cálculo do DELTA_TIME
+        # Cálculo do END_DATE (para Hospital Santa Catarina, ignora STATUS_PRELIMINAR)
         df['END_DATE'] = df.apply(
             lambda row: row['STATUS_APROVADO'] if row['UNIDADE'] == 'Hospital Santa Catarina'
             else (row['STATUS_PRELIMINAR'] if pd.notna(row['STATUS_PRELIMINAR']) else row['STATUS_APROVADO']),
             axis=1
         )
+
+        # Cálculo do DELTA_TIME
         df['DELTA_TIME'] = df.apply(
             lambda row: (
                 np.busday_count(row['STATUS_ALAUDAR'].date(), row['END_DATE'].date()) * 24
@@ -112,7 +118,7 @@ def main():
         condition_2 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (~df['MEDICO_SOLICITANTE'].isin(doctors_of_interest)) & (df['DELTA_TIME'] > 120)
         condition_3 = (df['GRUPO'] == 'GRUPO RAIO-X') & (df['DELTA_TIME'] > 72)
         condition_4 = (df['GRUPO'] == 'GRUPO MEDICINA NUCLEAR') & (df['DELTA_TIME'] > 120)
-        condition_5 = (df['TIPO_ATENDIMENTO'] == 'Pronto Atendimento') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 1.2)
+        condition_5 = (df['TIPO_ATENDIMENTO'] == 'Pronto Atendimento') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (row['DELTA_TIME'] > 1.2)
         condition_6 = (df['TIPO_ATENDIMENTO'] == 'Internado') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 24)
         condition_7 = (df['TIPO_ATENDIMENTO'] == 'Externo') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 96)
 
@@ -139,7 +145,7 @@ def main():
                 return "Noite"
         df['PERIODO_DIA'] = df['STATUS_ALAUDAR'].apply(calcular_periodo_dia)
 
-        # Colunas selecionadas (incluindo DATA_HORA_PRESCRICAO para filtro)
+        # Colunas selecionadas
         selected_columns = [
             'SAME', 'NOME_PACIENTE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO',
             'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE', 'TIPO_ATENDIMENTO',
@@ -164,9 +170,7 @@ def main():
         max_date = df['DATA_HORA_PRESCRICAO'].max()
         start_date, end_date = st.sidebar.date_input("Selecione o período", [min_date, max_date])
 
-        # ----------------------------------------------------------------------
-        # 3) Filtro do DataFrame principal
-        # ----------------------------------------------------------------------
+        # DataFrame filtrado (para abas 1 e 2, se quiser)
         df_filtered = df_selected[
             (df_selected['UNIDADE'] == selected_unidade) &
             (df_selected['GRUPO'] == selected_grupo) &
@@ -182,13 +186,10 @@ def main():
             (df_selected['DATA_HORA_PRESCRICAO'] <= pd.Timestamp(end_date))
         ]
 
-        # Criação das abas para visualização dos dados
+        # Criação das abas
         tab1, tab2, tab3 = st.tabs(["Exames com Laudo", "Exames sem Laudo", "Agente de IA"])
 
         # --- Aba 1: Exames com Laudo ---
-        # Considera o exame como "com laudo" se:
-        # - STATUS_PRELIMINAR estiver preenchido
-        # - OU, se STATUS_PRELIMINAR estiver nulo, STATUS_APROVADO deve conter uma data válida.
         with tab1:
             st.subheader("Dados dos Exames (com laudo)")
             df_com_laudo = df_filtered[
@@ -198,7 +199,6 @@ def main():
             total_exams = len(df_com_laudo)
             st.write(f"Total de exames com laudo: {total_exams}")
 
-            # Exibe exames com SLA FORA DO PERÍODO, ordenados por PERIODO_DIA
             df_fora = df_com_laudo[df_com_laudo['SLA_STATUS'] == 'SLA FORA DO PERÍODO'].copy()
             periodo_order = {"Madrugada": 1, "Manhã": 2, "Tarde": 3, "Noite": 4}
             df_fora['PERIODO_ORDER'] = df_fora['PERIODO_DIA'].map(periodo_order)
@@ -206,7 +206,7 @@ def main():
             st.subheader("Exames SLA FORA DO PRAZO (ordenados por período do dia)")
             st.dataframe(df_fora.drop(columns=['PERIODO_ORDER']))
 
-            # Contagens por período
+            # Contagens
             contagem_periodo = df_fora['PERIODO_DIA'].value_counts()
             contagem_periodo_df = pd.DataFrame({
                 'PERIODO_DIA': contagem_periodo.index,
@@ -223,7 +223,6 @@ def main():
             st.subheader("Contagem total por período (exames com laudo)")
             st.dataframe(contagem_periodo_total_df)
 
-            # Gráfico de Pizza para o SLA Status
             if not df_com_laudo.empty:
                 sla_status_counts = df_com_laudo['SLA_STATUS'].value_counts()
                 colors = ['lightcoral' if status == 'SLA FORA DO PERÍODO' else 'lightgreen'
@@ -237,11 +236,9 @@ def main():
                 )
                 ax.set_title(f'SLA Status - {selected_unidade} - {selected_grupo} - {selected_tipo_atendimento}')
 
-                # Adiciona o logo no gráfico
                 logo_img = Image.open(BytesIO(requests.get(logo_url).content))
                 logo_img.thumbnail((400, 400))
                 fig.figimage(logo_img, 10, 10, zorder=1, alpha=0.7)
-
                 st.pyplot(fig)
             else:
                 st.warning("Nenhum registro encontrado para este filtro.")
@@ -249,169 +246,205 @@ def main():
         # --- Aba 2: Exames sem Laudo ---
         with tab2:
             st.subheader("Exames sem Laudo")
-            # Filtra de acordo com os status desejados
             df_sem_laudo = df_filtered_2[df_filtered_2['STATUS_ATUAL'].isin(['A laudar', 'Sem Laudo'])]
             st.dataframe(df_sem_laudo)
             st.write(f"Total de exames sem laudo: {len(df_sem_laudo)}")
 
-
-        # Certifique-se de que a chave de API esteja definida em st.secrets
+        # Configura a chave da OpenAI
         openai.api_key = st.secrets["openai"]["api_key"]
 
-        with tab3:
-            def query_dataframe(question: str, df: pd.DataFrame) -> str:
-                """
-                Recebe uma pergunta em linguagem natural e consulta o DataFrame df.
-                Retorna uma string com a resposta.
-                
-                A função filtra por:
-                - Modalidade (ex: tomografia, ultrassom)
-                - Intervalos ou datas específicas (ex: janeiro de 2023, 10/02/2025)
-                - UNIDADE (hospital) se mencionado na pergunta
-                - TIPO_ATENDIMENTO (porta de entrada) se mencionado na pergunta
-                - STATUS_ATUAL para exames sem laudo, considerando "A laudar" e "Sem laudo"
-                """
-                q_lower = question.lower()
+        # -------------------------------------------------------------
+        # Função para exportar o último resultado em Excel
+        # -------------------------------------------------------------
+        def export_last_query_to_excel() -> str:
+            """
+            Gera um arquivo Excel (em memória) a partir do último DataFrame consultado
+            e retorna um link (base64) para download.
+            """
+            if "last_query_result" not in st.session_state:
+                return "Não há resultado de consulta armazenado para exportar."
 
-                # 1) Detectar a modalidade solicitada
-                modalidade_map = {
-                    "tomografia": "GRUPO TOMOGRAFIA",
-                    "ressonância": "GRUPO RESSONÂNCIA MAGNÉTICA",
-                    "ressonancia": "GRUPO RESSONÂNCIA MAGNÉTICA",
-                    "raio-x": "GRUPO RAIO-X",
-                    "raio x": "GRUPO RAIO-X",
-                    "mamografia": "GRUPO MAMOGRAFIA",
-                    "medicina nuclear": "GRUPO MEDICINA NUCLEAR",
-                    "ultrassom": "GRUPO ULTRASSOM",
-                }
-                modalidade_detectada = None
-                for chave, grupo in modalidade_map.items():
-                    if chave in q_lower:
-                        modalidade_detectada = grupo
-                        break
+            df_to_export = st.session_state["last_query_result"].copy()
+            if df_to_export.empty:
+                return "O último resultado de consulta está vazio."
 
-                # 2) Detectar datas na pergunta (ex.: "10/02/2025")
-                datas_encontradas = re.findall(r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", q_lower)
-                datas_convertidas = []
-                for d in datas_encontradas:
-                    try:
-                        dt = parser.parse(d, dayfirst=True)
-                        datas_convertidas.append(dt.date())
-                    except Exception:
-                        pass
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                df_to_export.to_excel(writer, index=False, sheet_name="Resultado")
+            output.seek(0)
 
-                # Detectar também datas por extenso (ex.: "janeiro de 2023")
-                mes_ano_match = re.findall(r"(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+de\s+(\d{4})", q_lower)
-                meses_map = {
-                    "janeiro": 1, "fevereiro": 2, "março": 3, "marco": 3, "abril": 4, 
-                    "maio": 5, "junho": 6, "julho": 7, "agosto": 8, "setembro": 9,
-                    "outubro": 10, "novembro": 11, "dezembro": 12
-                }
-                datas_inferidas = []
-                for (mes_str, ano_str) in mes_ano_match:
-                    mes_num = meses_map.get(mes_str, None)
-                    ano_num = int(ano_str)
-                    if mes_num:
-                        dt_inicio = datetime(ano_num, mes_num, 1).date()
-                        if mes_num == 12:
-                            dt_fim = datetime(ano_num + 1, 1, 1).date()
-                        else:
-                            dt_fim = datetime(ano_num, mes_num + 1, 1).date()
-                        datas_inferidas.append((dt_inicio, dt_fim))
+            encoded = base64.b64encode(output.read()).decode("utf-8")
+            href = (
+                f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{encoded}" '
+                f'download="resultado.xlsx">Baixar Excel</a>'
+            )
+            return href
 
-                # 3) Inicia o DataFrame temporário para filtragem
-                df_temp = df.copy()
-                if modalidade_detectada:
-                    df_temp = df_temp[df_temp['GRUPO'] == modalidade_detectada]
+        # -------------------------------------------------------------
+        # Função principal de consulta ao DataFrame
+        # -------------------------------------------------------------
+        def query_dataframe(question: str, df: pd.DataFrame) -> str:
+            """
+            Filtra o DataFrame conforme a pergunta (modalidade, datas, UNIDADE, TIPO_ATENDIMENTO, etc.)
+            e retorna uma string com o resultado.
+            Armazena o DataFrame resultante em st.session_state["last_query_result"] para exportação.
+            """
+            q_lower = question.lower()
 
-                if len(datas_convertidas) == 1:
-                    dia = datas_convertidas[0]
-                    df_temp = df_temp[df_temp['DATA_HORA_PRESCRICAO'].dt.date == dia]
-                elif len(datas_convertidas) >= 2:
-                    inicio = min(datas_convertidas)
-                    fim = max(datas_convertidas)
-                    df_temp = df_temp[(df_temp['DATA_HORA_PRESCRICAO'].dt.date >= inicio) &
-                                    (df_temp['DATA_HORA_PRESCRICAO'].dt.date <= fim)]
+            # 1) Detectar a modalidade
+            modalidade_map = {
+                "tomografia": "GRUPO TOMOGRAFIA",
+                "ressonância": "GRUPO RESSONÂNCIA MAGNÉTICA",
+                "ressonancia": "GRUPO RESSONÂNCIA MAGNÉTICA",
+                "raio-x": "GRUPO RAIO-X",
+                "raio x": "GRUPO RAIO-X",
+                "mamografia": "GRUPO MAMOGRAFIA",
+                "medicina nuclear": "GRUPO MEDICINA NUCLEAR",
+                "ultrassom": "GRUPO ULTRASSOM",
+            }
+            modalidade_detectada = None
+            for chave, grupo in modalidade_map.items():
+                if chave in q_lower:
+                    modalidade_detectada = grupo
+                    break
 
-                if datas_inferidas:
-                    (dt_inicio, dt_fim) = datas_inferidas[0]
-                    df_temp = df_temp[(df_temp['DATA_HORA_PRESCRICAO'].dt.date >= dt_inicio) &
-                                    (df_temp['DATA_HORA_PRESCRICAO'].dt.date < dt_fim)]
+            # 2) Detectar datas
+            datas_encontradas = re.findall(r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", q_lower)
+            datas_convertidas = []
+            for d in datas_encontradas:
+                try:
+                    dt = parser.parse(d, dayfirst=True)
+                    datas_convertidas.append(dt.date())
+                except:
+                    pass
 
-                # 4) Filtrar por UNIDADE (hospital) se mencionado na pergunta
-                unidades = df['UNIDADE'].unique()
-                for unidade in unidades:
-                    if unidade.lower() in q_lower:
-                        df_temp = df_temp[df_temp['UNIDADE'] == unidade]
-                        break
-
-                # 5) Filtrar por TIPO_ATENDIMENTO se mencionado na pergunta
-                tipos = df['TIPO_ATENDIMENTO'].unique()
-                for tipo in tipos:
-                    if tipo.lower() in q_lower:
-                        df_temp = df_temp[df_temp['TIPO_ATENDIMENTO'] == tipo]
-                        break
-
-                # 6) Filtrar por STATUS_ATUAL para exames sem laudo
-                # Se a pergunta mencionar "sem laudo" ou "a laudar", filtra os registros
-                if "sem laudo" in q_lower or "a laudar" in q_lower:
-                    df_temp = df_temp[df_temp['STATUS_ATUAL'].str.lower().isin(["a laudar", "sem laudo"])]
-
-                # 7) Montar a resposta com base na contagem dos registros filtrados
-                count = len(df_temp)
-                if any(x in q_lower for x in ["quantas", "quantos", "número", "numero"]):
-                    mod_str = modalidade_detectada.replace("GRUPO ", "").lower() if modalidade_detectada else "exames (todas as modalidades)"
-                    if datas_inferidas:
-                        mi, mf = datas_inferidas[0]
-                        return f"Foram {count} {mod_str} realizados entre {mi.strftime('%d/%m/%Y')} e {mf.strftime('%d/%m/%Y')}."
-                    elif len(datas_convertidas) == 1:
-                        return f"Foram {count} {mod_str} realizados em {datas_convertidas[0].strftime('%d/%m/%Y')}."
-                    elif len(datas_convertidas) >= 2:
-                        i2 = min(datas_convertidas)
-                        f2 = max(datas_convertidas)
-                        return f"Foram {count} {mod_str} realizados no período de {i2.strftime('%d/%m/%Y')} até {f2.strftime('%d/%m/%Y')}."
+            mes_ano_match = re.findall(r"(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+de\s+(\d{4})", q_lower)
+            meses_map = {
+                "janeiro": 1, "fevereiro": 2, "março": 3, "marco": 3, "abril": 4, 
+                "maio": 5, "junho": 6, "julho": 7, "agosto": 8, "setembro": 9,
+                "outubro": 10, "novembro": 11, "dezembro": 12
+            }
+            datas_inferidas = []
+            for (mes_str, ano_str) in mes_ano_match:
+                mes_num = meses_map.get(mes_str, None)
+                ano_num = int(ano_str)
+                if mes_num:
+                    dt_inicio = datetime(ano_num, mes_num, 1).date()
+                    if mes_num == 12:
+                        dt_fim = datetime(ano_num + 1, 1, 1).date()
                     else:
-                        return f"Foram {count} {mod_str} encontrados no DataFrame."
-                
-                return f"Após os filtros aplicados, encontrei {count} registros."
+                        dt_fim = datetime(ano_num, mes_num + 1, 1).date()
+                    datas_inferidas.append((dt_inicio, dt_fim))
 
-            # 2) Defina o schema da função para o ChatCompletion
-            functions = [
-                {
-                    "name": "query_dataframe",
-                    "description": (
-                        "Consulta o DataFrame carregado no Python para obter informações."
-                    ),
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "question": {
-                                "type": "string",
-                                "description": "A pergunta que o usuário fez sobre o DataFrame."
-                            }
-                        },
-                        "required": ["question"]
+            # 3) Inicia o DataFrame temporário
+            df_temp = df.copy()
+
+            # Modalidade
+            if modalidade_detectada:
+                df_temp = df_temp[df_temp['GRUPO'] == modalidade_detectada]
+
+            # Datas exatas
+            if len(datas_convertidas) == 1:
+                dia = datas_convertidas[0]
+                df_temp = df_temp[df_temp['DATA_HORA_PRESCRICAO'].dt.date == dia]
+            elif len(datas_convertidas) >= 2:
+                inicio = min(datas_convertidas)
+                fim = max(datas_convertidas)
+                df_temp = df_temp[(df_temp['DATA_HORA_PRESCRICAO'].dt.date >= inicio) &
+                                  (df_temp['DATA_HORA_PRESCRICAO'].dt.date <= fim)]
+
+            # Intervalo mes_ano
+            if datas_inferidas:
+                (dt_inicio, dt_fim) = datas_inferidas[0]
+                df_temp = df_temp[(df_temp['DATA_HORA_PRESCRICAO'].dt.date >= dt_inicio) &
+                                  (df_temp['DATA_HORA_PRESCRICAO'].dt.date < dt_fim)]
+
+            # 4) UNIDADE
+            unidades = df['UNIDADE'].unique()
+            for unidade in unidades:
+                if unidade.lower() in q_lower:
+                    df_temp = df_temp[df_temp['UNIDADE'] == unidade]
+                    break
+
+            # 5) TIPO_ATENDIMENTO
+            tipos = df['TIPO_ATENDIMENTO'].unique()
+            for tipo in tipos:
+                if tipo.lower() in q_lower:
+                    df_temp = df_temp[df_temp['TIPO_ATENDIMENTO'] == tipo]
+                    break
+
+            # 6) STATUS_ATUAL (sem laudo)
+            if "sem laudo" in q_lower or "a laudar" in q_lower:
+                df_temp = df_temp[df_temp['STATUS_ATUAL'].str.lower().isin(["A laudar", "Sem Laudo"])]
+
+            # Armazena o resultado para exportação
+            st.session_state["last_query_result"] = df_temp.copy()
+
+            # 7) Monta resposta
+            count = len(df_temp)
+            if any(x in q_lower for x in ["quantas", "quantos", "número", "numero"]):
+                mod_str = modalidade_detectada.replace("GRUPO ", "").lower() if modalidade_detectada else "exames (todas as modalidades)"
+                if datas_inferidas:
+                    mi, mf = datas_inferidas[0]
+                    return f"Foram {count} {mod_str} realizados entre {mi.strftime('%d/%m/%Y')} e {mf.strftime('%d/%m/%Y')}."
+                elif len(datas_convertidas) == 1:
+                    return f"Foram {count} {mod_str} realizados em {datas_convertidas[0].strftime('%d/%m/%Y')}."
+                elif len(datas_convertidas) >= 2:
+                    i2 = min(datas_convertidas)
+                    f2 = max(datas_convertidas)
+                    return f"Foram {count} {mod_str} realizados no período de {i2.strftime('%d/%m/%Y')} até {f2.strftime('%d/%m/%Y')}."
+                else:
+                    return f"Foram {count} {mod_str} encontrados no DataFrame."
+            
+            return f"Após os filtros aplicados, encontrei {count} registros."
+
+        # 2) Defina o schema das funções
+        functions = [
+            {
+                "name": "query_dataframe",
+                "description": "Consulta o DataFrame carregado no Python para obter informações.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "question": {
+                            "type": "string",
+                            "description": "A pergunta que o usuário fez sobre o DataFrame."
+                        }
                     },
+                    "required": ["question"]
+                },
+            },
+            {
+                "name": "export_last_query_to_excel",
+                "description": (
+                    "Gera um arquivo Excel a partir do último resultado de consulta e retorna um link de download."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
                 }
-            ]
+            }
+        ]
 
-            # 3) Inicializa o histórico da conversa, se ainda não existir
+        # 3) Inicializa o histórico da conversa, se ainda não existir
+        with tab3:
             if "chat_history" not in st.session_state:
-                # Você pode manter as mensagens de sistema que já tinha, incluindo um resumo do DataFrame
                 data_context = (
-                    f"O DataFrame filtrado possui {len(df_filtered)} registros e as colunas: "
-                    f"{', '.join(df_filtered.columns)}.\n"
-                    "Aqui está uma prévia dos 5 primeiros registros:\n"
-                    f"{df_filtered.head(5).to_string()}"
+                    "Você tem acesso a duas funções:\n\n"
+                    "1) 'query_dataframe(question)': filtra o DataFrame para responder perguntas.\n"
+                    "2) 'export_last_query_to_excel()': gera um arquivo Excel do último resultado filtrado.\n\n"
+                    f"Atualmente, há {len(df_filtered)} linhas no df_filtered para visualização nas abas.\n"
+                    "Mas a função 'query_dataframe' opera sobre df_selected (todas as linhas/colunas)."
                 )
                 st.session_state.chat_history = [
                     {
                         "role": "system",
                         "content": (
                             "Você é um assistente de análise de dados. "
-                            "Você tem acesso a uma função 'query_dataframe(question)', que permite "
-                            "consultar o DataFrame real em Python. Sempre que precisar de dados concretos, "
-                            "chame a função. Responda de forma intuitiva e explique seu raciocínio."
+                            "Sempre que precisar consultar dados concretos, chame a função 'query_dataframe'. "
+                            "Se o usuário quiser um arquivo Excel do resultado, chame 'export_last_query_to_excel'. "
+                            "Responda de forma intuitiva e explique seu raciocínio."
                         )
                     },
                     {
@@ -420,68 +453,72 @@ def main():
                     }
                 ]
 
-            # 4) Campo para inserir a pergunta do usuário
             user_input = st.text_input("Digite sua pergunta ou comentário:")
-
             if st.button("Enviar Consulta"):
                 if not user_input.strip():
                     st.info("Por favor, digite uma pergunta para continuar.")
                 else:
-                    # Adiciona a mensagem do usuário ao histórico
                     st.session_state.chat_history.append({"role": "user", "content": user_input})
-
                     try:
-                        # 5) Chama a API do ChatCompletion com suporte a function calling
                         response = openai.ChatCompletion.create(
-                            model="gpt-4",  # Use GPT-4 ou outro modelo com function calling
+                            model="gpt-4",
                             messages=st.session_state.chat_history,
                             functions=functions,
-                            function_call="auto",  # Deixe o modelo decidir se chama a função
+                            function_call="auto",
                             temperature=0.7
                         )
-
                         msg_content = response["choices"][0]["message"]
 
-                        # Verifica se o modelo chamou a função
                         if msg_content.get("function_call"):
-                            # Extrai o nome da função e os argumentos
                             function_name = msg_content["function_call"]["name"]
                             arguments_json = msg_content["function_call"]["arguments"]
                             arguments = json.loads(arguments_json)
 
                             if function_name == "query_dataframe":
-                                # Executa a função localmente no Python
                                 answer = query_dataframe(arguments["question"], df_selected)
-
-                                # Adiciona a resposta do "funcionário" (função) ao histórico
                                 st.session_state.chat_history.append({
                                     "role": "function",
                                     "name": function_name,
                                     "content": answer
                                 })
-
-                                # 6) Agora chamamos a API novamente, incluindo a resposta da função
+                                # Segunda chamada
                                 second_response = openai.ChatCompletion.create(
                                     model="gpt-4",
                                     messages=st.session_state.chat_history,
                                     temperature=0.7
                                 )
                                 final_reply = second_response["choices"][0]["message"]["content"]
-
-                                # Adiciona a resposta final do assistente ao histórico
                                 st.session_state.chat_history.append({
                                     "role": "assistant",
                                     "content": final_reply
                                 })
-
-                                # Exibe a resposta
                                 st.write("**Resposta:**")
                                 st.write(final_reply)
+
+                            elif function_name == "export_last_query_to_excel":
+                                link = export_last_query_to_excel()
+                                st.session_state.chat_history.append({
+                                    "role": "function",
+                                    "name": function_name,
+                                    "content": link
+                                })
+                                second_response = openai.ChatCompletion.create(
+                                    model="gpt-4",
+                                    messages=st.session_state.chat_history,
+                                    temperature=0.7
+                                )
+                                final_reply = second_response["choices"][0]["message"]["content"]
+                                st.session_state.chat_history.append({
+                                    "role": "assistant",
+                                    "content": final_reply
+                                })
+                                st.write("**Resposta:**")
+                                # Exibimos o link como HTML
+                                st.markdown(final_reply, unsafe_allow_html=True)
 
                             else:
                                 st.error("Função desconhecida chamada pelo modelo.")
                         else:
-                            # Se não chamou função, é uma resposta direta
                             final_reply = msg_content["content"]
                             st.session_state.chat_history.append({
                                 "role": "assistant",
