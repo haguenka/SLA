@@ -6,6 +6,7 @@ import requests
 from io import BytesIO
 import numpy as np
 import re
+from dateutil import parser
 from datetime import datetime
 import openai
 import json
@@ -264,21 +265,126 @@ def main():
             def query_dataframe(question: str, df: pd.DataFrame) -> str:
                 """
                 Recebe uma pergunta em linguagem natural e 'consulta' o DataFrame df.
-                Retorna uma string com a resposta. Aqui você pode expandir a lógica
-                para lidar com diversas perguntas e operações mais complexas.
+                Retorna uma string com a resposta. 
+                Este exemplo filtra por modalidade (ex: tomografia, ultrassom) e 
+                intervalos de datas (ex: janeiro de 2023, dia 10/02/2025).
                 """
                 q_lower = question.lower()
 
-                # Exemplo simples de lógica
-                if "quantas linhas" in q_lower:
-                    return f"O DataFrame tem {len(df)} linhas."
-                elif "colunas" in q_lower or "quais são as colunas" in q_lower:
-                    return f"As colunas do DataFrame são: {', '.join(df.columns)}."
-                else:
-                    return (
-                        "Não entendi a pergunta. "
-                        "Exemplos: 'Quantas linhas tem o dataframe?' ou 'Quais são as colunas?'"
-                    )
+                # 1) Detectar a modalidade solicitada
+                #    Você pode expandir esta lista conforme as modalidades do seu DataFrame.
+                modalidade_map = {
+                    "tomografia": "GRUPO TOMOGRAFIA",
+                    "ressonância": "GRUPO RESSONÂNCIA MAGNÉTICA",
+                    "ressonancia": "GRUPO RESSONÂNCIA MAGNÉTICA",
+                    "raio-x": "GRUPO RAIO-X",
+                    "raio x": "GRUPO RAIO-X",
+                    "mamografia": "GRUPO MAMOGRAFIA",
+                    "medicina nuclear": "GRUPO MEDICINA NUCLEAR",
+                    "ultrassom": "GRUPO ULTRASSOM",
+                }
+                modalidade_detectada = None
+                for chave, grupo in modalidade_map.items():
+                    if chave in q_lower:
+                        modalidade_detectada = grupo
+                        break
+
+                # 2) Detectar data ou intervalo de datas na pergunta
+                #    Exemplo simples: procurar padrões como "janeiro de 2023", "fevereiro de 2025",
+                #    ou datas exatas "10/02/2025" etc.
+                #    Vamos usar regex para encontrar datas no formato dd/mm/yyyy ou dd-mm-yyyy
+                #    e também um parse simples para "mês de ano".
+                datas_encontradas = re.findall(r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", q_lower)
+                
+                # Listas para armazenar datas convertidas
+                datas_convertidas = []
+                for d in datas_encontradas:
+                    try:
+                        dt = parser.parse(d, dayfirst=True)
+                        datas_convertidas.append(dt.date())
+                    except:
+                        pass
+
+                # Também detectar algo como "janeiro de 2023", "fev de 2024" etc.
+                # Regex simplificada para "mes de ano"
+                mes_ano_match = re.findall(r"(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+de\s+(\d{4})", q_lower)
+                
+                # Vamos mapear meses por extenso para número
+                meses_map = {
+                    "janeiro": 1, "fevereiro": 2, "março": 3, "marco": 3, "abril": 4, 
+                    "maio": 5, "junho": 6, "julho": 7, "agosto": 8, "setembro": 9,
+                    "outubro": 10, "novembro": 11, "dezembro": 12
+                }
+
+                datas_inferidas = []
+                for (mes_str, ano_str) in mes_ano_match:
+                    mes_num = meses_map.get(mes_str, None)
+                    ano_num = int(ano_str)
+                    if mes_num:
+                        # Construir uma data inicial e final do mês
+                        dt_inicio = datetime(ano_num, mes_num, 1).date()
+                        # Tentar ir para o mês seguinte
+                        if mes_num == 12:
+                            dt_fim = datetime(ano_num + 1, 1, 1).date()
+                        else:
+                            dt_fim = datetime(ano_num, mes_num + 1, 1).date()
+                        datas_inferidas.append((dt_inicio, dt_fim))
+
+                # 3) Filtrar o DataFrame de acordo com a modalidade e datas
+                df_temp = df.copy()
+
+                # Filtrar por modalidade, se detectada
+                if modalidade_detectada:
+                    df_temp = df_temp[df_temp['GRUPO'] == modalidade_detectada]
+
+                # Se foram encontradas datas exatas (datas_convertidas), você decide como usar.
+                # Ex: se só encontrar 1 data, filtra por esse dia; se encontrar 2 datas, filtra por intervalo.
+                if len(datas_convertidas) == 1:
+                    dia = datas_convertidas[0]
+                    df_temp = df_temp[df_temp['DATA_HORA_PRESCRICAO'].dt.date == dia]
+                elif len(datas_convertidas) >= 2:
+                    inicio = min(datas_convertidas)
+                    fim = max(datas_convertidas)
+                    df_temp = df_temp[(df_temp['DATA_HORA_PRESCRICAO'].dt.date >= inicio) &
+                                    (df_temp['DATA_HORA_PRESCRICAO'].dt.date <= fim)]
+
+                # Se foram encontradas referências a "mês de ano" (datas_inferidas), filtrar por esses intervalos
+                # Caso tenha várias, este exemplo só usa a primeira
+                if datas_inferidas:
+                    (dt_inicio, dt_fim) = datas_inferidas[0]
+                    df_temp = df_temp[(df_temp['DATA_HORA_PRESCRICAO'].dt.date >= dt_inicio) &
+                                    (df_temp['DATA_HORA_PRESCRICAO'].dt.date < dt_fim)]
+
+                # 4) Montar uma resposta com base nos dados filtrados
+                count = len(df_temp)
+
+                # Se o usuário perguntou algo como "quantas" ou "numero" ou "quantos"
+                if any(x in q_lower for x in ["quantas", "quantos", "número", "numero"]):
+                    # Exemplo: "Foram X tomografias realizadas..."
+                    mod_str = ""
+                    if modalidade_detectada:
+                        mod_str = modalidade_detectada.replace("GRUPO ", "").lower()
+                    else:
+                        mod_str = "exames (todas as modalidades)"
+
+                    # Se detectou datas, descreva o intervalo
+                    if datas_inferidas:
+                        mi, mf = datas_inferidas[0]
+                        return f"Foram {count} {mod_str} realizadas entre {mi.strftime('%d/%m/%Y')} e {mf.strftime('%d/%m/%Y')}."
+                    elif len(datas_convertidas) == 1:
+                        return f"Foram {count} {mod_str} realizadas em {datas_convertidas[0].strftime('%d/%m/%Y')}."
+                    elif len(datas_convertidas) >= 2:
+                        i2 = min(datas_convertidas)
+                        f2 = max(datas_convertidas)
+                        return f"Foram {count} {mod_str} realizadas no período de {i2.strftime('%d/%m/%Y')} até {f2.strftime('%d/%m/%Y')}."
+                    else:
+                        return f"Foram {count} {mod_str} encontradas no DataFrame filtrado."
+                
+                # Se chegar até aqui, retorne algo padrão
+                return (
+                    f"Encontrei {count} registros no DataFrame após filtrar. "
+                    "Pergunta não reconhecida, mas eis a contagem."
+                )
 
             # 2) Defina o schema da função para o ChatCompletion
             functions = [
