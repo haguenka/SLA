@@ -447,7 +447,7 @@ def main():
                     }
                 ]
 
-            user_input = st.text_input("Digite sua pergunta ou comentário:", height=150)
+            user_input = st.text_area("Digite sua pergunta ou comentário:", height=150)
             if st.button("Enviar Consulta"):
                 if not user_input.strip():
                     st.info("Por favor, digite uma pergunta para continuar.")
