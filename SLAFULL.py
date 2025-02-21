@@ -447,7 +447,7 @@ def main():
                     }
                 ]
 
-            user_input = st.text_input("Digite sua pergunta ou comentário:")
+            user_input = st.text_input("Digite sua pergunta ou comentário:", height=150)
             if st.button("Enviar Consulta"):
                 if not user_input.strip():
                     st.info("Por favor, digite uma pergunta para continuar.")
@@ -455,7 +455,7 @@ def main():
                     st.session_state.chat_history.append({"role": "user", "content": user_input})
                     try:
                         response = openai.ChatCompletion.create(
-                            model="gpt-4",
+                            model="gpt-4o",
                             messages=st.session_state.chat_history,
                             functions=functions,
                             function_call="auto",
@@ -523,7 +523,7 @@ def main():
 
                     except Exception as e:
                         st.error(f"Erro ao executar a consulta: {e}")
-                        
+
             # Em algum lugar da sua interface (por exemplo, logo abaixo da área de chat):
             data = export_last_query_to_excel_bytes()
             if data:
