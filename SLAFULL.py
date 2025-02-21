@@ -369,7 +369,7 @@ def main():
 
             # 6) STATUS_ATUAL (sem laudo)
             if "sem laudo" in q_lower or "a laudar" in q_lower:
-                df_temp = df_temp[df_temp['STATUS_ATUAL'].str.lower().isin(["A laudar", "Sem Laudo"])]
+                df_temp = df_temp[df_temp['STATUS_ATUAL'].str.lower().isin(["a laudar", "sem laudo"])]
 
             # Armazena o resultado para exportação
             st.session_state["last_query_result"] = df_temp.copy()
