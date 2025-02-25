@@ -67,8 +67,8 @@ regex_data = re.compile(r"(?i)data\s*do\s*exame\s*:\s*([\d/]+)")
 regex_context = re.compile(r"\b(pulmão|pulmões|lobo|lobos)\b", re.IGNORECASE)
 # Regex para identificar "contorno(s)" e extrair a palavra seguinte
 regex_contorno = re.compile(r"\bcontorno[s]?\b\s+(\w+)", re.IGNORECASE)
-# Regex para identificar "calcificado" ou "calcico"
-regex_calc = re.compile(r"\b(calcificado|calcico)\b", re.IGNORECASE)
+# Regex para identificar "calcificado" ou "calcico" com variações de acentuação e plural
+regex_calc = re.compile(r"\b(c[áa]lcificad[o]s?|c[áa]lcic[óo]s?)\b", re.IGNORECASE)
 # Regex para as exceções (negações) que devem ser mantidas
 regex_calc_exceptions = re.compile(r"\b(sem calcifica[cç][ãa]o|não calcificado|parcialmente calcificado)\b", re.IGNORECASE)
 
