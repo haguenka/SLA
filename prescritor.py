@@ -144,12 +144,17 @@ with tab2:
     df_rm = df[df["MODALIDADE"].str.contains("MR", case=False, na=False)]
     top_medicos_rm = df_rm["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors='ignore').head(10)
     st.bar_chart(top_medicos_rm)
-    # Cria DataFrame com nomes e quantidade
-    df_top_rm = top_medicos_rm.reset_index().rename(columns={"index": "Medico", "MEDICO_SOLICITANTE": "Quantidade"})
+    # Converte a Series para DataFrame e define explicitamente as colunas
+    df_top_rm = top_medicos_rm.reset_index()
+    df_top_rm.columns = ["Medico", "Quantidade"]  # Define as colunas como "Medico" e "Quantidade"
+    # Opcional: exibir as colunas para debug
+    st.write("Colunas do df_top_rm:", df_top_rm.columns.tolist())
+    
     # Função para gerar o detalhamento dos exames para cada médico
     def get_exam_breakdown(medico):
         exam_counts = df_rm[df_rm["MEDICO_SOLICITANTE"] == medico]["DESCRICAO_PROCEDIMENTO"].value_counts()
         return "\n".join([f"{exame} - {count}" for exame, count in exam_counts.items()])
+    
     # Adiciona a coluna "Exames" com o detalhamento
     df_top_rm["Exames"] = df_top_rm["Medico"].apply(get_exam_breakdown)
     st.dataframe(df_top_rm)
@@ -158,9 +163,8 @@ with tab2:
     df_tc = df[df["MODALIDADE"].str.contains("CT", case=False, na=False)]
     top_medicos_tc = df_tc["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors='ignore').head(10)
     st.bar_chart(top_medicos_tc)
-    # Cria DataFrame com nomes e quantidade
-    df_top_tc = top_medicos_tc.reset_index().rename(columns={"index": "Medico", "MEDICO_SOLICITANTE": "Quantidade"})
-    # Adiciona a coluna "Exames" com o detalhamento para cada médico em TC
+    df_top_tc = top_medicos_tc.reset_index()
+    df_top_tc.columns = ["Medico", "Quantidade"]
     df_top_tc["Exames"] = df_top_tc["Medico"].apply(
         lambda medico: "\n".join([
             f"{exame} - {count}" 
