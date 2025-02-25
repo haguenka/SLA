@@ -143,3 +143,12 @@ with tab2:
     df_rm = df[df["MODALIDADE"].str.contains("MR", case=False, na=False)]
     top_medicos_rm = df_rm["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors='ignore').head(10)
     st.bar_chart(top_medicos_rm)
+    # Exibe o DataFrame com nomes e quantidade de exames
+    st.dataframe(top_medicos_rm.reset_index().rename(columns={"index": "Médico", "MEDICO_SOLICITANTE": "Quantidade"}))
+
+    st.header("Top 10 Médicos Prescritores de TC")
+    df_tc = df[df["MODALIDADE"].str.contains("TC", case=False, na=False)]
+    top_medicos_tc = df_tc["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors='ignore').head(10)
+    st.bar_chart(top_medicos_tc)
+    # Exibe o DataFrame com nomes e quantidade de exames
+    st.dataframe(top_medicos_tc.reset_index().rename(columns={"index": "Médico", "MEDICO_SOLICITANTE": "Quantidade"}))
