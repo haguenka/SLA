@@ -145,7 +145,7 @@ with tab2:
     top_medicos_rm = df_rm["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors='ignore').head(10)
     st.bar_chart(top_medicos_rm)
     # Cria DataFrame com nomes e quantidade
-    df_top_rm = df_rm.reset_index().rename(columns={"index": "Médico", "MEDICO_SOLICITANTE": "Quantidade"})
+    df_top_rm = top_medicos_rm.reset_index().rename(columns={"index": "Médico", "MEDICO_SOLICITANTE": "Quantidade"})
     # Função para gerar o detalhamento dos exames para cada médico
     def get_exam_breakdown(medico):
         exam_counts = df_rm[df_rm["MEDICO_SOLICITANTE"] == medico]["DESCRICAO_PROCEDIMENTO"].value_counts()
