@@ -136,45 +136,40 @@ excluir_medicos = ["HENRIQUE ARUME GUENKA", "MARCELO JACOBINA DE ABREU"]
 
 
 with tab2:
-    st.header("Top 10 Médicos Prescritores")
-    top_medicos = df["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors='ignore').head(10)
-    st.bar_chart(top_medicos)
-
     st.header("Top 10 Médicos Prescritores de RM")
     df_rm = df[df["MODALIDADE"].str.contains("MR", case=False, na=False)]
-    top_medicos_rm = df_rm["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors='ignore').head(10)
+    top_medicos_rm = df_rm["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors="ignore").head(10)
     st.bar_chart(top_medicos_rm)
-    # Converte a Series para DataFrame e define explicitamente as colunas
+    
+    # Converte a Series em DataFrame e define as colunas
     df_top_rm = top_medicos_rm.reset_index()
     df_top_rm.columns = ["Medico", "Quantidade"]
-    st.write("Colunas do df_top_rm:", df_top_rm.columns.tolist())
-    
-    # Função para gerar o detalhamento dos exames para cada médico (indentado com tab)
+
+    # Função para gerar a listagem dos exames (cada exame em uma nova linha)
     def get_exam_breakdown(medico):
         exam_counts = df_rm[df_rm["MEDICO_SOLICITANTE"] == medico]["DESCRICAO_PROCEDIMENTO"].value_counts()
-        # Retorna os exames, cada linha recuada com um \t
+        # Para cada exame, cria uma linha com indentação (usando \t)
         return "\n\t" + "\n\t".join([f"{exame} - {count}" for exame, count in exam_counts.items()])
-    
-    # Cria a coluna "Exames" com o detalhamento
-    df_top_rm["Exames"] = df_top_rm["Medico"].apply(get_exam_breakdown)
-    # Combina o nome e os exames em uma única coluna "Prescritor"
-    df_top_rm["Prescritor"] = df_top_rm["Medico"] + df_top_rm["Exames"]
-    # Seleciona as colunas que serão exibidas (por exemplo, "Prescritor" e "Quantidade")
+
+    # Cria uma nova coluna "Prescritor" com o nome e, na linha abaixo, a listagem dos exames
+    df_top_rm["Prescritor"] = df_top_rm["Medico"].apply(lambda m: f"{m}\n{get_exam_breakdown(m)}")
+    # Seleciona as colunas desejadas
     df_top_rm = df_top_rm[["Prescritor", "Quantidade"]]
+    
     st.table(df_top_rm)
 
     st.header("Top 10 Médicos Prescritores de TC")
     df_tc = df[df["MODALIDADE"].str.contains("CT", case=False, na=False)]
-    top_medicos_tc = df_tc["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors='ignore').head(10)
+    top_medicos_tc = df_tc["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors="ignore").head(10)
     st.bar_chart(top_medicos_tc)
+    
     df_top_tc = top_medicos_tc.reset_index()
     df_top_tc.columns = ["Medico", "Quantidade"]
-    df_top_tc["Exames"] = df_top_tc["Medico"].apply(
-        lambda medico: "\n\t" + "\n\t".join([
+    df_top_tc["Prescritor"] = df_top_tc["Medico"].apply(
+        lambda m: f"{m}\n" + "\n\t".join([
             f"{exame} - {count}" 
-            for exame, count in df_tc[df_tc["MEDICO_SOLICITANTE"] == medico]["DESCRICAO_PROCEDIMENTO"].value_counts().items()
+            for exame, count in df_tc[df_tc["MEDICO_SOLICITANTE"] == m]["DESCRICAO_PROCEDIMENTO"].value_counts().items()
         ])
     )
-    df_top_tc["Prescritor"] = df_top_tc["Medico"] + df_top_tc["Exames"]
     df_top_tc = df_top_tc[["Prescritor", "Quantidade"]]
     st.table(df_top_tc)
