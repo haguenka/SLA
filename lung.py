@@ -5,6 +5,7 @@ import streamlit as st
 from io import BytesIO
 import base64
 import logging
+import requests
 
 # Configurar a página antes de qualquer outra chamada do Streamlit
 st.set_page_config(page_title="Minerador de PDF - Nódulo", layout="wide")
