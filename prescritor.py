@@ -136,6 +136,10 @@ excluir_medicos = ["HENRIQUE ARUME GUENKA", "MARCELO JACOBINA DE ABREU"]
 
 
 with tab2:
+    st.header("Top 10 Médicos Prescritores")
+    top_medicos = df["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors='ignore').head(10)
+    st.bar_chart(top_medicos)
+    
     st.header("Top 10 Médicos Prescritores de RM")
     df_rm = df[df["MODALIDADE"].str.contains("MR", case=False, na=False)]
     top_medicos_rm = df_rm["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors="ignore").head(10)
