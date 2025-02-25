@@ -47,7 +47,7 @@ st.markdown("""
 # -------------------------------
 # TÍTULO E LOGO NA SIDEBAR
 # -------------------------------
-st.title("Rastreador de Nódulos CSSJ")
+st.title("Rastreador de Nódulos Pulmonares CSSJ")
 if logo is not None:
     st.sidebar.image(logo, use_container_width=True)
 st.sidebar.header("Selecione os Arquivos")
@@ -55,26 +55,21 @@ st.sidebar.header("Selecione os Arquivos")
 # -------------------------------
 # EXPRESSÕES REGULARES GLOBAIS
 # -------------------------------
-# Regex para identificar "nódulo" (com ou sem acento e no plural)
 regex_nodulo = re.compile(r"n[oó]dulo[s]?", re.IGNORECASE)
-# Regex para extrair tamanho (ex.: 8,5 cm ou 10 mm)
 regex_tamanho = re.compile(r"\b\d+[.,]?\d*\s?(?:mm|cm)\b", re.IGNORECASE)
 regex_nome = re.compile(r"(?i)paciente\s*:\s*(.+)")
 regex_idade = re.compile(r"(?i)idade\s*:\s*(\d+[Aa]?\s*\d*[Mm]?)")
 regex_same = re.compile(r"(?i)same\s*:\s*(\S+)")
 regex_data = re.compile(r"(?i)data\s*do\s*exame\s*:\s*([\d/]+)")
-# Regex para palavras de contexto obrigatórias
 regex_context = re.compile(r"\b(pulmão|pulmões|lobo|lobos)\b", re.IGNORECASE)
-# Regex para identificar "contorno(s)" e extrair a palavra seguinte
 regex_contorno = re.compile(r"\bcontorno[s]?\b\s+(\w+)", re.IGNORECASE)
-# Regex para identificar "calcificado" ou "calcico" com variações de acentuação e plural
 regex_calc = re.compile(r"\b(c[áa]lcificad[o]s?|c[áa]lcic[óo]s?)\b", re.IGNORECASE)
-# Regex para as exceções (negações) que devem ser mantidas
 regex_calc_exceptions = re.compile(r"\b(sem calcifica[cç][ãa]o|não calcificado|parcialmente calcificado)\b", re.IGNORECASE)
-# Nova regex para excluir sentenças que contenham as palavras: tireóide, fígado, rin(s) ou baço
 regex_exclude = re.compile(r"\b(tire[oó]ide|f[ií]gado|rins?|ba[çc]o)\b", re.IGNORECASE)
-# Nova regex para identificar as palavras "lobulado(s)", "bocelado(s)" ou "irregular(es)"
 regex_contorno_keywords = re.compile(r"\b(lobulad[oó]s?|bocelad[oó]s?|irregular[es]?)\b", re.IGNORECASE)
+# Novas expressões para extração de "Localização" e "Densidade"
+regex_localizacao = re.compile(r"\b(lobo superior|segmento superior)\b", re.IGNORECASE)
+regex_densidade = re.compile(r"\b(s[óo]lido[s]?|semi-?s[óo]lido[s]?|semisolido[s]?|vidro-?fosco|subs[óo]lido[s]?)\b", re.IGNORECASE)
 
 # -------------------------------
 # FUNÇÃO PARA DESTACAR "NÓDULO" EM VERDE
@@ -150,7 +145,7 @@ def processar_pdfs_streamlit(pdf_files):
                     continue
                 if regex_calc.search(sentenca) and not regex_calc_exceptions.search(sentenca):
                     continue
-                # Verifica se há "contorno(s)" e extrai a palavra seguinte; caso contrário, verifica os novos termos
+                # Extrai informações de contorno: via "contorno(s)" ou palavras-chave
                 contorno_match = regex_contorno.search(sentenca)
                 if contorno_match:
                     contorno_word = contorno_match.group(1)
@@ -161,11 +156,23 @@ def processar_pdfs_streamlit(pdf_files):
                         contorno_word = keyword_match.group(0)
                     else:
                         contorno_word = "Não informado"
+                # Extrai a localização, se houver (ex.: "lobo superior" ou "segmento superior")
+                match_localizacao = regex_localizacao.search(sentenca)
+                if match_localizacao:
+                    localizacao = match_localizacao.group(0)
+                else:
+                    localizacao = "Não informado"
+                # Extrai densidade, se presente
+                match_densidade = regex_densidade.search(sentenca)
+                if match_densidade:
+                    densidade = match_densidade.group(0)
+                else:
+                    densidade = "Não informado"
                 # Destaca "nódulo" em verde
                 sentenca_destacada = highlight_nodulo(sentenca)
                 tamanho_match = re.search(regex_tamanho, sentenca)
                 tamanho_valor = tamanho_match.group(0) if tamanho_match else "Não informado"
-                ocorrencias_validas.append((tamanho_valor, sentenca_destacada, contorno_word))
+                ocorrencias_validas.append((tamanho_valor, sentenca_destacada, contorno_word, localizacao, densidade))
         
         if ocorrencias_validas:
             data_exame = cabecalho["Data do Exame"]
@@ -183,13 +190,15 @@ def processar_pdfs_streamlit(pdf_files):
             if key not in relatorio_mensal:
                 relatorio_mensal[key] = set()
             relatorio_mensal[key].add(cabecalho["Paciente"])
-            for tamanho, sentenca_destacada, contorno_word in ocorrencias_validas:
+            for tamanho, sentenca_destacada, contorno_word, localizacao, densidade in ocorrencias_validas:
                 record = {**cabecalho,
                           "Tamanho": tamanho,
                           "Sentenca": sentenca_destacada,
                           "Arquivo": file_name,
                           "pdf_bytes": pdf_bytes,
-                          "Contornos": contorno_word}
+                          "Contornos": contorno_word,
+                          "Localização": localizacao,
+                          "Densidade": densidade}
                 lista_nodulos.append(record)
     for key in relatorio_mensal:
         relatorio_mensal[key] = len(relatorio_mensal[key])
@@ -237,10 +246,20 @@ def processar_pdfs_from_zip(zip_file):
                                 contorno_word = keyword_match.group(0)
                             else:
                                 contorno_word = "Não informado"
+                        match_localizacao = regex_localizacao.search(sentenca)
+                        if match_localizacao:
+                            localizacao = match_localizacao.group(0)
+                        else:
+                            localizacao = "Não informado"
+                        match_densidade = regex_densidade.search(sentenca)
+                        if match_densidade:
+                            densidade = match_densidade.group(0)
+                        else:
+                            densidade = "Não informado"
                         sentenca_destacada = highlight_nodulo(sentenca)
                         tamanho_match = re.search(regex_tamanho, sentenca)
                         tamanho_valor = tamanho_match.group(0) if tamanho_match else "Não informado"
-                        ocorrencias_validas.append((tamanho_valor, sentenca_destacada, contorno_word))
+                        ocorrencias_validas.append((tamanho_valor, sentenca_destacada, contorno_word, localizacao, densidade))
                 if ocorrencias_validas:
                     data_exame = cabecalho["Data do Exame"]
                     partes_data = data_exame.split("/")
@@ -257,13 +276,15 @@ def processar_pdfs_from_zip(zip_file):
                     if key not in relatorio_mensal:
                         relatorio_mensal[key] = set()
                     relatorio_mensal[key].add(cabecalho["Paciente"])
-                    for tamanho, sentenca_destacada, contorno_word in ocorrencias_validas:
+                    for tamanho, sentenca_destacada, contorno_word, localizacao, densidade in ocorrencias_validas:
                         record = {**cabecalho,
                                   "Tamanho": tamanho,
                                   "Sentenca": sentenca_destacada,
                                   "Arquivo": pdf_name,
                                   "pdf_bytes": pdf_bytes,
-                                  "Contornos": contorno_word}
+                                  "Contornos": contorno_word,
+                                  "Localização": localizacao,
+                                  "Densidade": densidade}
                         lista_nodulos.append(record)
     for key in relatorio_mensal:
         relatorio_mensal[key] = len(relatorio_mensal[key])
@@ -309,7 +330,7 @@ def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
 # ARMAZENAMENTO EM CACHE (st.session_state)
 # -------------------------------
 if "pacientes_minerados_df" not in st.session_state:
-    st.session_state["pacientes_minerados_df"] = pd.DataFrame(columns=["Paciente", "Idade", "Same", "Data do Exame", "Tamanho", "Sentenca", "pdf_bytes", "Contornos"])
+    st.session_state["pacientes_minerados_df"] = pd.DataFrame(columns=["Paciente", "Idade", "Same", "Data do Exame", "Tamanho", "Sentenca", "pdf_bytes", "Contornos", "Localização", "Densidade"])
     st.session_state["relatorio_mensal"] = {}
     st.session_state["lista_nodulos"] = []
 
@@ -324,7 +345,6 @@ if upload_method == "Upload de PDFs":
 else:
     zip_file = st.sidebar.file_uploader("Selecione o arquivo ZIP contendo os PDFs", type="zip")
 
-# Upload do arquivo de internados (opcional)
 internados_file = st.sidebar.file_uploader("Arquivo internados.xlsx (opcional)", type="xlsx")
 
 # -------------------------------
