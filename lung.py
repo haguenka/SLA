@@ -71,6 +71,8 @@ regex_contorno = re.compile(r"\bcontorno[s]?\b\s+(\w+)", re.IGNORECASE)
 regex_calc = re.compile(r"\b(c[áa]lcificad[o]s?|c[áa]lcic[óo]s?)\b", re.IGNORECASE)
 # Regex para as exceções (negações) que devem ser mantidas
 regex_calc_exceptions = re.compile(r"\b(sem calcifica[cç][ãa]o|não calcificado|parcialmente calcificado)\b", re.IGNORECASE)
+# Nova regex para excluir sentenças que contenham as palavras: tireóide, fígado, rin(s) ou baço
+regex_exclude = re.compile(r"\b(tire[oó]ide|f[ií]gado|rins?|ba[çc]o)\b", re.IGNORECASE)
 
 # -------------------------------
 # FUNÇÃO PARA DESTACAR "NÓDULO" EM VERDE
@@ -90,7 +92,6 @@ def highlight_nodulo(sentence):
 # -------------------------------
 def highlight_contorno(sentence):
     def repl(match):
-        # Destaca a palavra seguinte a "contorno(s)"
         return f"{match.group(1)} <span style='background-color: green;'>{match.group(2)}</span>"
     return re.sub(r"(\bcontorno[s]?\b)\s+(\w+)", repl, sentence, flags=re.IGNORECASE)
 
@@ -144,18 +145,19 @@ def processar_pdfs_streamlit(pdf_files):
                     continue
                 if re.search(r"\b(não\s+há|não\s+apresenta|não\s+possui|nenhum)\b", sentenca, re.IGNORECASE):
                     continue
-                # Se a sentença contém "calcificado" ou "calcico", mas NÃO contém as exceções, descarta a sentença
+                # Excluir a sentença se contiver tireóide, fígado, rin(s) ou baço
+                if regex_exclude.search(sentenca):
+                    continue
+                # Se a sentença contém "calcificado" ou "calcico", mas não contém as exceções, descarta a sentença
                 if regex_calc.search(sentenca) and not regex_calc_exceptions.search(sentenca):
                     continue
                 # Se houver "contorno(s)", extrai a palavra seguinte
                 contorno_match = regex_contorno.search(sentenca)
                 if contorno_match:
                     contorno_word = contorno_match.group(1)
-                    # Destaca a palavra extraída na sentença
                     sentenca = highlight_contorno(sentenca)
                 else:
                     contorno_word = "Não informado"
-                # Destaca "nódulo" em verde
                 sentenca_destacada = highlight_nodulo(sentenca)
                 tamanho_match = re.search(regex_tamanho, sentenca)
                 tamanho_valor = tamanho_match.group(0) if tamanho_match else "Não informado"
@@ -216,6 +218,8 @@ def processar_pdfs_from_zip(zip_file):
                         if re.search(r"\bsem\b", sentenca, re.IGNORECASE):
                             continue
                         if re.search(r"\b(não\s+há|não\s+apresenta|não\s+possui|nenhum)\b", sentenca, re.IGNORECASE):
+                            continue
+                        if regex_exclude.search(sentenca):
                             continue
                         if regex_calc.search(sentenca) and not regex_calc_exceptions.search(sentenca):
                             continue
