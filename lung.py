@@ -16,6 +16,20 @@ pdf_files = st.sidebar.file_uploader("Selecione os arquivos PDF", type="pdf", ac
 logging.basicConfig(level=logging.INFO)
 
 # -------------------------------
+# FUNÇÃO PARA CARREGAR A LOGO COM CACHE
+# -------------------------------
+@st.cache_data(show_spinner=False)
+def load_logo(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        return Image.open(BytesIO(response.content))
+    else:
+        return None
+
+url_logo = 'https://raw.githubusercontent.com/haguenka/SLA/main/sj.png'
+logo = load_logo(url_logo)
+
+# -------------------------------
 # CONFIGURAÇÃO DE CSS (DARK MODE)
 # -------------------------------
 st.markdown("""
