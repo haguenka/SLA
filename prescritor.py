@@ -143,12 +143,27 @@ with tab2:
     df_rm = df[df["MODALIDADE"].str.contains("MR", case=False, na=False)]
     top_medicos_rm = df_rm["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors='ignore').head(10)
     st.bar_chart(top_medicos_rm)
-    # Exibe o DataFrame com nomes e quantidade de exames
-    st.dataframe(top_medicos_rm.reset_index().rename(columns={"index": "Médico", "MEDICO_SOLICITANTE": "Quantidade"}))
+    # Cria DataFrame com nomes e quantidade
+    df_top_rm = top_medicos_rm.reset_index().rename(columns={"index": "Médico", "MEDICO_SOLICITANTE": "Quantidade"})
+    # Função para gerar o detalhamento dos exames para cada médico
+    def get_exam_breakdown(medico):
+        exam_counts = df_rm[df_rm["MEDICO_SOLICITANTE"] == medico]["DESCRICAO_PROCEDIMENTO"].value_counts()
+        return "\n".join([f"{exame} - {count}" for exame, count in exam_counts.items()])
+    # Adiciona a coluna com os tipos de exames e suas quantidades
+    df_top_rm["Exames"] = df_top_rm["Médico"].apply(get_exam_breakdown)
+    st.dataframe(df_top_rm)
 
     st.header("Top 10 Médicos Prescritores de TC")
-    df_tc = df[df["MODALIDADE"].str.contains("CT", case=False, na=False)]
+    df_tc = df[df["MODALIDADE"].str.contains("TC", case=False, na=False)]
     top_medicos_tc = df_tc["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors='ignore').head(10)
     st.bar_chart(top_medicos_tc)
-    # Exibe o DataFrame com nomes e quantidade de exames
-    st.dataframe(top_medicos_tc.reset_index().rename(columns={"index": "Médico", "MEDICO_SOLICITANTE": "Quantidade"}))
+    # Cria DataFrame com nomes e quantidade
+    df_top_tc = top_medicos_tc.reset_index().rename(columns={"index": "Médico", "MEDICO_SOLICITANTE": "Quantidade"})
+    # Adiciona o detalhamento dos exames para cada médico em TC
+    df_top_tc["Exames"] = df_top_tc["Médico"].apply(
+        lambda medico: "\n".join([
+            f"{exame} - {count}" 
+            for exame, count in df_tc[df_tc["MEDICO_SOLICITANTE"] == medico]["DESCRICAO_PROCEDIMENTO"].value_counts().items()
+        ])
+    )
+    st.dataframe(df_top_tc)
