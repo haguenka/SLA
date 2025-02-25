@@ -8,6 +8,9 @@ import logging
 
 # Configurar a página antes de qualquer outra chamada do Streamlit
 st.set_page_config(page_title="Minerador de PDF - Nódulo", layout="wide")
+st.title("Minerador de PDF - Busca por Nódulo e Massa")
+st.sidebar.header("Upload de PDFs")
+pdf_files = st.sidebar.file_uploader("Selecione os arquivos PDF", type="pdf", accept_multiple_files=True)
 
 # Configuração do logging (opcional)
 logging.basicConfig(level=logging.INFO)
@@ -29,14 +32,6 @@ st.markdown("""
     }
     </style>
     """, unsafe_allow_html=True)
-
-# -------------------------------
-# TÍTULO E SIDEBAR
-# -------------------------------
-st.set_page_config(page_title="Minerador de PDF - Nódulo", layout="wide")
-st.title("Minerador de PDF - Busca por Nódulo e Massa")
-st.sidebar.header("Upload de PDFs")
-pdf_files = st.sidebar.file_uploader("Selecione os arquivos PDF", type="pdf", accept_multiple_files=True)
 
 # -------------------------------
 # PADRÕES DE BUSCA E REGEX
