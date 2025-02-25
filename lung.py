@@ -69,7 +69,10 @@ regex_exclude = re.compile(r"\b(tire[oó]ide|f[ií]gado|rins?|ba[çc]o)\b", re.I
 regex_contorno_keywords = re.compile(r"\b(lobulad[oó]s?|bocelad[oó]s?|irregular[es]?)\b", re.IGNORECASE)
 # Novas expressões para extração de "Localização" e "Densidade"
 regex_localizacao = re.compile(r"\b(lobo superior|segmento superior)\b", re.IGNORECASE)
-regex_densidade = re.compile(r"\b(s[óo]lido[s]?|semi-?s[óo]lido[s]?|semisolido[s]?|vidro-?fosco|subs[óo]lido[s]?)\b", re.IGNORECASE)
+regex_densidade = re.compile(
+    r"\b(s[óo]lido[s]?|semi-?s[óo]lido[s]?|semisolido[s]?|vidro\s*fosco|subs[óo]lido[s]?|partes?\s*moles?)\b",
+    re.IGNORECASE
+)
 
 # -------------------------------
 # FUNÇÃO PARA DESTACAR "NÓDULO" EM VERDE
