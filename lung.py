@@ -36,18 +36,31 @@ logo = load_logo(url_logo)
 # -------------------------------
 st.markdown("""
     <style>
+    /* Estilo para o corpo (modo escuro) */
     body {
         background-color: #121212;
         color: #ffffff;
     }
+    /* Estilo para a sidebar */
     .css-1d391kg, .css-1d391kg div {
         background-color: #1e1e1e;
     }
+    /* Ajuste de fonte e espaçamento para um visual clean/fancy */
     .reportview-container .main .block-container{
-        padding: 2rem;
+        padding-top: 2rem;
+        padding-right: 2rem;
+        padding-left: 2rem;
+        padding-bottom: 2rem;
     }
     </style>
     """, unsafe_allow_html=True)
+
+# -------------------------------
+# TÍTULO E LOGO NA SIDEBAR
+# -------------------------------
+if logo is not None:
+    st.sidebar.image(logo, use_container_width=True)
+st.sidebar.header("Selecione os Arquivos")
 
 # -------------------------------
 # PADRÕES DE BUSCA E REGEX
