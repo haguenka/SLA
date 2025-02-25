@@ -162,14 +162,20 @@ with tab2:
     df_tc = df[df["MODALIDADE"].str.contains("CT", case=False, na=False)]
     top_medicos_tc = df_tc["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors="ignore").head(10)
     st.bar_chart(top_medicos_tc)
-    
+
+    # Converte a Series em DataFrame e define as colunas
     df_top_tc = top_medicos_tc.reset_index()
     df_top_tc.columns = ["Medico", "Quantidade"]
-    df_top_tc["Prescritor"] = df_top_tc["Medico"].apply(
-        lambda m: f"{m}\n" + "\n\t".join([
-            f"{exame} - {count}" 
-            for exame, count in df_tc[df_tc["MEDICO_SOLICITANTE"] == m]["DESCRICAO_PROCEDIMENTO"].value_counts().items()
-        ])
-    )
+
+    # Função para gerar a listagem dos exames (cada exame em uma nova linha)
+    def get_exam_breakdown(medico):
+        exam_counts = df_tc[df_tc["MEDICO_SOLICITANTE"] == medico]["DESCRICAO_PROCEDIMENTO"].value_counts()
+        # Para cada exame, cria uma linha com indentação (usando \t)
+        return "\n\t" + "\n\t".join([f"{exame} - {count}" for exame, count in exam_counts.items()])
+
+    # Cria uma nova coluna "Prescritor" com o nome e, na linha abaixo, a listagem dos exames
+    df_top_tc["Prescritor"] = df_top_tc["Medico"].apply(lambda m: f"{m}\n{get_exam_breakdown(m)}")
+    # Seleciona as colunas desejadas
     df_top_tc = df_top_tc[["Prescritor", "Quantidade"]]
+    
     st.table(df_top_tc)
