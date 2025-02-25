@@ -67,6 +67,10 @@ regex_data = re.compile(r"(?i)data\s*do\s*exame\s*:\s*([\d/]+)")
 regex_context = re.compile(r"\b(pulmão|pulmões|lobo|lobos)\b", re.IGNORECASE)
 # Regex para identificar "contorno(s)" e extrair a palavra seguinte
 regex_contorno = re.compile(r"\bcontorno[s]?\b\s+(\w+)", re.IGNORECASE)
+# Regex para identificar "calcificado" ou "calcico"
+regex_calc = re.compile(r"\b(calcificado|calcico)\b", re.IGNORECASE)
+# Regex para as exceções (negações) que devem ser mantidas
+regex_calc_exceptions = re.compile(r"\b(sem calcifica[cç][ãa]o|não calcificado|parcialmente calcificado)\b", re.IGNORECASE)
 
 # -------------------------------
 # FUNÇÃO PARA DESTACAR "NÓDULO" EM VERDE
@@ -133,12 +137,15 @@ def processar_pdfs_streamlit(pdf_files):
         sentencas = re.split(r'(?<=[.!?])\s+', texto_completo)
         ocorrencias_validas = []
         for sentenca in sentencas:
-            # Verifica se a sentença contém "nódulo" e também uma das palavras de contexto
+            # Verifica se a sentença contém "nódulo" e uma palavra de contexto obrigatória
             if regex_nodulo.search(sentenca) and regex_context.search(sentenca):
-                # Exclui sentenças com "sem" ou negações
+                # Exclui sentenças com "sem" ou negações gerais
                 if re.search(r"\bsem\b", sentenca, re.IGNORECASE):
                     continue
                 if re.search(r"\b(não\s+há|não\s+apresenta|não\s+possui|nenhum)\b", sentenca, re.IGNORECASE):
+                    continue
+                # Se a sentença contém "calcificado" ou "calcico", mas NÃO contém as exceções, descarta a sentença
+                if regex_calc.search(sentenca) and not regex_calc_exceptions.search(sentenca):
                     continue
                 # Se houver "contorno(s)", extrai a palavra seguinte
                 contorno_match = regex_contorno.search(sentenca)
@@ -209,6 +216,8 @@ def processar_pdfs_from_zip(zip_file):
                         if re.search(r"\bsem\b", sentenca, re.IGNORECASE):
                             continue
                         if re.search(r"\b(não\s+há|não\s+apresenta|não\s+possui|nenhum)\b", sentenca, re.IGNORECASE):
+                            continue
+                        if regex_calc.search(sentenca) and not regex_calc_exceptions.search(sentenca):
                             continue
                         contorno_match = regex_contorno.search(sentenca)
                         if contorno_match:
