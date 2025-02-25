@@ -113,8 +113,8 @@ def main():
         )
 
         # Define condições para SLA fora do período
-        doctors_of_interest = ['henrique arume guenka', 'marcelo jacobina de abreu']
-        condition_1 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (df['MEDICO_SOLICITANTE'].isin(doctors_of_interest)) & (df['DELTA_TIME'] > (10 * 24))
+        #doctors_of_interest = ['henrique arume guenka', 'marcelo jacobina de abreu']
+        #condition_1 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (df['MEDICO_SOLICITANTE'].isin(doctors_of_interest)) & (df['DELTA_TIME'] > 120)
         condition_2 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (~df['MEDICO_SOLICITANTE'].isin(doctors_of_interest)) & (df['DELTA_TIME'] > 120)
         condition_3 = (df['GRUPO'] == 'GRUPO RAIO-X') & (df['DELTA_TIME'] > 72)
         condition_4 = (df['GRUPO'] == 'GRUPO MEDICINA NUCLEAR') & (df['DELTA_TIME'] > 120)
@@ -123,7 +123,7 @@ def main():
         condition_7 = (df['TIPO_ATENDIMENTO'] == 'Externo') & (df['GRUPO'].isin(['GRUPO TOMOGRAFIA', 'GRUPO RESSONÂNCIA MAGNÉTICA', 'GRUPO ULTRASSOM'])) & (df['DELTA_TIME'] > 96)
 
         df['SLA_STATUS'] = 'SLA DENTRO DO PERÍODO'
-        df.loc[condition_1 | condition_2 | condition_3 | condition_4 | condition_5 | condition_6 | condition_7,
+        df.loc[condition_2 | condition_3 | condition_4 | condition_5 | condition_6 | condition_7,
                'SLA_STATUS'] = 'SLA FORA DO PERÍODO'
 
         # Cria a coluna OBSERVACAO se não existir
