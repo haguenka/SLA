@@ -145,13 +145,13 @@ with tab2:
     top_medicos_rm = df_rm["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors='ignore').head(10)
     st.bar_chart(top_medicos_rm)
     # Cria DataFrame com nomes e quantidade
-    df_top_rm = top_medicos_rm.reset_index().rename(columns={"index": "Médico", "MEDICO_SOLICITANTE": "Quantidade"})
+    df_top_rm = top_medicos_rm.reset_index().rename(columns={"index": "Medico", "MEDICO_SOLICITANTE": "Quantidade"})
     # Função para gerar o detalhamento dos exames para cada médico
     def get_exam_breakdown(medico):
         exam_counts = df_rm[df_rm["MEDICO_SOLICITANTE"] == medico]["DESCRICAO_PROCEDIMENTO"].value_counts()
         return "\n".join([f"{exame} - {count}" for exame, count in exam_counts.items()])
     # Adiciona a coluna "Exames" com o detalhamento
-    df_top_rm["Exames"] = df_top_rm["Médico"].apply(get_exam_breakdown)
+    df_top_rm["Exames"] = df_top_rm["Medico"].apply(get_exam_breakdown)
     st.dataframe(df_top_rm)
 
     st.header("Top 10 Médicos Prescritores de TC")
@@ -159,9 +159,9 @@ with tab2:
     top_medicos_tc = df_tc["MEDICO_SOLICITANTE"].value_counts().drop(labels=excluir_medicos, errors='ignore').head(10)
     st.bar_chart(top_medicos_tc)
     # Cria DataFrame com nomes e quantidade
-    df_top_tc = top_medicos_tc.reset_index().rename(columns={"index": "Médico", "MEDICO_SOLICITANTE": "Quantidade"})
+    df_top_tc = top_medicos_tc.reset_index().rename(columns={"index": "Medico", "MEDICO_SOLICITANTE": "Quantidade"})
     # Adiciona a coluna "Exames" com o detalhamento para cada médico em TC
-    df_top_tc["Exames"] = df_top_tc["Médico"].apply(
+    df_top_tc["Exames"] = df_top_tc["Medico"].apply(
         lambda medico: "\n".join([
             f"{exame} - {count}" 
             for exame, count in df_tc[df_tc["MEDICO_SOLICITANTE"] == medico]["DESCRICAO_PROCEDIMENTO"].value_counts().items()
