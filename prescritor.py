@@ -146,18 +146,22 @@ with tab2:
     st.bar_chart(top_medicos_rm)
     # Converte a Series para DataFrame e define explicitamente as colunas
     df_top_rm = top_medicos_rm.reset_index()
-    df_top_rm.columns = ["Medico", "Quantidade"]  # Define as colunas como "Medico" e "Quantidade"
-    # Opcional: exibir as colunas para debug
+    df_top_rm.columns = ["Medico", "Quantidade"]
     st.write("Colunas do df_top_rm:", df_top_rm.columns.tolist())
     
-    # Função para gerar o detalhamento dos exames para cada médico
+    # Função para gerar o detalhamento dos exames para cada médico (indentado com tab)
     def get_exam_breakdown(medico):
         exam_counts = df_rm[df_rm["MEDICO_SOLICITANTE"] == medico]["DESCRICAO_PROCEDIMENTO"].value_counts()
-        return "\n".join([f"{exame} - {count}" for exame, count in exam_counts.items()])
+        # Retorna os exames, cada linha recuada com um \t
+        return "\n\t" + "\n\t".join([f"{exame} - {count}" for exame, count in exam_counts.items()])
     
-    # Adiciona a coluna "Exames" com o detalhamento
+    # Cria a coluna "Exames" com o detalhamento
     df_top_rm["Exames"] = df_top_rm["Medico"].apply(get_exam_breakdown)
-    st.dataframe(df_top_rm)
+    # Combina o nome e os exames em uma única coluna "Prescritor"
+    df_top_rm["Prescritor"] = df_top_rm["Medico"] + df_top_rm["Exames"]
+    # Seleciona as colunas que serão exibidas (por exemplo, "Prescritor" e "Quantidade")
+    df_top_rm = df_top_rm[["Prescritor", "Quantidade"]]
+    st.table(df_top_rm)
 
     st.header("Top 10 Médicos Prescritores de TC")
     df_tc = df[df["MODALIDADE"].str.contains("CT", case=False, na=False)]
@@ -166,9 +170,11 @@ with tab2:
     df_top_tc = top_medicos_tc.reset_index()
     df_top_tc.columns = ["Medico", "Quantidade"]
     df_top_tc["Exames"] = df_top_tc["Medico"].apply(
-        lambda medico: "\n".join([
+        lambda medico: "\n\t" + "\n\t".join([
             f"{exame} - {count}" 
             for exame, count in df_tc[df_tc["MEDICO_SOLICITANTE"] == medico]["DESCRICAO_PROCEDIMENTO"].value_counts().items()
         ])
     )
-    st.dataframe(df_top_tc)
+    df_top_tc["Prescritor"] = df_top_tc["Medico"] + df_top_tc["Exames"]
+    df_top_tc = df_top_tc[["Prescritor", "Quantidade"]]
+    st.table(df_top_tc)
