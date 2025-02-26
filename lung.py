@@ -67,7 +67,7 @@ regex_calc = re.compile(r"\b(c[áa]lcificad[o]s?|c[áa]lcic[óo]s?)\b", re.IGNOR
 regex_calc_exceptions = re.compile(r"\b(sem calcifica[cç][ãa]o|não calcificado|parcialmente calcificado)\b", re.IGNORECASE)
 regex_exclude = re.compile(r"\b(tire[oó]ide|f[ií]gado|rins?|ba[çc]o)\b", re.IGNORECASE)
 regex_contorno_keywords = re.compile(r"\b(lobulad[oó]s?|bocelad[oó]s?|irregular[es]?)\b", re.IGNORECASE)
-# Novas expressões para extração de "Localização" e "Densidade"
+# Expressões para extração de "Localização" e "Densidade"
 regex_localizacao = re.compile(r"\b(lobo superior|segmento superior)\b", re.IGNORECASE)
 regex_densidade = re.compile(
     r"\b(s[óo]lido[s]?|semi-?s[óo]lido[s]?|semisolido[s]?|vidro\s*fosco|subs[óo]lido[s]?|partes?\s*moles?)\b",
@@ -138,7 +138,7 @@ def processar_pdfs_streamlit(pdf_files):
         sentencas = re.split(r'(?<=[.!?])\s+', texto_completo)
         ocorrencias_validas = []
         for sentenca in sentencas:
-            # Verifica se a sentença contém "nódulo" e uma palavra de contexto obrigatória
+            # Seleciona sentenças que contenham "nódulo" e contexto obrigatório
             if regex_nodulo.search(sentenca) and regex_context.search(sentenca):
                 if re.search(r"\bsem\b", sentenca, re.IGNORECASE):
                     continue
@@ -148,7 +148,7 @@ def processar_pdfs_streamlit(pdf_files):
                     continue
                 if regex_calc.search(sentenca) and not regex_calc_exceptions.search(sentenca):
                     continue
-                # Extrai informações de contorno: via "contorno(s)" ou palavras-chave
+                # Extrai contornos: via "contorno(s)" ou pelas palavras-chave
                 contorno_match = regex_contorno.search(sentenca)
                 if contorno_match:
                     contorno_word = contorno_match.group(1)
@@ -159,7 +159,7 @@ def processar_pdfs_streamlit(pdf_files):
                         contorno_word = keyword_match.group(0)
                     else:
                         contorno_word = "Não informado"
-                # Extrai a localização, se houver (ex.: "lobo superior" ou "segmento superior")
+                # Extrai localização, se houver
                 match_localizacao = regex_localizacao.search(sentenca)
                 if match_localizacao:
                     localizacao = match_localizacao.group(0)
@@ -201,7 +201,8 @@ def processar_pdfs_streamlit(pdf_files):
                           "pdf_bytes": pdf_bytes,
                           "Contornos": contorno_word,
                           "Localização": localizacao,
-                          "Densidade": densidade}
+                          "Densidade": densidade,
+                          "Convenio": ""}  # Inicialmente vazio
                 lista_nodulos.append(record)
     for key in relatorio_mensal:
         relatorio_mensal[key] = len(relatorio_mensal[key])
@@ -287,7 +288,8 @@ def processar_pdfs_from_zip(zip_file):
                                   "pdf_bytes": pdf_bytes,
                                   "Contornos": contorno_word,
                                   "Localização": localizacao,
-                                  "Densidade": densidade}
+                                  "Densidade": densidade,
+                                  "Convenio": ""}
                         lista_nodulos.append(record)
     for key in relatorio_mensal:
         relatorio_mensal[key] = len(relatorio_mensal[key])
@@ -302,15 +304,11 @@ def processar_pdfs_from_zip(zip_file):
         pacientes_minerados_df = pacientes_minerados_df.drop(columns=["Arquivo", "pdf_bytes"], errors="ignore")
     return relatorio_mensal, lista_nodulos, pacientes_minerados_df
 
-def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
-    pacientes_df['Paciente'] = pacientes_df['Paciente'].fillna("").astype(str)
-    internados_df['Paciente'] = internados_df['Paciente'].fillna("").astype(str)
-    if 'Convenio' not in internados_df.columns:
-        st.warning("A coluna 'convenio' não foi encontrada no dataframe de internados. Será criada com valores vazios.")
-        internados_df['Convenio'] = None
-    pacientes_df['Paciente_lower'] = pacientes_df['Paciente'].str.lower()
-    internados_df['Paciente_lower'] = internados_df['Paciente'].str.lower()
-    internados_list = internados_df['Paciente_lower'].tolist()
+def correlacionar_pacientes_fuzzy(pacientes_df, pa_df, threshold=70):
+    # Ajusta os nomes para comparação
+    pacientes_df['Paciente_lower'] = pacientes_df['Paciente'].fillna("").str.lower()
+    pa_df['Paciente_lower'] = pa_df['Paciente'].fillna("").str.lower()
+    internados_list = pa_df['Paciente_lower'].tolist()
     matched_indices = []
     convenios = []
     for idx, row in pacientes_df.iterrows():
@@ -320,20 +318,22 @@ def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
         best_match, score = process.extractOne(nome, internados_list, scorer=fuzz.ratio)
         if score >= threshold:
             matched_indices.append(idx)
-            match_idx = internados_df[internados_df['Paciente_lower'] == best_match].index[0]
-            convenio_value = internados_df.loc[match_idx, 'Convenio']
+            match_idx = pa_df[pa_df['Paciente_lower'] == best_match].index[0]
+            convenio_value = pa_df.loc[match_idx, 'Convenio']
             convenios.append(convenio_value)
     correlated_df = pacientes_df.loc[matched_indices].copy()
-    correlated_df.drop(columns=['Paciente_lower'], inplace=True)
-    correlated_df = correlated_df.drop(columns=["Arquivo", "pdf_bytes"], errors="ignore")
     correlated_df['Convenio'] = convenios
+    correlated_df.drop(columns=['Paciente_lower'], inplace=True)
     return correlated_df
 
 # -------------------------------
 # ARMAZENAMENTO EM CACHE (st.session_state)
 # -------------------------------
 if "pacientes_minerados_df" not in st.session_state:
-    st.session_state["pacientes_minerados_df"] = pd.DataFrame(columns=["Paciente", "Idade", "Same", "Data do Exame", "Tamanho", "Sentenca", "pdf_bytes", "Contornos", "Localização", "Densidade"])
+    st.session_state["pacientes_minerados_df"] = pd.DataFrame(
+        columns=["Paciente", "Idade", "Same", "Data do Exame", "Tamanho", "Sentenca",
+                 "pdf_bytes", "Contornos", "Localização", "Densidade", "Convenio"]
+    )
     st.session_state["relatorio_mensal"] = {}
     st.session_state["lista_nodulos"] = []
 
@@ -348,7 +348,8 @@ if upload_method == "Upload de PDFs":
 else:
     zip_file = st.sidebar.file_uploader("Selecione o arquivo ZIP contendo os PDFs", type="zip")
 
-internados_file = st.sidebar.file_uploader("Arquivo internados.xlsx (opcional)", type="xlsx")
+# Uploader para o arquivo de Atendimento PA
+atendimento_pa_file = st.sidebar.file_uploader("Atendimento PA (arquivo xlsx)", type="xlsx")
 
 # -------------------------------
 # BOTÃO DE PROCESSAMENTO
@@ -396,6 +397,21 @@ if st.sidebar.button("Processar"):
         st.session_state["relatorio_mensal"] = combined_relatorio
         st.session_state["lista_nodulos"] = combined_df.to_dict(orient="records")
 
+    # Se houver arquivo de Atendimento PA, correlacione e extraia "Convenio"
+    if atendimento_pa_file:
+        pa_df = pd.read_excel(atendimento_pa_file)
+        # Certifique-se de que a planilha de PA contenha as colunas "Paciente" e "Convenio"
+        correlated_pa_df = correlacionar_pacientes_fuzzy(
+            st.session_state["pacientes_minerados_df"].copy(), pa_df, threshold=70
+        )
+        # Atualize o DataFrame com o Convenio encontrado
+        for idx, row in correlated_pa_df.iterrows():
+            st.session_state["pacientes_minerados_df"].loc[
+                st.session_state["pacientes_minerados_df"]['Paciente'] == row['Paciente'], 'Convenio'
+            ] = row['Convenio']
+        st.success("Correlação com Atendimento PA realizada com sucesso!")
+
+    # Montagem do relatório e das abas
     report_md = "Pacientes encontrados com nódulos por mês:<br>"
     for key in sorted(st.session_state["relatorio_mensal"].keys(), key=lambda x: (x[0], x[1]) if isinstance(x, tuple) and len(x)==2 else (0,0)):
         ano, mes = key if isinstance(key, tuple) and len(key)==2 else (0, 0)
@@ -481,17 +497,19 @@ if st.sidebar.button("Processar"):
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     
-    if internados_file:
-        internados_df = pd.read_excel(internados_file)
-        correlated_df = correlacionar_pacientes_fuzzy(st.session_state["pacientes_minerados_df"].copy(), internados_df, threshold=70)
-        st.markdown(f"### Correlação com Internados:\nForam encontrados {len(correlated_df)} pacientes minerados internados.")
-        st.dataframe(correlated_df)
+    if atendimento_pa_file:
+        st.markdown("### Atendimento PA Correlacionado:")
+        pa_df = pd.read_excel(atendimento_pa_file)
+        correlated_pa_df = correlacionar_pacientes_fuzzy(
+            st.session_state["pacientes_minerados_df"].copy(), pa_df, threshold=70
+        )
+        st.dataframe(correlated_pa_df)
         towrite_corr = BytesIO()
-        correlated_df.to_excel(towrite_corr, index=False, engine='openpyxl')
+        correlated_pa_df.to_excel(towrite_corr, index=False, engine='openpyxl')
         towrite_corr.seek(0)
         st.download_button(
-            label="Download Excel de Pacientes Internados Correlacionados",
+            label="Download Excel de Pacientes Correlacionados com Atendimento PA",
             data=towrite_corr,
-            file_name="pacientes_internados_correlacionados.xlsx",
+            file_name="pacientes_atendimento_pa_correlacionado.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
