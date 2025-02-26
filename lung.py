@@ -503,7 +503,7 @@ if st.sidebar.button("Processar"):
         correlated_pa_df = correlacionar_pacientes_fuzzy(
             st.session_state["pacientes_minerados_df"].copy(), pa_df, threshold=70
         )
-        df_para_exibicao2 = st.session_state["correlated_pa_df"].drop(columns=["Tamanho","pdf_bytes", "Sentenca", "Contornos", "Densidade", "Localização"], errors="ignore")
+        df_para_exibicao2 = correlated_pa_df.drop(columns=["Tamanho","pdf_bytes", "Sentenca", "Contornos", "Densidade", "Localização"], errors="ignore")
         st.dataframe(df_para_exibicao2)
         towrite_corr = BytesIO()
         correlated_pa_df.to_excel(towrite_corr, index=False, engine='openpyxl')
