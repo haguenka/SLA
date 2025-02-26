@@ -319,6 +319,10 @@ else:
 # Upload do arquivo de internados (opcional)
 internados_file = st.sidebar.file_uploader("Arquivo internados.xlsx (opcional)", type="xlsx")
 
+# Upload do arquivo de Atendimentos PA (opcional) – movido para a sidebar fora do bloco de processamento
+atendimentos_file = st.sidebar.file_uploader("Arquivo Atendimentos PA (xlsx) (opcional)", type="xlsx")
+
+
 # -------------------------------
 # BOTÃO DE PROCESSAMENTO
 # -------------------------------
@@ -488,8 +492,6 @@ if st.sidebar.button("Processar"):
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
-    # Upload do arquivo de Atendimentos PA (opcional)
-    atendimentos_file = st.sidebar.file_uploader("Arquivo Atendimentos PA (xlsx) (opcional)", type="xlsx")
 
     # Correlação com Atendimentos PA (se arquivo fornecido)
     if atendimentos_file:
