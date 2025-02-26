@@ -301,7 +301,7 @@ def correlacionar_pacientes_fuzzy(pacientes_df, internados_df, threshold=70):
 # ARMAZENAMENTO EM CACHE (st.session_state)
 # -------------------------------
 if "pacientes_minerados_df" not in st.session_state:
-    st.session_state["pacientes_minerados_df"] = pd.DataFrame(columns=["Paciente", "Idade", "Same", "Data do Exame", "Tamanho", "Sentenca", "Arquivo", "pdf_bytes"])
+    st.session_state["pacientes_minerados_df"] = pd.DataFrame(columns=["Paciente", "Idade", "Same", "Data do Exame", "Tamanho", "Sentenca", "Arquivo", "pdf_bytes", "Convenio"])
     st.session_state["relatorio_mensal"] = {}
     st.session_state["lista_calculos"] = []
 
@@ -492,7 +492,6 @@ if st.sidebar.button("Processar"):
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
-
     # Correlação com Atendimentos PA (se arquivo fornecido)
     if atendimentos_file:
         atendimentos_df = pd.read_excel(atendimentos_file)
@@ -508,11 +507,13 @@ if st.sidebar.button("Processar"):
         st.session_state["pacientes_minerados_df"] = st.session_state["pacientes_minerados_df"].merge(
             df_pa, on='Paciente', how='left', suffixes=('', '_pa')
         )
-        # Se já houver algum valor em 'Convenio', os não nulos do novo arquivo podem sobrescrever ou complementar
-        st.session_state["pacientes_minerados_df"]["Convenio"] = st.session_state["pacientes_minerados_df"]["Convenio"].combine_first(
-            st.session_state["pacientes_minerados_df"]["Convenio_pa"]
-        )
-        st.session_state["pacientes_minerados_df"].drop(columns=["Convenio_pa"], inplace=True)
+        
+        # Verifica se a coluna "Convenio_pa" existe antes de utilizá-la
+        if "Convenio_pa" in st.session_state["pacientes_minerados_df"].columns:
+            st.session_state["pacientes_minerados_df"]["Convenio"] = st.session_state["pacientes_minerados_df"]["Convenio"].combine_first(
+                st.session_state["pacientes_minerados_df"]["Convenio_pa"]
+            )
+            st.session_state["pacientes_minerados_df"].drop(columns=["Convenio_pa"], inplace=True)
 
         # Atualiza a exibição dos dados
         df_para_exibicao_atend = st.session_state["pacientes_minerados_df"].drop(columns=["pdf_bytes", "Arquivo", "Sentenca"], errors="ignore")
