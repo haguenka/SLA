@@ -487,3 +487,31 @@ if st.sidebar.button("Processar"):
             file_name="pacientes_internados_correlacionados.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
+    # Upload do arquivo de Atendimentos PA (opcional)
+    atendimentos_file = st.sidebar.file_uploader("Arquivo Atendimentos PA (xlsx) (opcional)", type="xlsx")
+
+    # Correlação com Atendimentos PA (se arquivo fornecido)
+    if atendimentos_file:
+        atendimentos_df = pd.read_excel(atendimentos_file)
+        correlated_pa_df = correlacionar_pacientes_fuzzy(
+            st.session_state["pacientes_minerados_df"].copy(), atendimentos_df, threshold=70
+        )
+        st.markdown(f"### Correlação com Atendimentos PA:\nForam encontrados {len(correlated_pa_df)} pacientes minerados atendidos no PA.")
+        
+        # Atualiza o DataFrame principal para incluir o 'Convenio' do PA
+        # Supondo que ambos os DataFrames possuem a coluna 'Paciente'
+        # Se o DataFrame já tiver uma coluna 'Convenio', você pode optar por preencher os ausentes
+        df_pa = correlated_pa_df[['Paciente', 'Convenio']]
+        st.session_state["pacientes_minerados_df"] = st.session_state["pacientes_minerados_df"].merge(
+            df_pa, on='Paciente', how='left', suffixes=('', '_pa')
+        )
+        # Se já houver algum valor em 'Convenio', os não nulos do novo arquivo podem sobrescrever ou complementar
+        st.session_state["pacientes_minerados_df"]["Convenio"] = st.session_state["pacientes_minerados_df"]["Convenio"].combine_first(
+            st.session_state["pacientes_minerados_df"]["Convenio_pa"]
+        )
+        st.session_state["pacientes_minerados_df"].drop(columns=["Convenio_pa"], inplace=True)
+
+        # Atualiza a exibição dos dados
+        df_para_exibicao_atend = st.session_state["pacientes_minerados_df"].drop(columns=["pdf_bytes", "Arquivo", "Sentenca"], errors="ignore")
+        st.dataframe(df_para_exibicao_atend)
