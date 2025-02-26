@@ -468,10 +468,16 @@ if st.sidebar.button("Processar"):
     # -------------------------------
     if internados_file:
         internados_df = pd.read_excel(internados_file)
-        correlated_df = correlacionar_pacientes_fuzzy(st.session_state["pacientes_minerados_df"].copy(), internados_df, threshold=70)
+        correlated_df = correlacionar_pacientes_fuzzy(
+            st.session_state["pacientes_minerados_df"].copy(), internados_df, threshold=70
+        )
+        # Save in session state for later access
+        st.session_state["correlated_df"] = correlated_df
+        
         st.markdown(f"### Correlação com Internados:\nForam encontrados {len(correlated_df)} pacientes minerados internados.")
         df_para_exibicao2 = st.session_state["correlated_df"].drop(columns=["Tamanho", "Sentenca"], errors="ignore")
         st.dataframe(df_para_exibicao2)
+        # ... rest of your code
         towrite_corr = BytesIO()
         correlated_df.to_excel(towrite_corr, index=False, engine='openpyxl')
         towrite_corr.seek(0)
