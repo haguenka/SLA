@@ -13,3 +13,4 @@ thefuzz
 fuzzywuzzy
 pytesseract
 pandasai
+pydicom
