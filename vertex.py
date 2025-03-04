@@ -9,32 +9,10 @@ from vertexai.generative_models import GenerativeModel, Part, Image
 
 # --- Configuração Inicial ---
 
-# 1. Autenticação Vertex AI (SECRETO!)
-# Configure a autenticação da Vertex AI *ANTES* de executar o aplicativo.
-# Há várias maneiras:
-#    a) Variável de Ambiente GOOGLE_APPLICATION_CREDENTIALS:
-#       - Baixe o arquivo JSON da chave da sua conta de serviço.
-#       - Defina a variável de ambiente:
-#         ```bash
-#         export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/service_account_key.json"
-#         ```
-#    b)  `gcloud auth application-default login` (se você tiver o SDK do Google Cloud instalado):
-#       ```bash
-#       gcloud auth application-default login
-#       ```
-#    c)  Dentro do próprio código (NÃO RECOMENDADO para produção, APENAS para testes rápidos):
-#        ```python
-#        import os
-#        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/caminho/para/seu/client_secret.json"
-#        ```
-#        *MUITO IMPORTANTE:* Nunca coloque suas credenciais diretamente no código em um ambiente de produção!
-
-# Defina a variável de ambiente *DENTRO* do código (MENOS SEGURO)
-os.environ["GOOGLE_CLOUD_PROJECT"] = "vertex-api-452717"  # Substitua!
+os.environ["GOOGLE_CLOUD_PROJECT"] = "vertex-api-452717"  # Substitua pelo seu projeto!
 LOCATION = "us-central1"  # Ou a região desejada.
 
 try:
-    # Inicializa o Vertex AI (boa prática, mesmo que a variável de ambiente esteja definida)
     vertexai.init(project=os.environ["GOOGLE_CLOUD_PROJECT"], location=LOCATION)
     model = GenerativeModel("gemini-1.5-pro-002")
 except Exception as e:
@@ -43,73 +21,49 @@ except Exception as e:
 
 # --- Funções Auxiliares ---
 
-def load_dicom_image(file_content):
-    """Carrega e converte uma imagem DICOM para um formato utilizável."""
-    try:
-        dicom_file = pydicom.dcmread(io.BytesIO(file_content))
-        image = dicom_file.pixel_array
-        return image, dicom_file  # Retorna imagem e metadata
-    except Exception as e:
-        st.error(f"Erro ao ler o arquivo DICOM: {e}")
-        return None, None
-
 def window_image(image, window_center, window_width):
-    """Aplica janelamento a uma imagem."""
+    """Aplica janelamento à imagem."""
     img_min = window_center - window_width // 2
     img_max = window_center + window_width // 2
-    windowed_image = image.copy()
-    windowed_image[windowed_image < img_min] = img_min
-    windowed_image[windowed_image > img_max] = img_max
+    windowed_image = np.clip(image, img_min, img_max)
+    # Normaliza para 0-255
+    windowed_image = ((windowed_image - img_min) / (img_max - img_min) * 255).astype(np.uint8)
     return windowed_image
 
-def normalize_image(image):
-    """Normaliza uma imagem para o intervalo [0, 1]."""
-    normalized_image = (image - np.min(image)) / (np.max(image) - np.min(image))
-    return normalized_image
-
-def dicom_to_vertexai_image(image, dicom_data):
-    """Converte uma imagem DICOM processada para um objeto vertexai.Part.Image."""
-    # 1. Janelamento (exemplo para pulmão - ajuste conforme necessário)
-    windowed_image = window_image(image, -600, 1500)
-
-    # 2. Normalização
-    normalized_image = normalize_image(windowed_image)
-
-    # 3. Conversão para uint8 (escala de cinza 0-255) - IMPORTANTE para visualização
-    image_uint8 = (normalized_image * 255).astype(np.uint8)
-
-    # 4. Se a imagem for 3D (múltiplas fatias), usa apenas uma fatia para este exemplo.
-    if len(image_uint8.shape) == 3:
-         image_uint8 = image_uint8[image_uint8.shape[0] // 2]  # Pega a fatia do meio
-
-    # 5. Conversão para PNG (formato aceito pelo Gemini)
-    _, encoded_image = cv2.imencode(".png", image_uint8)
-    image_bytes = encoded_image.tobytes()
-
-    # 6. Criação do objeto Image do Vertex AI
-    vertex_image = Image.from_bytes(image_bytes)
-    return vertex_image
+def apply_zoom_and_pan(image, zoom, pan_x, pan_y):
+    """Aplica zoom e pan à imagem.
+       Se zoom == 1, retorna a imagem original.
+       Caso contrário, recorta uma região central (ajustada pelo pan) e a redimensiona para o tamanho original."""
+    if zoom == 1.0:
+        return image
+    h, w = image.shape
+    new_w = int(w / zoom)
+    new_h = int(h / zoom)
+    center_x = w // 2 + pan_x
+    center_y = h // 2 + pan_y
+    # Define os limites do recorte garantindo que não ultrapasse a imagem
+    x1 = max(center_x - new_w // 2, 0)
+    y1 = max(center_y - new_h // 2, 0)
+    x2 = min(x1 + new_w, w)
+    y2 = min(y1 + new_h, h)
+    cropped = image[y1:y2, x1:x2]
+    zoomed = cv2.resize(cropped, (w, h), interpolation=cv2.INTER_LINEAR)
+    return zoomed
 
 def get_pixels_hu(scans):
     """Converte uma lista de fatias para unidades Hounsfield (HU)."""
     image = np.stack([s.pixel_array for s in scans])
     image = image.astype(np.int16)
-
-    # Define pixels fora do exame para 0
     image[image == -2000] = 0
-
-    # Converte para Hounsfield Units (HU)
     intercept = scans[0].RescaleIntercept
     slope = scans[0].RescaleSlope
-
     if slope != 1:
         image = slope * image.astype(np.float64)
         image = image.astype(np.int16)
-
     image += np.int16(intercept)
     return np.array(image, dtype=np.int16)
 
-def generate_text_from_image(image, prompt, metadata, dicom_data):
+def generate_text_from_image(image_obj, prompt, metadata, dicom_data):
     """Envia a imagem e o prompt para o Gemini e retorna a resposta."""
     full_prompt = f"""
     {prompt}
@@ -123,9 +77,7 @@ def generate_text_from_image(image, prompt, metadata, dicom_data):
     {metadata}
     """
     try:
-        response = model.generate_content(
-            [Part.from_image(image), full_prompt]
-        )
+        response = model.generate_content([Part.from_image(image_obj), full_prompt])
         return response.text
     except Exception as e:
         st.error(f"Erro ao chamar a API do Gemini: {e}")
@@ -133,9 +85,9 @@ def generate_text_from_image(image, prompt, metadata, dicom_data):
 
 # --- Interface Streamlit ---
 
-st.title("Análise de Tomografia Computadorizada com Gemini")
+st.title("Visualizador Interativo de Tomografia com Gemini")
 
-# Atualização: Carregamento de múltiplos arquivos DICOM pela sidebar
+# Carregamento de múltiplos arquivos DICOM pela sidebar
 uploaded_files = st.sidebar.file_uploader(
     "Carregue um ou mais arquivos DICOM",
     type=["dcm"],
@@ -152,32 +104,55 @@ if uploaded_files:
             st.error(f"Erro ao ler o arquivo {file.name}: {e}")
     
     if slices:
-        # Ordena as fatias, se possível (utilizando ImagePositionPatient ou SliceLocation)
+        # Ordena as fatias (usando ImagePositionPatient ou SliceLocation, se disponível)
         try:
             slices.sort(key=lambda ds: float(ds.ImagePositionPatient[2]) if 'ImagePositionPatient' in ds else (float(ds.SliceLocation) if 'SliceLocation' in ds else float('inf')))
         except Exception:
             st.warning("Não foi possível ordenar as fatias. Usando a ordem de carregamento.")
         
-        # Exibe informações gerais do estudo
         st.write(f"{len(slices)} arquivos DICOM carregados com sucesso!")
         
-        image_hu = get_pixels_hu(slices)
-        metadata = f"""
-        Shape da imagem: {image_hu.shape}
-        Número de fatias: {len(slices)}
-        Espessura da fatia: {slices[0].SliceThickness if hasattr(slices[0], 'SliceThickness') else 'N/A'}
-        """
+        # Se houver mais de uma fatia, permite selecionar qual visualizar
+        slice_idx = st.sidebar.slider("Selecione a fatia", min_value=0, max_value=len(slices)-1, value=len(slices)//2)
+        selected_slice = slices[slice_idx]
+        image = selected_slice.pixel_array
         
+        # Janelamento: parâmetros via sliders
+        default_center = int(np.median(image))
+        default_width = int(np.max(image) - np.min(image))
+        window_center = st.sidebar.slider("Window Center", min_value=int(np.min(image)), max_value=int(np.max(image)), value=default_center)
+        window_width = st.sidebar.slider("Window Width", min_value=1, max_value=int(np.max(image)-np.min(image)), value=default_width)
+        windowed_image = window_image(image, window_center, window_width)
+        
+        # Zoom e Pan: parâmetros via sliders
+        zoom_factor = st.sidebar.slider("Zoom Factor", min_value=1.0, max_value=3.0, value=1.0, step=0.1)
+        if zoom_factor > 1:
+            h, w = windowed_image.shape
+            max_offset_x = w // 2
+            max_offset_y = h // 2
+            pan_x = st.sidebar.slider("Pan X", min_value=-max_offset_x, max_value=max_offset_x, value=0)
+            pan_y = st.sidebar.slider("Pan Y", min_value=-max_offset_y, max_value=max_offset_y, value=0)
+        else:
+            pan_x = pan_y = 0
+        
+        final_image = apply_zoom_and_pan(windowed_image, zoom_factor, pan_x, pan_y)
+        
+        st.image(final_image, caption=f"Fatia {slice_idx}", use_column_width=True)
+        
+        # Integração com o Gemini (opcional)
         prompt = st.text_area("Digite seu prompt para o Gemini:",
                               value="Descreva a imagem de tomografia computadorizada. ...",
                               height=150)
-        
+        metadata = f"""
+        Shape da imagem: {windowed_image.shape}
+        Fatia selecionada: {slice_idx}
+        Window Center: {window_center}, Window Width: {window_width}
+        Zoom Factor: {zoom_factor}
+        """
         if st.button("Analisar Imagem com Gemini"):
             with st.spinner("Analisando a imagem... (Isso pode levar algum tempo)"):
-                # Seleciona a fatia do meio para análise (pode-se adaptar para outras lógicas)
-                slice_to_analyze = slices[len(slices) // 2]
-                vertex_image = dicom_to_vertexai_image(slice_to_analyze.pixel_array, slice_to_analyze)
-                result = generate_text_from_image(vertex_image, prompt, metadata, slice_to_analyze)
+                vertex_image = Image.from_bytes(cv2.imencode(".png", final_image)[1].tobytes())
+                result = generate_text_from_image(vertex_image, prompt, metadata, selected_slice)
                 st.subheader("Resultado da Análise:")
                 st.write(result)
     else:
