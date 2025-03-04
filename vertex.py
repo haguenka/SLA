@@ -10,11 +10,11 @@ from vertexai.generative_models import GenerativeModel, Part, Image
 # --- Configuração Inicial ---
 
 os.environ["GOOGLE_CLOUD_PROJECT"] = "vertex-api-452717"  # Substitua pelo seu projeto!
-LOCATION = "us-central1"  # Ou a região desejada.
+LOCATION = "southamerica-east1"  # Ou a região desejada.
 
 try:
     vertexai.init(project=os.environ["GOOGLE_CLOUD_PROJECT"], location=LOCATION)
-    model = GenerativeModel("gemini-1.5-pro-002")
+    model = GenerativeModel("gemini-pro-vision")
 except Exception as e:
     st.error(f"Erro ao inicializar o modelo Gemini: {e}.")
     st.stop()
