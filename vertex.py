@@ -41,7 +41,7 @@ def apply_zoom_and_pan(image, zoom, pan_x, pan_y):
     new_h = int(h / zoom)
     center_x = w // 2 + pan_x
     center_y = h // 2 + pan_y
-    # Define os limites do recorte garantindo que não ultrapasse a imagem
+    # Garante que o recorte não ultrapasse os limites da imagem
     x1 = max(center_x - new_w // 2, 0)
     y1 = max(center_y - new_h // 2, 0)
     x2 = min(x1 + new_w, w)
@@ -49,6 +49,18 @@ def apply_zoom_and_pan(image, zoom, pan_x, pan_y):
     cropped = image[y1:y2, x1:x2]
     zoomed = cv2.resize(cropped, (w, h), interpolation=cv2.INTER_LINEAR)
     return zoomed
+
+@st.cache_data(show_spinner=False)
+def load_dicom_slices(file_bytes_tuple):
+    """Função cacheada para ler os arquivos DICOM e retornar uma lista de slices."""
+    slices = []
+    for file_bytes in file_bytes_tuple:
+        try:
+            ds = pydicom.dcmread(io.BytesIO(file_bytes))
+            slices.append(ds)
+        except Exception as e:
+            st.error(f"Erro ao ler um arquivo DICOM: {e}")
+    return slices
 
 def get_pixels_hu(scans):
     """Converte uma lista de fatias para unidades Hounsfield (HU)."""
@@ -95,16 +107,12 @@ uploaded_files = st.sidebar.file_uploader(
 )
 
 if uploaded_files:
-    slices = []
-    for file in uploaded_files:
-        try:
-            ds = pydicom.dcmread(io.BytesIO(file.getvalue()))
-            slices.append(ds)
-        except Exception as e:
-            st.error(f"Erro ao ler o arquivo {file.name}: {e}")
+    # Converte os arquivos para bytes e usa uma tupla para que seja hashable no cache
+    file_bytes_tuple = tuple(file.getvalue() for file in uploaded_files)
+    slices = load_dicom_slices(file_bytes_tuple)
     
     if slices:
-        # Ordena as fatias (usando ImagePositionPatient ou SliceLocation, se disponível)
+        # Ordena as fatias, se possível (usando ImagePositionPatient ou SliceLocation)
         try:
             slices.sort(key=lambda ds: float(ds.ImagePositionPatient[2]) if 'ImagePositionPatient' in ds else (float(ds.SliceLocation) if 'SliceLocation' in ds else float('inf')))
         except Exception:
