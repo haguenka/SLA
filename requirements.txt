@@ -14,4 +14,4 @@ fuzzywuzzy
 pytesseract
 pandasai
 pydicom
-cv2
+OpenCV
