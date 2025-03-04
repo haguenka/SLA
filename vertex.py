@@ -25,19 +25,18 @@ from vertexai.generative_models import GenerativeModel, Part, Image
 #    c)  Dentro do próprio código (NÃO RECOMENDADO para produção, APENAS para testes rápidos):
 #        ```python
 #        import os
-#os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/Users/henriqueguenka/Downloads/client_secret_175959353866-19tf5mtk2q0nu0daahjvnnf4pqk624k0.apps.googleusercontent.com.json"
+#        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/caminho/para/seu/client_secret.json"
 #        ```
 #        *MUITO IMPORTANTE:* Nunca coloque suas credenciais diretamente no código em um ambiente de produção!
 
 # Defina a variável de ambiente *DENTRO* do código (MENOS SEGURO)
 os.environ["GOOGLE_CLOUD_PROJECT"] = "vertex-api-452717"  # Substitua!
-LOCATION = "us-central1" #Ou a regiao desejada.
+LOCATION = "us-central1"  # Ou a região desejada.
 
 try:
-    # vertexai.init() não é estritamente necessário se a variável de ambiente estiver definida,
-    # mas é uma boa prática para garantir.  Você pode usar apenas um ou outro.
+    # Inicializa o Vertex AI (boa prática, mesmo que a variável de ambiente esteja definida)
     vertexai.init(project=os.environ["GOOGLE_CLOUD_PROJECT"], location=LOCATION)
-    model = GenerativeModel("gemini-2.0-pro")
+    model = GenerativeModel("gemini-1.5-pro-002")
 except Exception as e:
     st.error(f"Erro ao inicializar o modelo Gemini: {e}.")
     st.stop()
@@ -49,7 +48,7 @@ def load_dicom_image(file_content):
     try:
         dicom_file = pydicom.dcmread(io.BytesIO(file_content))
         image = dicom_file.pixel_array
-        return image, dicom_file #Retorna imagem e metadata
+        return image, dicom_file  # Retorna imagem e metadata
     except Exception as e:
         st.error(f"Erro ao ler o arquivo DICOM: {e}")
         return None, None
@@ -62,7 +61,6 @@ def window_image(image, window_center, window_width):
     windowed_image[windowed_image < img_min] = img_min
     windowed_image[windowed_image > img_max] = img_max
     return windowed_image
-
 
 def normalize_image(image):
     """Normaliza uma imagem para o intervalo [0, 1]."""
@@ -77,15 +75,12 @@ def dicom_to_vertexai_image(image, dicom_data):
     # 2. Normalização
     normalized_image = normalize_image(windowed_image)
 
-    # 3. Conversão para uint8 (escala de cinza 0-255) - *IMPORTANTE* para visualização
+    # 3. Conversão para uint8 (escala de cinza 0-255) - IMPORTANTE para visualização
     image_uint8 = (normalized_image * 255).astype(np.uint8)
 
-    # 4.  Se a imagem for 3D (múltiplas fatias), use apenas uma fatia para este exemplo.
-    #     Em um aplicativo real, você precisaria de uma lógica para lidar com o volume 3D.
+    # 4. Se a imagem for 3D (múltiplas fatias), usa apenas uma fatia para este exemplo.
     if len(image_uint8.shape) == 3:
-         #st.warning("O arquivo DICOM contém múltiplas fatias. Usando apenas a primeira fatia para este exemplo.")
-         image_uint8 = image_uint8[image_uint8.shape[0] // 2]  # Pega a fatia do meio, ou adapte.
-
+         image_uint8 = image_uint8[image_uint8.shape[0] // 2]  # Pega a fatia do meio
 
     # 5. Conversão para PNG (formato aceito pelo Gemini)
     _, encoded_image = cv2.imencode(".png", image_uint8)
@@ -95,88 +90,27 @@ def dicom_to_vertexai_image(image, dicom_data):
     vertex_image = Image.from_bytes(image_bytes)
     return vertex_image
 
-def get_scan(file_content):
-    """Carrega um estudo DICOM, lida com múltiplas fatias e calcula a espessura da fatia
-       de forma robusta.
+def get_pixels_hu(scans):
+    """Converte uma lista de fatias para unidades Hounsfield (HU)."""
+    image = np.stack([s.pixel_array for s in scans])
+    image = image.astype(np.int16)
 
-    Args:
-        file_content: O conteúdo do arquivo DICOM (bytes).
+    # Define pixels fora do exame para 0
+    image[image == -2000] = 0
 
-    Returns:
-        Uma lista de objetos pydicom.Dataset representando as fatias, ordenada
-        pela posição da imagem (ou SliceLocation, se disponível).  Retorna
-        uma lista vazia se ocorrer um erro.
-    """
-    try:
-        dicom_file = pydicom.dcmread(io.BytesIO(file_content))
-        # Verifica se é um estudo com múltiplas fatias.  Se for uma imagem única
-        # (por exemplo, uma radiografia), tratamos como uma única "fatia".
-        if 'pixel_array' in dicom_file and len(dicom_file.pixel_array.shape) < 3 :
-          slices = [dicom_file]
-          return slices
+    # Converte para Hounsfield Units (HU)
+    intercept = scans[0].RescaleIntercept
+    slope = scans[0].RescaleSlope
 
-
-        # Se chegamos aqui, assumimos que é um estudo com múltiplas fatias.
-        # Tenta carregar todas as fatias do estudo (se forem múltiplas fatias em um único arquivo)
-        slices = []
-        slices.append(dicom_file)
-
-
-        slices.sort(key=lambda x: float(x.ImagePositionPatient[2] if 'ImagePositionPatient' in x else x.SliceLocation if 'SliceLocation' in x else float('inf')))
-
-
-        # Calcula a espessura da fatia de forma robusta:
-        slice_thickness = None  # Inicializa como None
-        if len(slices) > 1:
-            # Tenta usar ImagePositionPatient (método preferido)
-            try:
-                slice_thickness = np.abs(slices[0].ImagePositionPatient[2] -
-                                         slices[1].ImagePositionPatient[2])
-            except (AttributeError, TypeError, IndexError):
-                # Se ImagePositionPatient falhar, tenta SliceLocation
-                try:
-                    slice_thickness = np.abs(slices[0].SliceLocation -
-                                             slices[1].SliceLocation)
-                except (AttributeError, TypeError):
-                    # Se SliceLocation também falhar, deixa slice_thickness como None
-                    # ou define um valor padrão (dependendo do seu caso de uso).
-                    # Exemplo: slice_thickness = 1.0  # Valor padrão de 1.0 mm
-                      pass # Nao faz nada.
-
-        # Define a espessura da fatia em cada objeto slice (se calculada):
-        if slice_thickness is not None:
-            for s in slices:
-                s.SliceThickness = slice_thickness #Atribui a todas as fatias.
-
-        return slices
-
-    except Exception as e:
-        st.error(f"Erro ao ler o estudo DICOM: {e}")
-        return []  # Retorna uma lista vazia em caso de erro
-
-def get_pixels_hu(scans): #Converte para HU
-        image = np.stack([s.pixel_array for s in scans])
+    if slope != 1:
+        image = slope * image.astype(np.float64)
         image = image.astype(np.int16)
 
-        # Set outside-of-scan pixels to 0
-        # The intercept is usually -1024, so air is approximately 0
-        image[image == -2000] = 0
-
-        # Convert to Hounsfield units (HU)
-        intercept = scans[0].RescaleIntercept
-        slope = scans[0].RescaleSlope
-
-        if slope != 1:
-            image = slope * image.astype(np.float64)
-            image = image.astype(np.int16)
-
-        image += np.int16(intercept)
-        return np.array(image, dtype=np.int16)
+    image += np.int16(intercept)
+    return np.array(image, dtype=np.int16)
 
 def generate_text_from_image(image, prompt, metadata, dicom_data):
     """Envia a imagem e o prompt para o Gemini e retorna a resposta."""
-
-    #Monta o prompt completo com informacoes relevantes
     full_prompt = f"""
     {prompt}
 
@@ -186,10 +120,8 @@ def generate_text_from_image(image, prompt, metadata, dicom_data):
     - ID do Paciente: {dicom_data.get('PatientID', 'N/A')}  (Anonimizado na prática)
     - Data do Estudo: {dicom_data.get('StudyDate', 'N/A')}
     - Instituição: {dicom_data.get('InstitutionName', 'N/A')}
-     {metadata}
+    {metadata}
     """
-
-
     try:
         response = model.generate_content(
             [Part.from_image(image), full_prompt]
@@ -199,48 +131,56 @@ def generate_text_from_image(image, prompt, metadata, dicom_data):
         st.error(f"Erro ao chamar a API do Gemini: {e}")
         return "Não foi possível obter uma resposta do modelo."
 
-
 # --- Interface Streamlit ---
 
 st.title("Análise de Tomografia Computadorizada com Gemini")
 
-uploaded_file = st.file_uploader("Carregue um arquivo DICOM", type=["dcm"])
+# Atualização: Carregamento de múltiplos arquivos DICOM pela sidebar
+uploaded_files = st.sidebar.file_uploader(
+    "Carregue um ou mais arquivos DICOM",
+    type=["dcm"],
+    accept_multiple_files=True
+)
 
-if uploaded_file is not None:
-    # image, dicom_data = load_dicom_image(uploaded_file.getvalue()) # REMOVA esta linha
-
-    # if image is not None: # REMOVA esta linha
-        #st.image(image, caption="Imagem DICOM (pré-visualização)",  use_column_width=True,  clamp=True) #Exibe, mas precisa de ajuste de windowing.
-
-    prompt = st.text_area("Digite seu prompt para o Gemini:",
-                              value="Descreva a imagem de tomografia computadorizada. ...",
-                              height=150)
-
-    slices = get_scan(uploaded_file.getvalue())  # Usa a função get_scan corrigida
-
-    if slices: #Verifica se a lista nao esta vazia.
-        image_hu = get_pixels_hu(slices)  # Agora passa a lista de fatias
-
+if uploaded_files:
+    slices = []
+    for file in uploaded_files:
+        try:
+            ds = pydicom.dcmread(io.BytesIO(file.getvalue()))
+            slices.append(ds)
+        except Exception as e:
+            st.error(f"Erro ao ler o arquivo {file.name}: {e}")
+    
+    if slices:
+        # Ordena as fatias, se possível (utilizando ImagePositionPatient ou SliceLocation)
+        try:
+            slices.sort(key=lambda ds: float(ds.ImagePositionPatient[2]) if 'ImagePositionPatient' in ds else (float(ds.SliceLocation) if 'SliceLocation' in ds else float('inf')))
+        except Exception:
+            st.warning("Não foi possível ordenar as fatias. Usando a ordem de carregamento.")
+        
+        # Exibe informações gerais do estudo
+        st.write(f"{len(slices)} arquivos DICOM carregados com sucesso!")
+        
+        image_hu = get_pixels_hu(slices)
         metadata = f"""
         Shape da imagem: {image_hu.shape}
         Número de fatias: {len(slices)}
-        Espessura da fatia: {slices[0].SliceThickness if 'SliceThickness' in slices[0] else 'N/A'}
+        Espessura da fatia: {slices[0].SliceThickness if hasattr(slices[0], 'SliceThickness') else 'N/A'}
         """
-
-        # Botão para analisar
+        
+        prompt = st.text_area("Digite seu prompt para o Gemini:",
+                              value="Descreva a imagem de tomografia computadorizada. ...",
+                              height=150)
+        
         if st.button("Analisar Imagem com Gemini"):
             with st.spinner("Analisando a imagem... (Isso pode levar algum tempo)"):
-                #Escolhe uma fatia para enviar ao Gemini.
-                #Pode ser a fatia do meio, a primeira, a ultima, ou implementar
-                #uma logica mais elaborada.
-                slice_to_analyze = slices[len(slices)//2] #Pega fatia do meio
+                # Seleciona a fatia do meio para análise (pode-se adaptar para outras lógicas)
+                slice_to_analyze = slices[len(slices) // 2]
                 vertex_image = dicom_to_vertexai_image(slice_to_analyze.pixel_array, slice_to_analyze)
                 result = generate_text_from_image(vertex_image, prompt, metadata, slice_to_analyze)
                 st.subheader("Resultado da Análise:")
                 st.write(result)
-
     else:
-        st.write("Não foi possível carregar as fatias do estudo DICOM.") #Mensagem caso a lista esteja vazia
-
+        st.write("Não foi possível carregar as fatias do estudo DICOM.")
 else:
-    st.write("Por favor, carregue um arquivo DICOM para começar.")
+    st.write("Por favor, carregue um ou mais arquivos DICOM para começar.")
