@@ -4,10 +4,11 @@ from vertexai.generative_models import GenerativeModel, Part, Image
 import os
 import cv2
 import io
+import time
 
 # --- Configuração do Vertex AI ---
 os.environ["GOOGLE_CLOUD_PROJECT"] = "vertex-api-452717"  # Substitua pelo seu projeto
-LOCATION = "southamerica-east1"  # Região desejada
+LOCATION = "us-central1"  # Região desejada
 
 try:
     vertexai.init(project=os.environ["GOOGLE_CLOUD_PROJECT"], location=LOCATION)
@@ -54,9 +55,12 @@ def main():
         
         if st.button("Analisar Imagem"):
             with st.spinner("Analisando..."):
+                start_time = time.time()
                 result = generate_text_from_image(image_bytes, prompt)
+                elapsed_time = time.time() - start_time
             st.subheader("Resultado da Análise")
             st.write(result)
+            st.write(f"Tempo de resposta: {elapsed_time:.2f} segundos")
 
 if __name__ == "__main__":
     main()
