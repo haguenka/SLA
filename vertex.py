@@ -10,7 +10,7 @@ import google.auth.transport.requests
 
 # --- Configurações ---
 # URL do arquivo JSON da conta de serviço no GitHub (use a URL RAW)
-SERVICE_ACCOUNT_URL = "https://raw.githubusercontent.com/haguenka/SLA/main/chave3.json"
+SERVICE_ACCOUNT_URL = "https://raw.githubusercontent.com/haguenka/SLA/main/chave4.json"
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 MODEL = "gemini-2.0-flash-001"  # Atualize conforme necessário
 URL = f"https://generativelanguage.googleapis.com/v1/models/{MODEL}:generateContent"
