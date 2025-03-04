@@ -17,3 +17,4 @@ pydicom
 opencv-python-headless
 google-cloud-aiplatform
 google
+google-generativeai
