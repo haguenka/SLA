@@ -8,19 +8,18 @@ import vertexai
 from vertexai.generative_models import GenerativeModel, Part, Image
 
 # --- Configuração Inicial ---
-
 os.environ["GOOGLE_CLOUD_PROJECT"] = "vertex-api-452717"  # Substitua pelo seu projeto!
-LOCATION = "southamerica-east1"  # Ou a região desejada.
+LOCATION = "us-central1"  # Ou a região desejada.
 
 try:
     vertexai.init(project=os.environ["GOOGLE_CLOUD_PROJECT"], location=LOCATION)
+    # Atualize para utilizar o modelo Gemini Pro Vision
     model = GenerativeModel("gemini-pro-vision")
 except Exception as e:
-    st.error(f"Erro ao inicializar o modelo Gemini: {e}.")
+    st.error(f"Erro ao inicializar o modelo Gemini Pro Vision: {e}.")
     st.stop()
 
 # --- Funções Auxiliares ---
-
 def window_image(image, window_center, window_width):
     """Aplica janelamento à imagem."""
     img_min = window_center - window_width // 2
@@ -33,7 +32,7 @@ def window_image(image, window_center, window_width):
 def apply_zoom_and_pan(image, zoom, pan_x, pan_y):
     """Aplica zoom e pan à imagem.
        Se zoom == 1, retorna a imagem original.
-       Caso contrário, recorta uma região central (ajustada pelo pan) e a redimensiona para o tamanho original."""
+       Caso contrário, recorta uma região central (ajustada pelo pan) e redimensiona para o tamanho original."""
     if zoom == 1.0:
         return image
     h, w = image.shape
@@ -41,7 +40,6 @@ def apply_zoom_and_pan(image, zoom, pan_x, pan_y):
     new_h = int(h / zoom)
     center_x = w // 2 + pan_x
     center_y = h // 2 + pan_y
-    # Garante que o recorte não ultrapasse os limites da imagem
     x1 = max(center_x - new_w // 2, 0)
     y1 = max(center_y - new_h // 2, 0)
     x2 = min(x1 + new_w, w)
@@ -76,7 +74,7 @@ def get_pixels_hu(scans):
     return np.array(image, dtype=np.int16)
 
 def generate_text_from_image(image_obj, prompt, metadata, dicom_data):
-    """Envia a imagem e o prompt para o Gemini e retorna a resposta."""
+    """Envia a imagem e o prompt para o Vertex AI Gemini Pro Vision e retorna a resposta."""
     full_prompt = f"""
     {prompt}
 
@@ -92,12 +90,11 @@ def generate_text_from_image(image_obj, prompt, metadata, dicom_data):
         response = model.generate_content([Part.from_image(image_obj), full_prompt])
         return response.text
     except Exception as e:
-        st.error(f"Erro ao chamar a API do Gemini: {e}")
+        st.error(f"Erro ao chamar a API do Gemini Pro Vision: {e}")
         return "Não foi possível obter uma resposta do modelo."
 
 # --- Interface Streamlit ---
-
-st.title("Visualizador Interativo de Tomografia com Gemini")
+st.title("Visualizador Interativo de Tomografia com Vertex AI - Gemini Pro Vision")
 
 # Carregamento de múltiplos arquivos DICOM pela sidebar
 uploaded_files = st.sidebar.file_uploader(
@@ -114,7 +111,8 @@ if uploaded_files:
     if slices:
         # Ordena as fatias, se possível (usando ImagePositionPatient ou SliceLocation)
         try:
-            slices.sort(key=lambda ds: float(ds.ImagePositionPatient[2]) if 'ImagePositionPatient' in ds else (float(ds.SliceLocation) if 'SliceLocation' in ds else float('inf')))
+            slices.sort(key=lambda ds: float(ds.ImagePositionPatient[2]) if 'ImagePositionPatient' in ds 
+                        else (float(ds.SliceLocation) if 'SliceLocation' in ds else float('inf')))
         except Exception:
             st.warning("Não foi possível ordenar as fatias. Usando a ordem de carregamento.")
         
@@ -125,14 +123,14 @@ if uploaded_files:
         selected_slice = slices[slice_idx]
         image = selected_slice.pixel_array
         
-        # Janelamento: parâmetros via sliders
+        # Parâmetros de janelamento via sliders
         default_center = int(np.median(image))
         default_width = int(np.max(image) - np.min(image))
         window_center = st.sidebar.slider("Window Center", min_value=int(np.min(image)), max_value=int(np.max(image)), value=default_center)
         window_width = st.sidebar.slider("Window Width", min_value=1, max_value=int(np.max(image)-np.min(image)), value=default_width)
         windowed_image = window_image(image, window_center, window_width)
         
-        # Zoom e Pan: parâmetros via sliders
+        # Parâmetros de Zoom e Pan via sliders
         zoom_factor = st.sidebar.slider("Zoom Factor", min_value=1.0, max_value=3.0, value=1.0, step=0.1)
         if zoom_factor > 1:
             h, w = windowed_image.shape
@@ -144,12 +142,11 @@ if uploaded_files:
             pan_x = pan_y = 0
         
         final_image = apply_zoom_and_pan(windowed_image, zoom_factor, pan_x, pan_y)
-        
         st.image(final_image, caption=f"Fatia {slice_idx}", use_column_width=True)
         
-        # Integração com o Gemini (opcional)
-        prompt = st.text_area("Digite seu prompt para o Gemini:",
-                              value="Descreva a imagem de tomografia computadorizada. ...",
+        # Integração com o Vertex AI (Gemini Pro Vision)
+        prompt = st.text_area("Digite seu prompt para o Vertex AI:",
+                              value="Descreva a imagem de tomografia computadorizada, identifique possíveis anomalias e forneça uma interpretação clínica.",
                               height=150)
         metadata = f"""
         Shape da imagem: {windowed_image.shape}
@@ -157,8 +154,9 @@ if uploaded_files:
         Window Center: {window_center}, Window Width: {window_width}
         Zoom Factor: {zoom_factor}
         """
-        if st.button("Analisar Imagem com Gemini"):
+        if st.button("Analisar Imagem com Vertex AI"):
             with st.spinner("Analisando a imagem... (Isso pode levar algum tempo)"):
+                # Converte a imagem para PNG e cria o objeto Vertex AI Image
                 vertex_image = Image.from_bytes(cv2.imencode(".png", final_image)[1].tobytes())
                 result = generate_text_from_image(vertex_image, prompt, metadata, selected_slice)
                 st.subheader("Resultado da Análise:")
