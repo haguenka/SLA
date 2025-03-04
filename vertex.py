@@ -1,41 +1,59 @@
 import streamlit as st
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, Image
+import requests
+import base64
 import os
 import cv2
 import io
-import time
 
-# --- Configuração do Vertex AI ---
-os.environ["GOOGLE_CLOUD_PROJECT"] = "vertex-api-452717"  # Substitua pelo seu projeto
-LOCATION = "us-central1"  # Região desejada
+# --- Configurações ---
+# Defina sua chave de API do Google na variável de ambiente ou diretamente aqui (NÃO deixe a chave em código para produção)
+API_KEY = os.environ.get("GOOGLE_API_KEY") or "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"
 
-try:
-    vertexai.init(project=os.environ["GOOGLE_CLOUD_PROJECT"], location=LOCATION)
-    # Escolha o modelo desejado (por exemplo, "gemini-2.0-flash-001" ou "gemini-pro-vision")
-    model = GenerativeModel("gemini-2.0-flash-001")
-except Exception as e:
-    st.error(f"Erro ao inicializar o Vertex AI: {e}")
-    st.stop()
+# Modelo desejado e URL da API
+MODEL = "gemini-2.0-flash-001"  # Altere conforme necessário
+URL = f"https://generativelanguage.googleapis.com/v1beta2/models/{MODEL}:generateContent"
 
 def generate_text_from_image(image_bytes, prompt):
     """
-    Converte os bytes da imagem para o objeto Vertex AI e envia junto com o prompt
-    para gerar uma resposta.
+    Converte a imagem para base64, monta o payload e envia para a API do Generative Language.
+    Retorna a resposta da análise.
     """
-    # Cria o objeto Image a partir dos bytes (a imagem deve estar em PNG ou JPEG)
-    vertex_image = Image.from_bytes(image_bytes)
+    # Converte a imagem para base64
+    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
     
-    # Você pode adicionar mais contexto ao prompt se desejar
-    full_prompt = prompt
-    try:
-        response = model.generate_content([Part.from_image(vertex_image), full_prompt])
-        return response.text
-    except Exception as e:
-        return f"Erro na análise: {e}"
+    # Monta o payload da requisição
+    payload = {
+        "instances": [
+            {
+                "image": image_base64,
+                "prompt": prompt
+            }
+        ],
+        "parameters": {
+            "temperature": 1,
+            "topP": 0.95,
+            "maxOutputTokens": 8192
+        }
+    }
+    
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {API_KEY}"
+    }
+    
+    response = requests.post(URL, json=payload, headers=headers)
+    
+    if response.status_code == 200:
+        # Supondo que a resposta retorne um JSON com o campo "predictions" e dentro dele "text"
+        try:
+            return response.json()["predictions"][0]["text"]
+        except Exception as e:
+            return f"Erro ao interpretar a resposta: {e}"
+    else:
+        return f"Erro na análise: {response.status_code} - {response.text}"
 
 def main():
-    st.title("Análise de Imagem com Vertex AI")
+    st.title("Análise de Imagem com Generative Language API")
     st.write("Carregue um arquivo de imagem (JPG ou PNG) para análise pela IA.")
     
     # Uploader para o arquivo de imagem
@@ -55,12 +73,9 @@ def main():
         
         if st.button("Analisar Imagem"):
             with st.spinner("Analisando..."):
-                start_time = time.time()
                 result = generate_text_from_image(image_bytes, prompt)
-                elapsed_time = time.time() - start_time
             st.subheader("Resultado da Análise")
             st.write(result)
-            st.write(f"Tempo de resposta: {elapsed_time:.2f} segundos")
 
 if __name__ == "__main__":
     main()
