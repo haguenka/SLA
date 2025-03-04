@@ -7,7 +7,7 @@ import io
 
 # --- Configuração do Vertex AI ---
 os.environ["GOOGLE_CLOUD_PROJECT"] = "vertex-api-452717"  # Substitua pelo seu projeto
-LOCATION = "us-central1"  # Região desejada
+LOCATION = "southamerica-east1"  # Região desejada
 
 try:
     vertexai.init(project=os.environ["GOOGLE_CLOUD_PROJECT"], location=LOCATION)
