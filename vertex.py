@@ -2,22 +2,24 @@ import streamlit as st
 import requests
 import base64
 import os
-import cv2
-import io
+from google.oauth2 import service_account
+import google.auth.transport.requests
 
 # --- Configurações ---
-# Defina sua chave de API do Google na variável de ambiente ou diretamente aqui (NÃO deixe a chave em código para produção)
-API_KEY = os.environ.get("GOOGLE_API_KEY") or "AIzaSyA91XZICNDN_nysC6Gj3eZEyevPMvme8xE"
-
-# Modelo desejado e URL da API
-MODEL = "gemini-2.0-flash-001"
+SERVICE_ACCOUNT_FILE = "Users/henrique_guenka/Downloads/client_secret_175959353866-19tf5mtk2q0nu0daahjvnnf4pqk624k0.apps.googleusercontent.com (1).json"  # Atualize com o caminho correto
+SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
+MODEL = "gemini-2.0-flash-001"  # Atualize conforme necessário
 URL = f"https://generativelanguage.googleapis.com/v1/models/{MODEL}:generateContent"
 
+def get_oauth_token():
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES
+    )
+    auth_req = google.auth.transport.requests.Request()
+    credentials.refresh(auth_req)
+    return credentials.token
+
 def generate_text_from_image(image_bytes, prompt):
-    """
-    Converte a imagem para base64, monta o payload e envia para a API do Generative Language.
-    Retorna a resposta da análise.
-    """
     # Converte a imagem para base64
     image_base64 = base64.b64encode(image_bytes).decode('utf-8')
     
@@ -36,15 +38,17 @@ def generate_text_from_image(image_bytes, prompt):
         }
     }
     
+    # Obtém o token OAuth 2.0
+    access_token = get_oauth_token()
+    
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {API_KEY}"
+        "Authorization": f"Bearer {access_token}"
     }
     
     response = requests.post(URL, json=payload, headers=headers)
     
     if response.status_code == 200:
-        # Supondo que a resposta retorne um JSON com o campo "predictions" e dentro dele "text"
         try:
             return response.json()["predictions"][0]["text"]
         except Exception as e:
@@ -56,15 +60,12 @@ def main():
     st.title("Análise de Imagem com Generative Language API")
     st.write("Carregue um arquivo de imagem (JPG ou PNG) para análise pela IA.")
     
-    # Uploader para o arquivo de imagem
     uploaded_file = st.file_uploader("Escolha uma imagem", type=["jpg", "jpeg", "png"])
     
     if uploaded_file is not None:
-        # Lê os bytes da imagem e a exibe
         image_bytes = uploaded_file.read()
         st.image(image_bytes, caption="Imagem carregada", use_column_width=True)
         
-        # Permite ao usuário definir um prompt opcional para a análise
         prompt = st.text_area(
             "Digite seu prompt para a análise",
             value="Analise a imagem e descreva os achados.",
