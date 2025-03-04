@@ -10,8 +10,8 @@ import io
 API_KEY = os.environ.get("GOOGLE_API_KEY") or "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"
 
 # Modelo desejado e URL da API
-MODEL = "gemini-2.0-flash-001"  # Altere conforme necessário
-URL = f"https://generativelanguage.googleapis.com/v1beta2/models/{MODEL}:generateContent"
+MODEL = "gemini-2.0-flash-001"
+URL = f"https://generativelanguage.googleapis.com/v1/models/{MODEL}:generateContent"
 
 def generate_text_from_image(image_bytes, prompt):
     """
