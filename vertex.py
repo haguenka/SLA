@@ -6,7 +6,7 @@ from google.oauth2 import service_account
 import google.auth.transport.requests
 
 # --- Configurações ---
-SERVICE_ACCOUNT_FILE = "Users/henrique_guenka/Downloads/client_secret_175959353866-19tf5mtk2q0nu0daahjvnnf4pqk624k0.apps.googleusercontent.com (1).json"  # Atualize com o caminho correto
+SERVICE_ACCOUNT_FILE = "/Users/henrique_guenka/Downloads/chave.json"  # Atualize com o caminho correto
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 MODEL = "gemini-2.0-flash-001"  # Atualize conforme necessário
 URL = f"https://generativelanguage.googleapis.com/v1/models/{MODEL}:generateContent"
