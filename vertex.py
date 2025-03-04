@@ -165,29 +165,40 @@ st.title("Análise de Tomografia Computadorizada com Gemini")
 uploaded_file = st.file_uploader("Carregue um arquivo DICOM", type=["dcm"])
 
 if uploaded_file is not None:
-    image, dicom_data = load_dicom_image(uploaded_file.getvalue())
+    # image, dicom_data = load_dicom_image(uploaded_file.getvalue()) # REMOVA esta linha
 
-    if image is not None:
+    # if image is not None: # REMOVA esta linha
         #st.image(image, caption="Imagem DICOM (pré-visualização)",  use_column_width=True,  clamp=True) #Exibe, mas precisa de ajuste de windowing.
 
-        prompt = st.text_area("Digite seu prompt para o Gemini:",
-                              value="Descreva a imagem de tomografia computadorizada.  Identifique quaisquer achados anormais, como nódulos, lesões, fraturas ou outras anormalidades.  Seja o mais detalhado possível.",
+    prompt = st.text_area("Digite seu prompt para o Gemini:",
+                              value="Descreva a imagem de tomografia computadorizada. ...",
                               height=150)
-        
-        slices = get_scan(uploaded_file.getvalue())
-        image_hu = get_pixels_hu(slices)
+
+    slices = get_scan(uploaded_file.getvalue())  # Usa a função get_scan corrigida
+
+    if slices: #Verifica se a lista nao esta vazia.
+        image_hu = get_pixels_hu(slices)  # Agora passa a lista de fatias
 
         metadata = f"""
         Shape da imagem: {image_hu.shape}
+        Número de fatias: {len(slices)}
+        Espessura da fatia: {slices[0].SliceThickness if 'SliceThickness' in slices[0] else 'N/A'}
         """
 
         # Botão para analisar
         if st.button("Analisar Imagem com Gemini"):
             with st.spinner("Analisando a imagem... (Isso pode levar algum tempo)"):
-                vertex_image = dicom_to_vertexai_image(image, dicom_data)
-                result = generate_text_from_image(vertex_image, prompt, metadata, dicom_data)
+                #Escolhe uma fatia para enviar ao Gemini.
+                #Pode ser a fatia do meio, a primeira, a ultima, ou implementar
+                #uma logica mais elaborada.
+                slice_to_analyze = slices[len(slices)//2] #Pega fatia do meio
+                vertex_image = dicom_to_vertexai_image(slice_to_analyze.pixel_array, slice_to_analyze)
+                result = generate_text_from_image(vertex_image, prompt, metadata, slice_to_analyze)
                 st.subheader("Resultado da Análise:")
                 st.write(result)
+
+    else:
+        st.write("Não foi possível carregar as fatias do estudo DICOM.") #Mensagem caso a lista esteja vazia
 
 else:
     st.write("Por favor, carregue um arquivo DICOM para começar.")
