@@ -37,7 +37,7 @@ try:
     # vertexai.init() não é estritamente necessário se a variável de ambiente estiver definida,
     # mas é uma boa prática para garantir.  Você pode usar apenas um ou outro.
     vertexai.init(project=os.environ["GOOGLE_CLOUD_PROJECT"], location=LOCATION)
-    model = GenerativeModel("gemini-1.5-pro-002")
+    model = GenerativeModel("gemini-2.0-pro")
 except Exception as e:
     st.error(f"Erro ao inicializar o modelo Gemini: {e}.")
     st.stop()
