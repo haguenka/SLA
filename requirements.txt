@@ -16,3 +16,4 @@ pandasai
 pydicom
 opencv-python-headless
 google-cloud-aiplatform
+google
