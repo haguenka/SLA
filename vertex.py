@@ -24,15 +24,21 @@ from vertexai.generative_models import GenerativeModel, Part, Image
 #    c)  Dentro do próprio código (NÃO RECOMENDADO para produção, APENAS para testes rápidos):
 #        ```python
 #        import os
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/Users/henriqueguenka/Downloads/client_secret_175959353866-19tf5mtk2q0nu0daahjvnnf4pqk624k0.apps.googleusercontent.com.json"
+#os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/Users/henriqueguenka/Downloads/client_secret_175959353866-19tf5mtk2q0nu0daahjvnnf4pqk624k0.apps.googleusercontent.com.json"
 #        ```
 #        *MUITO IMPORTANTE:* Nunca coloque suas credenciais diretamente no código em um ambiente de produção!
 
-# 2. Inicializar o Modelo Gemini
+# Defina a variável de ambiente *DENTRO* do código (MENOS SEGURO)
+os.environ["GOOGLE_CLOUD_PROJECT"] = "vertex-api-452717"  # Substitua!
+LOCATION = "us-central1" #Ou a regiao desejada.
+
 try:
-    model = GenerativeModel("gemini-1.5-pro-002")  # Ou o modelo apropriado
+    # vertexai.init() não é estritamente necessário se a variável de ambiente estiver definida,
+    # mas é uma boa prática para garantir.  Você pode usar apenas um ou outro.
+    vertexai.init(project=os.environ["GOOGLE_CLOUD_PROJECT"], location=LOCATION)
+    model = GenerativeModel("gemini-1.5-pro-002")
 except Exception as e:
-    st.error(f"Erro ao inicializar o modelo Gemini: {e}. Verifique sua autenticação e o nome do modelo.")
+    st.error(f"Erro ao inicializar o modelo Gemini: {e}.")
     st.stop()
 
 # --- Funções Auxiliares ---
