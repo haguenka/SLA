@@ -96,21 +96,63 @@ def dicom_to_vertexai_image(image, dicom_data):
     return vertex_image
 
 def get_scan(file_content):
+    """Carrega um estudo DICOM, lida com múltiplas fatias e calcula a espessura da fatia
+       de forma robusta.
+
+    Args:
+        file_content: O conteúdo do arquivo DICOM (bytes).
+
+    Returns:
+        Uma lista de objetos pydicom.Dataset representando as fatias, ordenada
+        pela posição da imagem (ou SliceLocation, se disponível).  Retorna
+        uma lista vazia se ocorrer um erro.
+    """
+    try:
         dicom_file = pydicom.dcmread(io.BytesIO(file_content))
-        image = dicom_file.pixel_array
+        # Verifica se é um estudo com múltiplas fatias.  Se for uma imagem única
+        # (por exemplo, uma radiografia), tratamos como uma única "fatia".
+        if 'pixel_array' in dicom_file and len(dicom_file.pixel_array.shape) < 3 :
+          slices = [dicom_file]
+          return slices
+
+
+        # Se chegamos aqui, assumimos que é um estudo com múltiplas fatias.
+        # Tenta carregar todas as fatias do estudo (se forem múltiplas fatias em um único arquivo)
         slices = []
         slices.append(dicom_file)
 
 
-        try:
-            slice_thickness = np.abs(slices[0].ImagePositionPatient[2] - slices[1].ImagePositionPatient[2])
-        except:
-            slice_thickness = np.abs(slices[0].SliceLocation - slices[1].SliceLocation)
+        slices.sort(key=lambda x: float(x.ImagePositionPatient[2] if 'ImagePositionPatient' in x else x.SliceLocation if 'SliceLocation' in x else float('inf')))
 
-        for s in slices:
-            s.SliceThickness = slice_thickness
+
+        # Calcula a espessura da fatia de forma robusta:
+        slice_thickness = None  # Inicializa como None
+        if len(slices) > 1:
+            # Tenta usar ImagePositionPatient (método preferido)
+            try:
+                slice_thickness = np.abs(slices[0].ImagePositionPatient[2] -
+                                         slices[1].ImagePositionPatient[2])
+            except (AttributeError, TypeError, IndexError):
+                # Se ImagePositionPatient falhar, tenta SliceLocation
+                try:
+                    slice_thickness = np.abs(slices[0].SliceLocation -
+                                             slices[1].SliceLocation)
+                except (AttributeError, TypeError):
+                    # Se SliceLocation também falhar, deixa slice_thickness como None
+                    # ou define um valor padrão (dependendo do seu caso de uso).
+                    # Exemplo: slice_thickness = 1.0  # Valor padrão de 1.0 mm
+                      pass # Nao faz nada.
+
+        # Define a espessura da fatia em cada objeto slice (se calculada):
+        if slice_thickness is not None:
+            for s in slices:
+                s.SliceThickness = slice_thickness #Atribui a todas as fatias.
 
         return slices
+
+    except Exception as e:
+        st.error(f"Erro ao ler o estudo DICOM: {e}")
+        return []  # Retorna uma lista vazia em caso de erro
 
 def get_pixels_hu(scans): #Converte para HU
         image = np.stack([s.pixel_array for s in scans])
