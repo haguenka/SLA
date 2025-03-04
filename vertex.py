@@ -4,6 +4,7 @@ import numpy as np
 import io
 import os
 import cv2
+import vertexai
 from vertexai.generative_models import GenerativeModel, Part, Image
 
 # --- Configuração Inicial ---
