@@ -7,7 +7,7 @@ import io
 
 # --- Configurações ---
 # Defina sua chave de API do Google na variável de ambiente ou diretamente aqui (NÃO deixe a chave em código para produção)
-API_KEY = os.environ.get("GOOGLE_API_KEY") or "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"
+API_KEY = os.environ.get("GOOGLE_API_KEY") or "AIzaSyA91XZICNDN_nysC6Gj3eZEyevPMvme8xE"
 
 # Modelo desejado e URL da API
 MODEL = "gemini-2.0-flash-001"
