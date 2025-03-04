@@ -2,18 +2,28 @@ import streamlit as st
 import requests
 import base64
 import os
+import json
+import cv2
+import io
 from google.oauth2 import service_account
 import google.auth.transport.requests
 
 # --- Configurações ---
-SERVICE_ACCOUNT_FILE = "/Users/henrique_guenka/Downloads/chave.json"  # Atualize com o caminho correto
+# URL do arquivo JSON da conta de serviço no GitHub (use a URL RAW)
+SERVICE_ACCOUNT_URL = "https://raw.githubusercontent.com/haguenka/SLA/main/chave.json"
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 MODEL = "gemini-2.0-flash-001"  # Atualize conforme necessário
 URL = f"https://generativelanguage.googleapis.com/v1/models/{MODEL}:generateContent"
 
 def get_oauth_token():
-    credentials = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES
+    # Busca o arquivo JSON da conta de serviço a partir do GitHub
+    response = requests.get(SERVICE_ACCOUNT_URL)
+    if response.status_code != 200:
+        raise Exception(f"Erro ao carregar o arquivo JSON da conta de serviço: {response.status_code}")
+    
+    service_account_info = response.json()
+    credentials = service_account.Credentials.from_service_account_info(
+        service_account_info, scopes=SCOPES
     )
     auth_req = google.auth.transport.requests.Request()
     credentials.refresh(auth_req)
@@ -39,7 +49,10 @@ def generate_text_from_image(image_bytes, prompt):
     }
     
     # Obtém o token OAuth 2.0
-    access_token = get_oauth_token()
+    try:
+        access_token = get_oauth_token()
+    except Exception as e:
+        return f"Erro ao obter o token OAuth: {e}"
     
     headers = {
         "Content-Type": "application/json",
