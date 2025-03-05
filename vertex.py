@@ -7,15 +7,11 @@ import time
 import jwt  # pip install pyjwt
 import cv2
 import io
-
-# --- Configurações ---
-# URL do modelo (ajuste conforme necessário)
-MODEL = "gemini-2.0-flash-001"
-URL = f"https://generativelanguage.googleapis.com/v1/models/{MODEL}:generateContent"
+import requests
 
 def get_oauth_token_manual(service_account_info):
     """
-    Gera um JWT manualmente usando PyJWT e troca por um token OAuth 2.0.
+    Gera um JWT manualmente usando PyJWT (incluindo o header "kid") e troca por um token OAuth 2.0.
     """
     private_key = service_account_info["private_key"]
     client_email = service_account_info["client_email"]
@@ -27,11 +23,16 @@ def get_oauth_token_manual(service_account_info):
         "scope": "https://www.googleapis.com/auth/cloud-platform",
         "aud": token_uri,
         "iat": now,
-        "exp": now + 3600,  # token válido por 1 hora
+        "exp": now + 3600,  # Token válido por 1 hora
     }
     
-    # Gera o JWT usando o algoritmo RS256
-    signed_jwt = jwt.encode(payload, private_key, algorithm="RS256")
+    # Inclua o header "kid" com o ID da chave privada
+    jwt_headers = {
+        "kid": service_account_info["private_key_id"]
+    }
+    
+    # Gera o JWT usando RS256 e incluindo o header "kid"
+    signed_jwt = jwt.encode(payload, private_key, algorithm="RS256", headers=jwt_headers)
     
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     data = {
@@ -42,8 +43,7 @@ def get_oauth_token_manual(service_account_info):
     response = requests.post(token_uri, headers=headers, data=data)
     
     if response.status_code == 200:
-        token = response.json()["access_token"]
-        return token
+        return response.json()["access_token"]
     else:
         raise Exception(f"Falha ao obter token: {response.status_code} {response.text}")
 
