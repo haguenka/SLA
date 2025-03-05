@@ -1,59 +1,35 @@
 import streamlit as st
+import json
 import requests
 import base64
 import os
-import json
-import time
-import jwt  # pip install pyjwt
 import cv2
 import io
-import requests
+from google.oauth2 import service_account
+import google.auth.transport.requests
 
-def get_oauth_token_manual(service_account_info):
+# --- Configurações ---
+SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
+MODEL = "gemini-2.0-flash-001"  # Atualize conforme necessário
+URL = f"https://generativelanguage.googleapis.com/v1/models/{MODEL}:generateContent"
+
+def get_oauth_token_google_auth(service_account_info):
     """
-    Gera um JWT manualmente usando PyJWT (incluindo o header "kid") e troca por um token OAuth 2.0.
+    Obtém o token OAuth 2.0 utilizando a biblioteca google-auth.
     """
-    # Normaliza a chave privada para garantir que as quebras de linha estejam corretas
-    private_key = service_account_info["private_key"].replace("\\n", "\n")
-    client_email = service_account_info["client_email"]
-    token_uri = service_account_info["token_uri"]
-    now = int(time.time())
-    
-    payload = {
-        "iss": client_email,
-        "scope": "https://www.googleapis.com/auth/cloud-platform",
-        "aud": token_uri,
-        "iat": now,
-        "exp": now + 3600,  # Token válido por 1 hora
-    }
-    
-    # Inclua o header "kid" com o ID da chave
-    jwt_headers = {
-        "kid": service_account_info["private_key_id"]
-    }
-    
-    # Gera o JWT usando RS256 e incluindo o header "kid"
     try:
-        signed_jwt = jwt.encode(payload, private_key, algorithm="RS256", headers=jwt_headers)
+        credentials = service_account.Credentials.from_service_account_info(
+            service_account_info, scopes=SCOPES
+        )
+        auth_req = google.auth.transport.requests.Request()
+        credentials.refresh(auth_req)
+        return credentials.token
     except Exception as e:
-        raise Exception(f"Erro ao gerar o JWT: {e}")
-    
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    data = {
-        "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
-        "assertion": signed_jwt,
-    }
-    
-    response = requests.post(token_uri, headers=headers, data=data)
-    
-    if response.status_code == 200:
-        return response.json()["access_token"]
-    else:
-        raise Exception(f"Falha ao obter token: {response.status_code} {response.text}")
+        raise Exception(f"Erro ao obter token com google-auth: {e}")
 
 def generate_text_from_image(image_bytes, prompt, service_account_info):
     """
-    Converte a imagem para base64, obtém o token manualmente e envia o payload para a API.
+    Converte a imagem para base64, obtém o token OAuth via google-auth e envia o payload para a API.
     """
     image_base64 = base64.b64encode(image_bytes).decode("utf-8")
     
@@ -69,9 +45,9 @@ def generate_text_from_image(image_bytes, prompt, service_account_info):
     }
     
     try:
-        access_token = get_oauth_token_manual(service_account_info)
+        access_token = get_oauth_token_google_auth(service_account_info)
     except Exception as e:
-        return f"Erro ao obter token OAuth manual: {e}"
+        return f"Erro ao obter token OAuth: {e}"
     
     headers = {
         "Content-Type": "application/json",
