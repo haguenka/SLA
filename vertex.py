@@ -2,44 +2,28 @@ import streamlit as st
 import requests
 import base64
 import os
-import json
-import cv2
-import io
-from google.oauth2 import service_account
+import google.auth
 import google.auth.transport.requests
 
-# --- Configurações ---
-# URL do arquivo JSON da conta de serviço no GitHub (use a URL RAW)
-SERVICE_ACCOUNT_URL = "https://raw.githubusercontent.com/haguenka/SLA/main/vertex-api-452717-0b777b61146d.json"
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 MODEL = "gemini-2.0-flash-001"  # Atualize conforme necessário
 URL = f"https://generativelanguage.googleapis.com/v1/models/{MODEL}:generateContent"
 
-def get_oauth_token():
-    # Busca o arquivo JSON da conta de serviço a partir do GitHub
-    response = requests.get(SERVICE_ACCOUNT_URL)
-    if response.status_code != 200:
-        raise Exception(f"Erro ao carregar o arquivo JSON da conta de serviço: {response.status_code}")
-    
-    service_account_info = response.json()
-    credentials = service_account.Credentials.from_service_account_info(
-        service_account_info, scopes=SCOPES
-    )
+def get_oauth_token_default():
+    # Obtém as credenciais padrão do aplicativo (que podem ser configuradas via "gcloud auth application-default login")
+    credentials, project = google.auth.default(scopes=SCOPES)
     auth_req = google.auth.transport.requests.Request()
     credentials.refresh(auth_req)
     return credentials.token
 
 def generate_text_from_image(image_bytes, prompt):
     # Converte a imagem para base64
-    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+    image_base64 = base64.b64encode(image_bytes).decode("utf-8")
     
     # Monta o payload da requisição
     payload = {
         "instances": [
-            {
-                "image": image_base64,
-                "prompt": prompt
-            }
+            {"image": image_base64, "prompt": prompt}
         ],
         "parameters": {
             "temperature": 1,
@@ -48,11 +32,8 @@ def generate_text_from_image(image_bytes, prompt):
         }
     }
     
-    # Obtém o token OAuth 2.0
-    try:
-        access_token = get_oauth_token()
-    except Exception as e:
-        return f"Erro ao obter o token OAuth: {e}"
+    # Obtém o token usando as credenciais padrão do aplicativo
+    access_token = get_oauth_token_default()
     
     headers = {
         "Content-Type": "application/json",
