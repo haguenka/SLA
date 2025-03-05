@@ -13,7 +13,8 @@ def get_oauth_token_manual(service_account_info):
     """
     Gera um JWT manualmente usando PyJWT (incluindo o header "kid") e troca por um token OAuth 2.0.
     """
-    private_key = service_account_info["private_key"]
+    # Normaliza a chave privada para garantir que as quebras de linha estejam corretas
+    private_key = service_account_info["private_key"].replace("\\n", "\n")
     client_email = service_account_info["client_email"]
     token_uri = service_account_info["token_uri"]
     now = int(time.time())
@@ -26,13 +27,16 @@ def get_oauth_token_manual(service_account_info):
         "exp": now + 3600,  # Token válido por 1 hora
     }
     
-    # Inclua o header "kid" com o ID da chave privada
+    # Inclua o header "kid" com o ID da chave
     jwt_headers = {
         "kid": service_account_info["private_key_id"]
     }
     
     # Gera o JWT usando RS256 e incluindo o header "kid"
-    signed_jwt = jwt.encode(payload, private_key, algorithm="RS256", headers=jwt_headers)
+    try:
+        signed_jwt = jwt.encode(payload, private_key, algorithm="RS256", headers=jwt_headers)
+    except Exception as e:
+        raise Exception(f"Erro ao gerar o JWT: {e}")
     
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     data = {
