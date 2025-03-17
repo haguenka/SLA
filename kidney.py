@@ -432,6 +432,12 @@ if st.sidebar.button("Processar"):
     # Cria os dois tabs: um para o relatório e outro para a lista com acesso ao PDF
     tab1, tab2 = st.tabs(["Relatório", "Lista de Pacientes Minerados com Acesso ao PDF"])
     
+    def remove_html_tags(text):
+        """Remove quaisquer tags HTML de uma string."""
+        if not isinstance(text, str):
+            return text
+        return re.sub(r'<.*?>', '', text)
+
     with tab1:
         st.markdown(report_md, unsafe_allow_html=True)
         st.dataframe(df_para_exibicao)
@@ -453,20 +459,33 @@ if st.sidebar.button("Processar"):
     
     with tab2:
         st.markdown("### Lista de Pacientes Minerados com Acesso ao PDF:")
+
+        # Mantém a coluna "Sentenca" com destaque para exibição
+        df_display = st.session_state["pacientes_minerados_df"].copy()
+        df_display["Acesso PDF"] = df_display.apply(
+            lambda row: create_download_link(row["pdf_bytes"], row["Arquivo"]), axis=1
+        )
+        df_display = df_display.drop(columns=["pdf_bytes", "Arquivo"], errors="ignore")
+        
+        # Exibe com destaque na tela (a coluna "Sentenca" ainda contém HTML)
         st.markdown(df_display.to_html(escape=False, index=False), unsafe_allow_html=True)
-    
-    # -------------------------------
-    # DOWNLOAD DO ARQUIVO EXCEL (Pacientes Minerados)
-    # -------------------------------
-    towrite = BytesIO()
-    st.session_state["pacientes_minerados_df"].to_excel(towrite, index=False, engine='openpyxl')
-    towrite.seek(0)
-    st.download_button(
-        label="Download Excel de Pacientes Minerados (Atualizado)",
-        data=towrite,
-        file_name="pacientes_minerados_atualizado.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+
+        # -------------------------------
+        # DOWNLOAD DO ARQUIVO EXCEL (Pacientes Minerados) SEM FORMATAÇÃO
+        # -------------------------------
+        df_export = st.session_state["pacientes_minerados_df"].copy()
+        # Remove as tags HTML somente para exportação
+        df_export["Sentenca"] = df_export["Sentenca"].apply(remove_html_tags)
+
+        towrite = BytesIO()
+        df_export.to_excel(towrite, index=False, engine='openpyxl')
+        towrite.seek(0)
+        st.download_button(
+            label="Download Excel de Pacientes Minerados (Sem Destaque)",
+            data=towrite,
+            file_name="pacientes_minerados_sem_formatacao.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
     
     # -------------------------------
     # Correlação com Internados (se arquivo fornecido)
