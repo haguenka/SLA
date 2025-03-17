@@ -449,7 +449,7 @@ if st.sidebar.button("Processar"):
     
     df_display = st.session_state["pacientes_minerados_df"].copy()
     df_display["Acesso PDF"] = df_display.apply(lambda row: create_download_link(row["pdf_bytes"], row["Arquivo"]), axis=1)
-    df_display = df_display.drop(columns=["pdf_bytes"], errors="ignore")
+    df_display = df_display.drop(columns=["pdf_bytes", "Arquivo"], errors="ignore")
     
     with tab2:
         st.markdown("### Lista de Pacientes Minerados com Acesso ao PDF:")
