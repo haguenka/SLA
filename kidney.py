@@ -476,6 +476,9 @@ if st.sidebar.button("Processar"):
         df_export = st.session_state["pacientes_minerados_df"].copy()
         # Remove as tags HTML somente para exportação
         df_export["Sentenca"] = df_export["Sentenca"].apply(remove_html_tags)
+        # Remove as colunas "Arquivo" e "pdf_bytes"
+        df_export = df_export.drop(columns=["Arquivo", "pdf_bytes"], errors="ignore")
+
 
         towrite = BytesIO()
         df_export.to_excel(towrite, index=False, engine='openpyxl')
