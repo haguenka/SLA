@@ -141,6 +141,7 @@ def processar_pdfs_streamlit(pdf_files):
         sentencas = re.split(r'(?<=[.!?])\s+', texto_completo)
         ocorrencias_validas = []
         for sentenca in sentencas:
+            sentenca = sentenca.replace('\n', ' ').replace('\r', ' ').strip()
             # Verifica se a sentença contém o termo "calculo"
             if regex_calculo.search(sentenca):
                 # Exclui se a sentença conter "sem"
