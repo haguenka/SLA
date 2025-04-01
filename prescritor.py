@@ -56,7 +56,13 @@ st.markdown("""
 # -------------------------------
 st.title("Análise CDI - Médico Prescritor")
 if logo is not None:
-    st.sidebar.image(logo, use_container_width=True)
+    st.write(f"Imagem carregada: {logo.format}")  # Exibe o formato da imagem
+    try:
+        st.sidebar.image(logo, use_container_width=True)
+    except Exception as e:
+        st.sidebar.warning(f"Erro ao carregar o logo: {e}")
+else:
+    st.sidebar.warning("Não foi possível carregar o logo.")
 st.sidebar.header("Selecione os filtros")
 
 # Função para carregar os dados do repositório Git
