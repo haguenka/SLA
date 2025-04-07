@@ -24,7 +24,7 @@ def load_excel_data(xlsx_url):
         return None
 
 # URL do logo
-url_logo = 'https://raw.githubusercontent.com/haguenka/SLA/main/sj.png'
+url_logo = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.png'
 logo = load_logo(url_logo)
 
 # -------------------------------
