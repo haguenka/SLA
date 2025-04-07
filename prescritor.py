@@ -52,9 +52,9 @@ st.markdown("""
 # -------------------------------
 st.title("Análise CDI - Médico Prescritor")
 # Carrega e exibe o logo na barra lateral
-    logo_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
-    logo = load_logo(logo_url)
-    st.sidebar.image(logo, use_container_width=True)
+logo_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
+logo = load_logo(logo_url)
+st.sidebar.image(logo, use_container_width=True)
 
 # Função para carregar os dados do repositório Git
 def load_data():
