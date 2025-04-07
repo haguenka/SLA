@@ -6,8 +6,8 @@ from io import BytesIO
 
 # Função para carregar o logo via URL com cache
 @st.cache_data(show_spinner=False)
-def load_logo(url):
-    response = requests.get(url)
+def load_logo(url_logo):
+    response = requests.get(url_logo)
     if response.status_code == 200:
         return Image.open(BytesIO(response.content))
     else:
