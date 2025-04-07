@@ -6,8 +6,8 @@ from io import BytesIO
 
 # Função para carregar o logo via URL com cache
 @st.cache_data(show_spinner=False)
-def load_logo(url_logo):
-    response = requests.get(url_logo)
+def load_logo(logo_url):
+    response = requests.get(logo_url)
     if response.status_code == 200:
         return Image.open(BytesIO(response.content))
     else:
@@ -22,10 +22,6 @@ def load_excel_data(xlsx_url):
     else:
         st.error("Não foi possível carregar o arquivo Excel da URL fornecida.")
         return None
-
-# URL do logo
-url_logo = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.png'
-logo = load_logo(url_logo)
 
 # -------------------------------
 # CONFIGURAÇÃO DE CSS (DARK MODE)
@@ -55,15 +51,10 @@ st.markdown("""
 # TÍTULO E LOGO NA SIDEBAR
 # -------------------------------
 st.title("Análise CDI - Médico Prescritor")
-if logo is not None:
-    st.write(f"Imagem carregada: {logo.format}")  # Exibe o formato da imagem
-    try:
-        st.sidebar.image(logo, use_container_width=True)
-    except Exception as e:
-        st.sidebar.warning(f"Erro ao carregar o logo: {e}")
-else:
-    st.sidebar.warning("Não foi possível carregar o logo.")
-st.sidebar.header("Selecione os filtros")
+# Carrega e exibe o logo na barra lateral
+    logo_url = 'https://raw.githubusercontent.com/haguenka/SLA/main/logo.jpg'
+    logo = load_logo(logo_url)
+    st.sidebar.image(logo, use_container_width=True)
 
 # Função para carregar os dados do repositório Git
 def load_data():
