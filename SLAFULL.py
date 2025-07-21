@@ -64,7 +64,7 @@ def main():
             return
 
         # Padroniza 'MEDICO_SOLICITANTE'
-        df['MEDICO_SOLICITANTE'] = df['MEDICO_SOLICITANTE'].astype(str).str.strip().str.lower()
+        # df['MEDICO_SOLICITANTE'] = df['MEDICO_SOLICITANTE'].astype(str).str.strip().str.lower()
 
         # Filtra os grupos permitidos
         allowed_groups = [
@@ -113,8 +113,8 @@ def main():
         )
 
         # Define condições para SLA fora do período
-        #doctors_of_interest = ['henrique arume guenka', 'marcelo jacobina de abreu']
-        #condition_1 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (df['MEDICO_SOLICITANTE'].isin(doctors_of_interest)) & (df['DELTA_TIME'] > 120)
+        # doctors_of_interest = ['henrique arume guenka', 'marcelo jacobina de abreu']
+        # condition_1 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (df['MEDICO_SOLICITANTE'].isin(doctors_of_interest)) & (df['DELTA_TIME'] > 120)
         condition_2 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (df['DELTA_TIME'] > 120)
         condition_3 = (df['GRUPO'] == 'GRUPO RAIO-X') & (df['DELTA_TIME'] > 72)
         condition_4 = (df['GRUPO'] == 'GRUPO MEDICINA NUCLEAR') & (df['DELTA_TIME'] > 120)
@@ -150,7 +150,7 @@ def main():
             'SAME', 'NOME_PACIENTE', 'GRUPO', 'DESCRICAO_PROCEDIMENTO',
             'MEDICO_LAUDO_DEFINITIVO', 'UNIDADE', 'TIPO_ATENDIMENTO',
             'DATA_HORA_PRESCRICAO', 'STATUS_ALAUDAR', 'STATUS_PRELIMINAR',
-            'STATUS_APROVADO', 'MEDICO_SOLICITANTE', 'DELTA_TIME', 'SLA_STATUS',
+            'STATUS_APROVADO', 'DELTA_TIME', 'SLA_STATUS',
             'OBSERVACAO', 'PERIODO_DIA', 'STATUS_ATUAL'
         ]
         df_selected = df[selected_columns]
