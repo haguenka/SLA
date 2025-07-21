@@ -56,9 +56,9 @@ def main():
 
     try:
         # Verifica a existência de colunas essenciais
-        if 'MEDICO_SOLICITANTE' not in df.columns:
-            st.error("'MEDICO_SOLICITANTE' column not found in the data.")
-            return
+        # if 'MEDICO_SOLICITANTE' not in df.columns:
+            # st.error("'MEDICO_SOLICITANTE' column not found in the data.")
+            # return
         if 'UNIDADE' not in df.columns or 'TIPO_ATENDIMENTO' not in df.columns:
             st.error("'UNIDADE' ou 'TIPO_ATENDIMENTO' column not found.")
             return
