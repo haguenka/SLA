@@ -102,13 +102,9 @@ def main():
 
         # Cálculo do DELTA_TIME
         df['DELTA_TIME'] = df.apply(
-            lambda row: (
-                np.busday_count(row['STATUS_ALAUDAR'].date(), row['END_DATE'].date()) * 24
-            ) + ((row['END_DATE'] - row['STATUS_ALAUDAR']).seconds // 3600)
-            if row['TIPO_ATENDIMENTO'] != 'Pronto Atendimento'
-               and not pd.isna(row['STATUS_ALAUDAR'])
-               and not pd.isna(row['END_DATE'])
-            else (row['END_DATE'] - row['STATUS_ALAUDAR']).total_seconds() / 3600,
+            lambda row: (row['END_DATE'] - row['STATUS_ALAUDAR']).total_seconds() / 3600
+            if not pd.isna(row['STATUS_ALAUDAR']) and not pd.isna(row['END_DATE'])
+            else np.nan,
             axis=1
         )
 
