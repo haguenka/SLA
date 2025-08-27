@@ -100,11 +100,42 @@ def main():
             axis=1
         )
 
-        # Cálculo do DELTA_TIME
+        # Função para calcular horas úteis excluindo fins de semana
+        def calculate_business_hours(start_date, end_date):
+            if pd.isna(start_date) or pd.isna(end_date):
+                return np.nan
+            
+            # Se as datas são iguais, verifica se é fim de semana
+            if start_date.date() == end_date.date():
+                if start_date.weekday() < 5:  # Segunda a sexta (0-4)
+                    return (end_date - start_date).total_seconds() / 3600
+                else:
+                    return 0  # Fim de semana
+            
+            total_hours = 0
+            current_date = start_date
+            
+            while current_date.date() < end_date.date():
+                next_day = current_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+                
+                # Se o dia atual não é fim de semana (segunda a sexta)
+                if current_date.weekday() < 5:
+                    hours_in_day = (next_day - current_date).total_seconds() / 3600
+                    total_hours += hours_in_day
+                
+                # Move para o início do próximo dia
+                current_date = current_date.replace(hour=0, minute=0, second=0, microsecond=0) + pd.Timedelta(days=1)
+            
+            # Adiciona as horas do último dia (se não for fim de semana)
+            if current_date.weekday() < 5:
+                final_hours = (end_date - current_date).total_seconds() / 3600
+                total_hours += final_hours
+            
+            return total_hours
+
+        # Cálculo do DELTA_TIME excluindo fins de semana
         df['DELTA_TIME'] = df.apply(
-            lambda row: (row['END_DATE'] - row['STATUS_ALAUDAR']).total_seconds() / 3600
-            if not pd.isna(row['STATUS_ALAUDAR']) and not pd.isna(row['END_DATE'])
-            else np.nan,
+            lambda row: calculate_business_hours(row['STATUS_ALAUDAR'], row['END_DATE']),
             axis=1
         )
 
