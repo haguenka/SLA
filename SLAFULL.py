@@ -157,20 +157,7 @@ def main():
         if 'OBSERVACAO' not in df.columns:
             df['OBSERVACAO'] = ''
 
-        # Criação da coluna PERIODO_DIA com base em STATUS_ALAUDAR
-        def calcular_periodo_dia(dt):
-            if pd.isna(dt):
-                return None
-            hora = dt.hour
-            if 0 <= hora < 7:
-                return "Madrugada"
-            elif 7 <= hora < 13:
-                return "Manhã"
-            elif 13 <= hora < 19:
-                return "Tarde"
-            else:
-                return "Noite"
-        df['PERIODO_DIA'] = df['STATUS_ALAUDAR'].apply(calcular_periodo_dia)
+    
 
         # Colunas selecionadas
         selected_columns = [
