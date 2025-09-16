@@ -196,21 +196,22 @@ def main():
         min_date = df['DATA_HORA_PRESCRICAO'].min()
         max_date = df['DATA_HORA_PRESCRICAO'].max()
         start_date, end_date = st.sidebar.date_input("Selecione o período", [min_date, max_date])
-
+        # Ajusta end_date para incluir o último dia inteiro
+        end_date = pd.Timestamp(end_date) + pd.Timedelta(days=1)
         # DataFrame filtrado (para abas 1 e 2, se quiser)
         df_filtered = df_selected[
             (df_selected['UNIDADE'] == selected_unidade) &
             (df_selected['GRUPO'] == selected_grupo) &
             (df_selected['TIPO_ATENDIMENTO'] == selected_tipo_atendimento) &
             (df_selected['DATA_HORA_PRESCRICAO'] >= pd.Timestamp(start_date)) &
-            (df_selected['DATA_HORA_PRESCRICAO'] <= pd.Timestamp(end_date))
+            (df_selected['DATA_HORA_PRESCRICAO'] < end_date)
         ]
 
         df_filtered_2 = df_selected[
             (df_selected['UNIDADE'] == selected_unidade) &
             (df_selected['GRUPO'] == selected_grupo) &
             (df_selected['DATA_HORA_PRESCRICAO'] >= pd.Timestamp(start_date)) &
-            (df_selected['DATA_HORA_PRESCRICAO'] <= pd.Timestamp(end_date))
+            (df_selected['DATA_HORA_PRESCRICAO'] < end_date)
         ]
 
         # Criação das abas
