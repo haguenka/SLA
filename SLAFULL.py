@@ -140,8 +140,8 @@ def main():
         )
 
         # Define condições para SLA fora do período
-        # doctors_of_interest = ['henrique arume guenka', 'marcelo jacobina de abreu']
-        # condition_1 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (df['MEDICO_SOLICITANTE'].isin(doctors_of_interest)) & (df['DELTA_TIME'] > 120)
+        #doctors_of_interest = ['henrique arume guenka', 'marcelo jacobina de abreu']
+        #condition_1 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (df['MEDICO_SOLICITANTE'].isin(doctors_of_interest)) & (df['DELTA_TIME'] > 96)
         condition_2 = (df['GRUPO'] == 'GRUPO MAMOGRAFIA') & (df['DELTA_TIME'] > 96)
         condition_3 = (df['GRUPO'] == 'GRUPO RAIO-X') & (df['DELTA_TIME'] > 96)
         condition_4 = (df['GRUPO'] == 'GRUPO MEDICINA NUCLEAR') & (df['DELTA_TIME'] > 96)
